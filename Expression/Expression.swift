@@ -8,106 +8,12 @@
 
 // MARK: Public interface
 
-public typealias Evaluator<T> = (_ symbol: Expression.Symbol, _ args: [T]) -> T?
-
-/// Default evaluator for numeric arguments
-public func defaultEvaluator(_ symbol: Expression.Symbol, _ args: [Double]) -> Double? {
-    switch symbol {
-        
-    // MARK: infix operators
-    case .infix("+"):
-        return args[0] + args[1]
-    case .infix("-"):
-        return args[0] - args[1]
-    case .infix("*"):
-        return args[0] * args[1]
-    case .infix("/"):
-        return args[0] / args[1]
-    case .infix("%"):
-        guard args.count == 2 else { return nil }
-        return fmod(args[0], args[1])
-        
-    // MARK: prefix operators
-    case .prefix("-"):
-        return -args[0]
-    case .prefix("√"):
-        return sqrt(args[0])
-    case .prefix("∛"):
-        return pow(args[0], 1/3)
-    case .prefix("∜"):
-        return pow(args[0], 1/4)
-        
-    // MARK: functions (arity: 1)
-    case .function("sqrt"):
-        guard args.count == 1 else { return nil }
-        return sqrt(args[0])
-    case .function("floor"):
-        guard args.count == 1 else { return nil }
-        return floor(args[0])
-    case .function("ceil"):
-        guard args.count == 1 else { return nil }
-        return ceil(args[0])
-    case .function("round"):
-        guard args.count == 1 else { return nil }
-        return round(args[0])
-    case .function("cos"):
-        guard args.count == 1 else { return nil }
-        return cos(args[0])
-    case .function("acos"):
-        guard args.count == 1 else { return nil }
-        return acos(args[0])
-    case .function("sin"):
-        guard args.count == 1 else { return nil }
-        return sin(args[0])
-    case .function("asin"):
-        guard args.count == 1 else { return nil }
-        return asin(args[0])
-    case .function("tan"):
-        guard args.count == 1 else { return nil }
-        return tan(args[0])
-    case .function("atan"):
-        guard args.count == 1 else { return nil }
-        return atan(args[0])
-    case .function("abs"):
-        guard args.count == 1 else { return nil }
-        return abs(args[0])
-        
-    // MARK: functions (arity: 2)
-    case .function("pow"):
-        guard args.count == 2 else { return nil }
-        return pow(args[0], args[1])
-    case .function("max"):
-        guard args.count == 2 else { return nil }
-        return max(args[0], args[1])
-    case .function("min"):
-        guard args.count == 2 else { return nil }
-        return min(args[0], args[1])
-    case .function("atan"):
-        guard args.count == 2 else { return nil }
-        return atan2(args[0], args[1])
-    case .function("mod"):
-        guard args.count == 2 else { return nil }
-        return fmod(args[0], args[1])
-        
-    default:
-        return nil
-    }
-}
-
-/// Default evaluator for String arguments
-public func defaultEvaluator(_ symbol: Expression.Symbol, _ args: [String]) -> String? {
-    if case .infix("+") = symbol {
-        if let lhs = Double(String(args[0])), let rhs = Double(String(args[1])) {
-            return String(lhs + rhs)
-        } else {
-            return args[0] + args[1]
-        }
-    }
-    return nil
-}
-
 public class Expression {
     private let root: Subexpression
+    private let evaluator: Evaluator
+
+    /// Function prototype for evaluating an expression
+    public typealias Evaluator = (_ symbol: Expression.Symbol, _ args: [Double]) throws -> Double?
     
     /// Symbols that make up an expression
     public enum Symbol: CustomStringConvertible {
@@ -153,7 +59,7 @@ public class Expression {
         public var description: String {
             switch self {
             case .unexpectedToken(let string):
-                return "Unexpected symbol `\(string)`"
+                return "Unexpected token `\(string)`"
             case .missingDelimiter(let string):
                 return "Missing `\(string)`"
             case .undefinedSymbol(let symbol):
@@ -162,45 +68,120 @@ public class Expression {
         }
     }
     
-    // Default constructor - creates an Expression object from a string
-    public init(_ expression: String) throws {
+    /// Default constructor - creates an Expression object from a string
+    public init(_ expression: String, evaluator: @escaping Evaluator = { _ in nil }) throws {
         var characters = expression.characters
         root = try characters.parseSubexpression()
+        self.evaluator = evaluator
     }
     
-    public func evaluate<T: LosslessStringConvertible>(_ evaluator: Evaluator<T>) -> T? {
-        return root.evaluate { symbol, args in
-            if let value = evaluator(symbol, args) {
-                return value
+    /// Evaluate the expression using an optional custom evaluator
+    public func evaluate(_ evaluator: @escaping Evaluator = { _ in nil }) throws -> Double {
+        return try root.evaluate { symbol, args in
+            return try
+                evaluator(symbol, args) ??
+                self.evaluator(symbol, args) ??
+                defaultEvaluator(symbol, args)
+        }
+    }
+    
+    /// Evaluate the expression using a dictionary of variables
+    public func evaluate(_ variables: [String: Double]) throws -> Double {
+        return try evaluate { symbol, _ in
+            if case Symbol.variable(let name) = symbol {
+                return variables[name]
             }
-            // Treat as Double
-            let doubles: [Double] = args.flatMap { $0 as? Double ?? Double(String($0)) }
-            if doubles.count == args.count {
-                return defaultEvaluator(symbol, doubles).map { $0 as? T ?? T(String($0))! }
-            }
-            // Treat as String
-            let strings: [String] = args.flatMap { $0 as? String ?? String($0) }
-            if strings.count == args.count {
-                return defaultEvaluator(symbol, strings).map { $0 as? T ?? T($0)! }
-            }
-            // Handle error
+            return nil
+        }
+    }
+    
+    // Default evaluator for numeric arguments
+    private func defaultEvaluator(_ symbol: Expression.Symbol, _ args: [Double]) throws -> Double? {
+        switch symbol {
+        
+        // MARK: constants
+        case .variable("π"):
+            return .pi
             
-            return nil
-        }
-    }
-    
-    public func evaluate<T: LosslessStringConvertible>(_ constants: [String: T]) -> T? {
-        return evaluate { symbol, args in
-            if case .variable(let name) = symbol {
-                return constants[name]
+        // MARK: infix operators
+        case .infix("+"):
+            return args[0] + args[1]
+        case .infix("-"):
+            return args[0] - args[1]
+        case .infix("*"):
+            return args[0] * args[1]
+        case .infix("/"):
+            return args[0] / args[1]
+        case .infix("%"):
+            return fmod(args[0], args[1])
+            
+        // MARK: prefix operators
+        case .prefix("-"):
+            return -args[0]
+        case .prefix("√"):
+            return sqrt(args[0])
+        case .prefix("∛"):
+            return pow(args[0], 1/3)
+        case .prefix("∜"):
+            return pow(args[0], 1/4)
+            
+        // MARK: functions (
+        case .function(let name):
+            
+            // arity: 1
+            if args.count == 1 {
+                switch name {
+                case "sqrt":
+                    return sqrt(args[0])
+                case "floor":
+                    return floor(args[0])
+                case "ceil":
+                    return ceil(args[0])
+                case "round":
+                    return round(args[0])
+                case "cos":
+                    return cos(args[0])
+                case "acos":
+                    return acos(args[0])
+                case "sin":
+                    return sin(args[0])
+                case "asin":
+                    return asin(args[0])
+                case "tan":
+                    return tan(args[0])
+                case "atan":
+                    return atan(args[0])
+                case "abs":
+                    return abs(args[0])
+                default:
+                    break
+                }
             }
-            return nil
+            
+            // arity: 2
+            if args.count == 2 {
+                switch name {
+                case "pow":
+                    return pow(args[0], args[1])
+                case "max":
+                    return max(args[0], args[1])
+                case "min":
+                    return min(args[0], args[1])
+                case "atan":
+                    return atan2(args[0], args[1])
+                case "mod":
+                    return fmod(args[0], args[1])
+                default:
+                    break
+                }
+            }
+            
+        default:
+            break
         }
-    }
-    
-    public func evaluate<T: LosslessStringConvertible>() -> T? {
-        let evaluator: Evaluator<T> = { _ in nil }
-        return self.evaluate(evaluator)
+        
+        // the buck stops here
+        return nil
     }
 }
 
@@ -211,21 +192,21 @@ fileprivate enum Subexpression {
     case operand(Expression.Symbol, [Subexpression])
     case `operator`(String)
     
-    func evaluate<T: LosslessStringConvertible>(_ evaluator: Evaluator<T>) -> T? {
+    func evaluate(_ evaluator: Expression.Evaluator) throws -> Double {
         switch self {
         case .literal(let value):
-            return T(value)
-        case .operand(let symbol, let args):
-            var argValues: [T] = []
-            for arg in args {
-                guard let value = arg.evaluate(evaluator) else {
-                    return nil // error
-                }
-                argValues.append(value)
+            if let value = Double(value) {
+                return value
             }
-            return evaluator(symbol, argValues)
-        case .operator:
-            return nil // error
+            throw Expression.Error.unexpectedToken(value)
+        case .operand(let symbol, let args):
+            let argValues = try args.map { try $0.evaluate(evaluator) }
+            if let value = try evaluator(symbol, argValues) {
+                return value
+            }
+            throw Expression.Error.undefinedSymbol(symbol)
+        case .operator(let name):
+            throw Expression.Error.unexpectedToken(name)
         }
     }
 }
@@ -308,36 +289,6 @@ fileprivate extension String.CharacterView {
         return nil
     }
     
-    mutating func parseStringLiteral() throws -> Subexpression? {
-        var string = ""
-        if let delimiter = scanCharacter({ $0 == "\"" || $0 == "'" })?.characters.first! {
-            while count > 0 {
-                while let substring = scanCharacters({ $0 != "\\" && $0 != delimiter }) {
-                    string += substring
-                }
-                if scanCharacter("\\") {
-                    if let c = scanCharacter({ _ in true }) {
-                        switch c {
-                        case "t":
-                            string += "\t"
-                        case "n":
-                            string += "\n"
-                        case "r":
-                            string += "\r"
-                        default:
-                            string += c
-                        }
-                    }
-                }
-                guard scanCharacter(delimiter) else {
-                    throw Expression.Error.missingDelimiter(String(delimiter))
-                }
-                return .literal(string)
-            }
-        }
-        return nil // unterminated string
-    }
-    
     mutating func parseOperator() -> Subexpression? {
         if let op = scanCharacter({ "(),+-*/\\=!%°^&|<>?~±‡≤≥÷√∛∜".characters.contains($0) }) {
             return .operator(op)
@@ -349,7 +300,7 @@ fileprivate extension String.CharacterView {
         
         func isHead(_ c: Character) -> Bool {
             switch c {
-            case "a" ... "z", "A" ... "Z", "_", "$", "#", "@":
+            case "a" ... "z", "A" ... "Z", "_", "$", "#", "@", "π":
                 return true
             default:
                 return false
@@ -357,10 +308,12 @@ fileprivate extension String.CharacterView {
         }
         
         func isTail(_ c: Character) -> Bool {
-            if case "0" ... "9" = c {
+            switch c {
+            case "a" ... "z", "A" ... "Z", "_", "0" ... "9":
                 return true
+            default:
+                return false
             }
-            return isHead(c)
         }
         
         func scanIdentifier() -> String? {
@@ -416,7 +369,7 @@ fileprivate extension String.CharacterView {
                     return
                 case .literal, .operand:
                     // prefix operator
-                    stack[i ... i + 1] = [.operand(.prefix(symbol), [stack[1]])]
+                    stack[i ... i + 1] = [.operand(.prefix(symbol), [stack[i + 1]])]
                     try collapseStack(from: 0)
                     return
                 }
@@ -424,11 +377,13 @@ fileprivate extension String.CharacterView {
                 switch stack[i + 1] {
                 case .literal(let value):
                     // literal cannot follow an operand
-                    throw Expression.Error.unexpectedToken(value)
+                    throw Expression.Error.unexpectedToken(String(value))
                 case .operand(let symbol, _):
                     if case .variable(let name) = symbol {
                         // treat as a postfix operator
-                        stack[i + 1] = .operand(.postfix(name), [])
+                        stack[i ... i + 1] = [.operand(.postfix(name), [stack[i]])]
+                        try collapseStack(from: 0)
+                        return
                     }
                     // operand cannot follow another operand
                     // TODO: the symbol may not be the first part of the operand
@@ -443,10 +398,9 @@ fileprivate extension String.CharacterView {
                     let rhs = stack[i + 2]
                     if case .operator(let op3) = rhs {
                         if stack.count > i + 3 && canBePrefix(op3) {
-                            guard case .operator = stack[3] else {
+                            guard case .operator = stack[i + 3] else {
                                 // treat as prefix operator
-                                stack[i + 2 ... i + 3] = [.operand(.prefix(op3), [stack[3]])]
-                                try collapseStack(from: 0)
+                                try collapseStack(from: i + 2)
                                 return
                             }
                         }
@@ -488,8 +442,7 @@ fileprivate extension String.CharacterView {
         
         
         while skipWhitespace(),
-            let expression = try
-                parseStringLiteral() ??
+            let expression =
                 parseNumericLiteral() ??
                 parseOperator() ??
                 parseIdentifier() {

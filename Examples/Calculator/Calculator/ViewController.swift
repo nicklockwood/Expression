@@ -15,17 +15,14 @@ class ViewController: UIViewController, UITextFieldDelegate {
     @IBOutlet private var outputView: UITextView!
     
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        do {
-            if let text = textField.text, text != "" {
+        if  let text = textField.text, text != "" {
+            do {
                 let expression = try Expression(text)
-                if let result = expression.evaluate() as Float? {
-                    outputView.text = String(result) + "\n" + outputView.text
-                } else {
-                    outputView.text = "Invalid expression\n" + outputView.text
-                }
+                let result = try expression.evaluate()
+                outputView.text = String(format: "%g\n", result) + outputView.text
+            } catch {
+                outputView.text = "\(error)\n" + outputView.text
             }
-        } catch {
-             outputView.text = "\(error)\n" + outputView.text
         }
         return false
     }
