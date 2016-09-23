@@ -5,7 +5,7 @@
     "type": "zlib",
     "file": "LICENCE.md"
   },
-  "summary": "A library for Mac and iOS for calculating numeric expressions at runtime.",
+  "summary": "A Mac and iOS library for calculating numeric expressions at runtime.",
   "homepage": "https://github.com/nicklockwood/Expression",
   "authors": {
     "Nick Lockwood": "support@charcoaldesign.co.uk"
