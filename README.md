@@ -1,7 +1,5 @@
 [![Travis](https://img.shields.io/travis/nicklockwood/Expression.svg?maxAge=2592000)](https://travis-ci.org/nicklockwood/Expression)
 [![License](https://img.shields.io/badge/license-zlib-lightgrey.svg?maxAge=2592000)](https://opensource.org/licenses/Zlib)
-[![CocoaPods](https://img.shields.io/cocoapods/p/Expression.svg?maxAge=2592000)](https://cocoapods.org/pods/Expression)
-[![CocoaPods](https://img.shields.io/cocoapods/metrics/doc-percent/Expression.svg?maxAge=2592000)](http://cocoadocs.org/docsets/Expression/)
 [![Twitter](https://img.shields.io/badge/twitter-@nicklockwood-blue.svg?maxAge=2592000)](http://twitter.com/nicklockwood)
 
 
@@ -35,7 +33,7 @@ Expression is lightweight, well-tested, and written entirely in Swift 3.
 How do I install it?
 ---------------------
 
-It's just a single class, so you can simply drag the `Expression.swift` file into your project to use it. There's also a framework for Mac and iOS if you prefer to make things complicated, or you can use Cocoapods or Carthage if you prefer.
+It's just a single class, so you can simply drag the `Expression.swift` file into your project to use it. There's also a framework for Mac and iOS if you like to make things complicated.
 
 
 How do I use it?
@@ -166,6 +164,39 @@ Here is current supported list of standard library symbols:
     min(x,y)
     atan2(x,y)
     mod(x,y)
+    
+    
+Calculator Example
+--------------------
+
+Not much to say about this. It's a calculator. You can type expressions into it, and it will evaluate them and produce a result (or an error, if what you typed was invalid).
+
+
+Layout Example
+----------------
+
+This is a bit more interesting. The layout example demonstrates a crude-but-usable layout system, which supports arbitrary expressions for the coordinates of the views.
+
+It's conceptually similar to AutoLayout, but with some important differences:
+
+* The expressions can be as simple or as complex as you like. In AutoLayout, every constraint uses a choice between a few fixed formulae, where only the operands are interchangable.
+* Instead of applying an arbitrary number of constraints between properties of views, each view just has four fixed properties that can be calculated however you like.
+* Layout is deterministic. There is no weighting system used for resolving conflicts, and circular references are forbidden. Despite that, weighted relationshipts can be achieved using explicit multipliers.
+
+Default layout values for the example views have been set in the Storyboard, but you can edit them live in the app by tapping a view and typing in new values.
+
+Here are some things to note:
+
+* Every view has a `top`, `left`, `width` and `height` expression to define its coordinates on the screen.
+* Views have an optional `key` (like a tag, but string-based) that can be used to reference their properties from another view. 
+* Any expression-based property of any view can reference any other property (of the same view, or any other view), and can even reference multiple properties.
+* Every view has a bottom and right property. These are computed, and cannot be set directly, but they can be used in expressions.
+* Circular references (a property whose value depends on itself) are forbidden, and will be detected by the system.
+* The `width` and `height` properties can use the `auto` constant, which does nothing useful for ordinary views, but can be used with text labels to calculate the optimal height for a given width, based on the amount of text.
+* Numeric values are measures screen points. Percentage values are relative to the superview's `width` or `height` property.
+* Remember you can use functions like `min()` and `max()` to ensure that relative values don't go above or below a fixed threshold.
+
+This is just a toy example, but I think it has some interesting potential. Have fun with it, and maybe even try using `View+Layout.swift` in your own projects. I'll be exploring a more sophisticated implementation of this idea in the future.
      
 
 What's next?
