@@ -2,9 +2,12 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "group:../Expression.xcodeproj">
+      location = "group:Calculator/Calculator.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:Calculator/Calculator.xcodeproj">
+      location = "group:Layout/Layout.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:../Expression.xcodeproj">
    </FileRef>
 </Workspace>

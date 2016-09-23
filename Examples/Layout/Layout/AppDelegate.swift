@@ -1,8 +1,8 @@
 //
-//  Expression.h
-//  Expression
+//  AppDelegate.swift
+//  Layout
 //
-//  Created by Nick Lockwood on 15/09/2016.
+//  Created by Nick Lockwood on 21/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
 //
 //  Distributed under the permissive zlib license
@@ -29,14 +29,10 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //
 
-#import <Foundation/Foundation.h>
+import UIKit
 
-//! Project version number for Expression.
-FOUNDATION_EXPORT double ExpressionVersionNumber;
-
-//! Project version string for Expression.
-FOUNDATION_EXPORT const unsigned char ExpressionVersionString[];
-
-// In this header, you should import all the public headers of your framework using statements like #import <Expression/PublicHeader.h>
-
+@UIApplicationMain
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    var window: UIWindow?
+}
 

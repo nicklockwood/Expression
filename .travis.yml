@@ -1,0 +1,6 @@
+language: objective-c
+osx_image: xcode8.0
+before_script:
+- brew update
+- brew upgrade xctool || true
+script: xctool test -project Expression.xcodeproj -scheme "Expression (Mac)" -sdk macosx

@@ -27,10 +27,10 @@
                                     <outlet property="delegate" destination="BYZ-38-t0r" id="KM4-G7-gNi"/>
                                 </connections>
                             </textField>
-                            <textView clipsSubviews="YES" contentMode="scaleToFill" editable="NO" translatesAutoresizingMaskIntoConstraints="NO" id="kTt-QJ-Q8p">
+                            <textView clipsSubviews="YES" contentMode="scaleToFill" editable="NO" text="As well as regular operators like +, *, -, try using functions such as pow(), sqrt() and sin(). Most common ones are supported." translatesAutoresizingMaskIntoConstraints="NO" id="kTt-QJ-Q8p">
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                                 <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="0.5" colorSpace="calibratedRGB"/>
-                                <fontDescription key="fontDescription" type="system" pointSize="20"/>
+                                <fontDescription key="fontDescription" name=".SFNSDisplay-Regular" family=".SF NS Display" pointSize="20"/>
                                 <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
                             </textView>
                         </subviews>
