@@ -166,12 +166,6 @@ Here is current supported list of standard library symbols:
     min(x,y)
     atan2(x,y)
     mod(x,y)
-    
-    
-Calculator example
---------------------
-
-This is a simple gr
      
 
 What's next?
