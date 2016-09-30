@@ -5,6 +5,9 @@
       location = "group:Calculator/Calculator.xcodeproj">
    </FileRef>
    <FileRef
+      location = "group:Colors/Colors.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:Layout/Layout.xcodeproj">
    </FileRef>
    <FileRef

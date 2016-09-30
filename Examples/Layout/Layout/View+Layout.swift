@@ -120,6 +120,8 @@ extension UIView {
             
             let common: Expression.Evaluator = { [unowned self] symbol, args in
                 switch symbol {
+                case .constant("auto"):
+                    throw Expression.Error.message("`auto` can only be used for width or height")
                 case .constant(let name):
                     let parts = name.components(separatedBy: ".")
                     if parts.count == 2 {
@@ -141,8 +143,6 @@ extension UIView {
                 switch symbol {
                 case .postfix("%"):
                     return self.superview.map { Double($0.frame.width) / 100 * args[0] }
-                case .constant("auto"):
-                    throw Expression.Error.message("`auto` can only be used for width or height")
                 default:
                     return try common(symbol, args)
                 }
@@ -154,8 +154,6 @@ extension UIView {
                 switch symbol {
                 case .postfix("%"):
                     return self.superview.map { Double($0.frame.height) / 100 * args[0] }
-                case .constant("auto"):
-                    throw Expression.Error.message("`auto` can only be used for width or height")
                 default:
                     return try common(symbol, args)
                 }

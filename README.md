@@ -1,12 +1,14 @@
 [![Travis](https://img.shields.io/travis/nicklockwood/Expression.svg?maxAge=2592000)](https://travis-ci.org/nicklockwood/Expression)
 [![License](https://img.shields.io/badge/license-zlib-lightgrey.svg?maxAge=2592000)](https://opensource.org/licenses/Zlib)
+[![CocoaPods](https://img.shields.io/cocoapods/p/Expression.svg?maxAge=2592000)](https://cocoapods.org/pods/Expression)
+[![CocoaPods](https://img.shields.io/cocoapods/metrics/doc-percent/Expression.svg?maxAge=2592000)](http://cocoadocs.org/docsets/Expression/)
 [![Twitter](https://img.shields.io/badge/twitter-@nicklockwood-blue.svg?maxAge=2592000)](http://twitter.com/nicklockwood)
 
 
 What is this?
 ----------------
 
-Expression is a library for Mac and iOS for calculating numeric expressions at runtime.
+Expression is a library for Mac and iOS for evaluating numeric expressions at runtime.
 
 
 Why would I want to do that?
@@ -42,6 +44,7 @@ How do I use it?
 You create an `Expression` instance by passing a string containing your expression, and (optionally) an `Evaluator` function to implement custom behavior. You can then calculate the result by calling the `Expression.evaluate()` function.
 
 The default evaluator implements standard math functions and operators, so a custom one is only needed if your app supports additional functions or variables:
+
 ```swift
 // Basic usage
 
@@ -66,15 +69,17 @@ do {
     print("Error: \(error)")
 }
 ```
+
 Note that both the `Expression()` initializer and the `evaluate()` function can both throw an error. An error will be thrown during initialization if the expression is malformed, and during evaluation if it references an unknown symbol.
 
 For a simple hard-coded expression like the first example, there is no possibility of an error being thrown, but if you are accepting user input as your expression you must always ensure that you catch and handle errors. The error messages produced by Expression are detailed and human-readable (but not localized, unfortunately).
 
-Your custom `Evaluator` function can return either a `Double` or `nil` or it can throw an error. It is generally recommended that if you do not recognize a symbol, you shoud return nil so that it can be handled by the default evaluator.
+Your custom `Evaluator` function can return either a `Double` or `nil` or it can throw an error. It is generally recommended that if you do not recognize a symbol, you should return nil so that it can be handled by the default evaluator.
 
 In some case you may be certain that a symbol is incorrect,, however, and this is an opportunity to provide a more useful error message. In the example above, the evaluator matches the function `bar` with an arity of 1 (meaning that it takes one argument). This will only match calls to bar that take a single argument, and ignore calls with zero or multiple arguments.
 
 Since `bar` is a custom function, we know that it should only take one argument, so it is probably more helpful to throw an error if it is called with the wrong number of arguments. That would look something like this:
+
 ```swift
 switch symbol {
 case .constant("foo"):
@@ -86,9 +91,11 @@ default:
     return nil // pass to default evaluator
 }
 ```
+
 Note that you can check the arity of the function either using pattern matching (as we did above), or just by checking args.count. These will always match.
 
 As a convenience, if you just need to include some custom constants, you can pass them as a dictionary to the `evaluate()` function:
+
 ```swift
 let expression = try! Expression("foo + bar")
 let result = try! expression.evaluate(["foo": 5, "bar": 6]) // 11
@@ -100,25 +107,31 @@ Symbols
 Expressions are formed from symbols, defined by the `Expression.Symbol` enum type. The default evaluator defines several of these, but you are free to define your own in your custom evaluator function.
 
 The Expression library supports the following symbol types:
+
 ```swift
 .constant(String)
 ```
+
 This is an alphanumeric identifier representing a constant or variable in an expression. Identifiers can be any valid sequence of letters and numbers, beginning with a letter, underscore (_), dollar symbol ($), at sign (@) or pound sign (#).
 
-Like Swift, Expression allows certain unicode chracters in identifier, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for namespacing (as demonstrated in the Layout app).
+Like Swift, Expression allows certain unicode characters in identifier, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for namespacing (as demonstrated in the Layout app).
+
 ```swift
 .infix(String)
 .prefix(String)
 .postfix(String)
 ```
+
 These symbols represent operators. Currently operators must be a single character, but can be almost any symbol that wouldn't conflict with the possible identifier names. You can overload existing infix operators with a post/prefix variant, or vice-versa. Disambiguation depends on the white-space surrounding the operator (which is the same approach used by Swift), although where possible, Expression will attempt to disambiguate from context as well.
 
 Any valid identifier may also be used as a postfix operator, by placing it after an operator or literal value. For example, you could define `m` and `cm` as postfix operators when handling distance logic, or `hours`, `minutes` and `seconds` operators for computing times.
 
-Operator precedence follows standard BODMAS order, with multiplication/division given precedence over addition/subtraction.
+Operator precedence follows standard BODMAS order, with multiplication/division given precedence over addition/subtraction. Prefix operators take precedence over postfix operators, which take precedence over infix ones. There is currently no way to specify precedence for custom operators - they all have equal priority to addition/subtraction.
+
 ```swift
 .function(String, arity: Int)
 ```
+
 Functions can be defined as any valid identifier followed by a comma-delimited sequence of arguments in parentheses. Functions can be overloaded to support different argument counts, but it is up to you to handle argument validation in your evaluator function.
      
      
@@ -134,18 +147,25 @@ If you do not want to invoke the standard library functions, throw an `Error` fo
 Here is current supported list of standard library symbols:
 
 **constants**
+
 ```swift
 pi
 ```
+
 **infix operators**
+
 ```swift
 + - / *
 ```
+
 **prefix operators**
+
 ```swift
 -
 ```
+
 **functions**
+
 ```swift
 sqrt(x)
 floor(x)
@@ -172,16 +192,24 @@ Calculator Example
 Not much to say about this. It's a calculator. You can type expressions into it, and it will evaluate them and produce a result (or an error, if what you typed was invalid).
 
 
+Colors Example
+----------------
+
+The Colors example demonstrates how to use Expression to create a (mostly) CSS-compliant color parser. It takes a string containing a named color constant, hex color or rgb() function call and returns a UIColor object.
+
+Using Expression to parse colors is probably overkill, and it's a is a bit of a hack as it only works because it's possible to encode a color as a 32-bit Integer, which itself can be stored inside the Double returned by the Expression Evaluator. Still, it's a neat trick.
+
+
 Layout Example
 ----------------
 
-This is a bit more interesting. The layout example demonstrates a crude-but-usable layout system, which supports arbitrary expressions for the coordinates of the views.
+This is where things get interesting: The Layout example demonstrates a crude-but-usable layout system, which supports arbitrary expressions for the coordinates of the views.
 
 It's conceptually similar to AutoLayout, but with some important differences:
 
-* The expressions can be as simple or as complex as you like. In AutoLayout, every constraint uses a choice between a few fixed formulae, where only the operands are interchangable.
+* The expressions can be as simple or as complex as you like. In AutoLayout, every constraint uses a choice between a few fixed formulae, where only the operands are interchangeable.
 * Instead of applying an arbitrary number of constraints between properties of views, each view just has four fixed properties that can be calculated however you like.
-* Layout is deterministic. There is no weighting system used for resolving conflicts, and circular references are forbidden. Despite that, weighted relationshipts can be achieved using explicit multipliers.
+* Layout is deterministic. There is no weighting system used for resolving conflicts, and circular references are forbidden. Despite that, weighted relationships can be achieved using explicit multipliers.
 
 Default layout values for the example views have been set in the Storyboard, but you can edit them live in the app by tapping a view and typing in new values.
 
