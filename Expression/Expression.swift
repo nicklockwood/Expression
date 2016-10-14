@@ -35,14 +35,15 @@
 /// Reusing the same Expression instance for multiple evaluations is more efficient
 /// than creating a new one each time you wish to evaluate an expression string.
 public class Expression: CustomStringConvertible {
-    private let root: Subexpression
-    private let evaluator: Evaluator
+    private let expression: String
+    private let evaluator: Evaluator?
+    private var root: Subexpression?
 
     /// Function prototype for evaluating an expression
-    /// Return nil for an unrecognized symbol, or throw an erro if the symbol is recognized
+    /// Return nil for an unrecognized symbol, or throw an error if the symbol is recognized
     /// but there is some other problem (e.g. wrong number of arguments for a function)
     public typealias Evaluator = (_ symbol: Expression.Symbol, _ args: [Double]) throws -> Double?
-    
+
     /// Symbols that make up an expression
     public enum Symbol: CustomStringConvertible, Hashable {
         case constant(String)
@@ -50,7 +51,7 @@ public class Expression: CustomStringConvertible {
         case prefix(String)
         case postfix(String)
         case function(String, arity: Int)
-        
+
         public var name: String {
             switch self {
             case .constant(let string),
@@ -61,7 +62,7 @@ public class Expression: CustomStringConvertible {
                 return string
             }
         }
-        
+
         public var description: String {
             switch self {
             case .constant:
@@ -76,16 +77,16 @@ public class Expression: CustomStringConvertible {
                 return "function `\(name)()`"
             }
         }
-        
+
         public var hashValue: Int {
             return description.hashValue
         }
-        
+
         public static func ==(lhs: Symbol, rhs: Symbol) -> Bool {
             if case .function(_, let lhsarity) = lhs,
                 case .function(_, let rhsarity) = rhs,
                 lhsarity != rhsarity {
-                    return false
+                return false
             }
             return lhs.description == rhs.description
         }
@@ -122,44 +123,46 @@ public class Expression: CustomStringConvertible {
                     arity = _arity
                 }
                 let description = symbol.description
-                return
-                    String(description.characters.first!).uppercased() +
+                return String(description.characters.first!).uppercased() +
                     String(description.characters.dropFirst()) +
                     " expects \(arity) argument\(arity == 1 ? "" : "s")"
             }
         }
     }
-    
-    /// Default constructor - creates an Expression object from a string
-    public init(_ expression: String, evaluator: @escaping Evaluator = { _ in nil }) throws {
-        var characters = expression.characters
-        root = try characters.parseSubexpression()
+
+    /// Default constructor - creates an Expression object from a string but defers parsing
+    public init(_ expression: String, evaluator: Evaluator? = nil) {
+        self.expression = expression
         self.evaluator = evaluator
     }
-    
+
     /// Evaluate the expression using a dictionary of constants
     public func evaluate(_ constants: [String: Double] = [:]) throws -> Double {
-        return try root.evaluate { symbol, args in
+        if root == nil {
+            var characters = expression.characters
+            self.root = try characters.parseSubexpression()
+        }
+        return try root!.evaluate { symbol, args in
             if case Symbol.constant(let name) = symbol, let value = constants[name] {
                 return value
             }
-            return try self.evaluator(symbol, args) ?? defaultEvaluator(symbol, args)
+            return try self.evaluator?(symbol, args) ?? defaultEvaluator(symbol, args)
         }
     }
-    
-    // Default evaluator
-    private func defaultEvaluator(_ symbol: Expression.Symbol, _ args: [Double]) throws -> Double? {
+
+    // Standard library
+    static let defaultSymbols: [Symbol: ([Double]) -> Double] = {
         var symbols: [Symbol: ([Double]) -> Double] = [:]
-                
+
         // constants
         symbols[.constant("pi")] = { _ in .pi }
-            
+
         // infix operators
         symbols[.infix("+")] = { $0[0] + $0[1] }
         symbols[.infix("-")] = { $0[0] - $0[1] }
         symbols[.infix("*")] = { $0[0] * $0[1] }
         symbols[.infix("/")] = { $0[0] / $0[1] }
-        
+
         // prefix operators
         symbols[.prefix("-")] = { -$0[0] }
 
@@ -175,7 +178,7 @@ public class Expression: CustomStringConvertible {
         symbols[.function("tan", arity: 1)] = { tan($0[0]) }
         symbols[.function("atan", arity: 1)] = { atan($0[0]) }
         symbols[.function("abs", arity: 1)] = { abs($0[0]) }
-        
+
         // functions - arity 2
         symbols[.function("pow", arity: 2)] = { pow($0[0], $0[1]) }
         symbols[.function("max", arity: 2)] = { max($0[0], $0[1]) }
@@ -183,20 +186,28 @@ public class Expression: CustomStringConvertible {
         symbols[.function("atan2", arity: 2)] = { atan2($0[0], $0[1]) }
         symbols[.function("mod", arity: 2)] = { fmod($0[0], $0[1]) }
 
-        if let fn = symbols[symbol] {
+        return symbols
+    }()
+
+    // Default evaluator
+    private func defaultEvaluator(_ symbol: Expression.Symbol, _ args: [Double]) throws -> Double? {
+        if let fn = Expression.defaultSymbols[symbol] {
             return fn(args)
-        } else if case .function(let called, _) = symbol {
-            for case .function(let name, let arity) in symbols.keys where name == called {
-                if arity != args.count {
-                    throw Error.arityMismatch(.function(name, arity: arity))
+        } else if case .function(let called, let arity) = symbol {
+            for case .function(let name, let requiredArity) in
+            Expression.defaultSymbols.keys where name == called {
+                if arity != requiredArity {
+                    throw Error.arityMismatch(.function(name, arity: requiredArity))
                 }
             }
         }
         return nil
     }
-    
+
+    /// If expression has not yet been validated, returns the input expression
+    /// Once validated, returns a pretty-printed version of the expression
     public var description: String {
-        return root.description
+        return root?.description ?? expression
     }
 }
 
@@ -206,7 +217,7 @@ fileprivate enum Subexpression: CustomStringConvertible {
     case prefix(String)
     case postfix(String)
     case operand(Expression.Symbol, [Subexpression])
-    
+
     func evaluate(_ evaluator: Expression.Evaluator) throws -> Double {
         switch self {
         case .literal(let value):
@@ -226,8 +237,8 @@ fileprivate enum Subexpression: CustomStringConvertible {
             throw Expression.Error.unexpectedToken(name)
         }
     }
-    
-    public var description: String {
+
+    var description: String {
         switch self {
         case .literal(let string),
              .infix(let string),
@@ -258,7 +269,7 @@ fileprivate extension Character {
 }
 
 fileprivate extension String.CharacterView {
-    
+
     mutating func scanCharacters(_ matching: (Character) -> Bool) -> String? {
         var index = endIndex
         for (i, c) in enumerated() {
@@ -274,7 +285,7 @@ fileprivate extension String.CharacterView {
         }
         return nil
     }
-    
+
     mutating func scanCharacter(_ matching: (Character) -> Bool) -> String? {
         if let c = first, matching(c) {
             self = suffix(from: index(after: startIndex))
@@ -282,11 +293,11 @@ fileprivate extension String.CharacterView {
         }
         return nil
     }
-    
+
     mutating func scanCharacter(_ character: Character) -> Bool {
         return scanCharacter({ $0 == character }) != nil
     }
-    
+
     mutating func skipWhitespace() -> Bool {
         if let _ = scanCharacters({
             switch $0 {
@@ -300,9 +311,9 @@ fileprivate extension String.CharacterView {
         }
         return false
     }
-    
+
     mutating func parseNumericLiteral() -> Subexpression? {
-        
+
         func scanInteger() -> String? {
             return scanCharacters {
                 if case "0" ... "9" = $0 {
@@ -311,7 +322,7 @@ fileprivate extension String.CharacterView {
                 return false
             }
         }
-        
+
         var number = ""
         if let integer = scanInteger() {
             number = integer
@@ -336,7 +347,7 @@ fileprivate extension String.CharacterView {
         }
         return nil
     }
-    
+
     mutating func parseOperator() -> Subexpression? {
         if let op = scanCharacter({
             if "(),/=­-+!*%<>&|^~?".characters.contains($0) {
@@ -367,9 +378,9 @@ fileprivate extension String.CharacterView {
         }
         return nil
     }
-    
+
     mutating func parseIdentifier() -> Subexpression? {
-        
+
         func isHead(_ c: Character) -> Bool {
             switch c.unicodeValue {
             case 0x41 ... 0x5A, // A-Z
@@ -426,7 +437,7 @@ fileprivate extension String.CharacterView {
                 return false
             }
         }
-        
+
         func isTail(_ c: Character) -> Bool {
             switch c.unicodeValue {
             case 0x30 ... 0x39, // 0-9
@@ -439,7 +450,7 @@ fileprivate extension String.CharacterView {
                 return isHead(c)
             }
         }
-        
+
         func scanIdentifier() -> String? {
             if let head = scanCharacter({ isHead($0) || $0 == "@" || $0 == "#" }) {
                 if let tail = scanCharacters({ isTail($0) || $0 == "." }) {
@@ -453,13 +464,13 @@ fileprivate extension String.CharacterView {
             }
             return nil
         }
-        
+
         if let identifier = scanIdentifier() {
             return .operand(.constant(identifier), [])
         }
         return nil
     }
-    
+
     mutating func parseSubexpression() throws -> Subexpression {
         var stack: [Subexpression] = []
         var scopes: [[Subexpression]] = []
@@ -474,7 +485,7 @@ fileprivate extension String.CharacterView {
                 return 0
             }
         }
-        
+
         func collapseStack(from i: Int) throws {
             guard stack.count > 1 else {
                 return
@@ -551,13 +562,13 @@ fileprivate extension String.CharacterView {
                 }
             }
         }
-        
+
         var precededByWhitespace = true
         while let expression =
-                parseNumericLiteral() ??
-                parseOperator() ??
-                parseIdentifier() {
-                    
+            parseNumericLiteral() ??
+            parseOperator() ??
+            parseIdentifier() {
+
             // prepare for next iteration
             let followedByWhitespace = skipWhitespace() || count == 0
 
@@ -602,7 +613,7 @@ fileprivate extension String.CharacterView {
             default:
                 stack.append(expression)
             }
-                    
+
             // next iteration
             precededByWhitespace = followedByWhitespace
         }

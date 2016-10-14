@@ -32,63 +32,163 @@
 import UIKit
 import Expression
 
-fileprivate var layoutKey: UInt8 = 0
-
-class LayoutData: NSObject {
+fileprivate class LayoutData: NSObject {
+    
+    private weak var view: UIView!
+    private var inProgress = Set<String>()
+    
+    func computedValue(forKey key: String) throws -> Double {
+        if inProgress.contains(key) {
+            throw Expression.Error.message("Circular reference: \(key) depends on itself")
+        }
+        defer { inProgress.remove(key) }
+        inProgress.insert(key)
+        
+        if let expression = props[key] {
+            return try expression.evaluate()
+        }
+        switch key {
+        case "right":
+            return try computedValue(forKey: "left") + computedValue(forKey: "width")
+        case "bottom":
+            return try computedValue(forKey: "top") + computedValue(forKey: "height")
+        default:
+            throw Expression.Error.undefinedSymbol(.constant(key))
+        }
+    }
+    
+    private func common(_ symbol: Expression.Symbol, _ args: [Double]) throws -> Double? {
+        switch symbol {
+        case .constant("auto"):
+            throw Expression.Error.message("`auto` can only be used for width or height")
+        case .constant(let name):
+            let parts = name.components(separatedBy: ".")
+            if parts.count == 2 {
+                if let sublayout = view.window?.subview(forKey: parts[0])?.layout {
+                    return try sublayout.computedValue(forKey: parts[1])
+                }
+                throw Expression.Error.message("No view found for key `\(parts[0])`")
+            }
+            return try computedValue(forKey: parts[0])
+        default:
+            return nil
+        }
+    }
+    
     var key: String?
     var left: String? {
-        didSet { props.removeAll() }
+        didSet {
+            props["left"] = Expression(left ?? "0") { [unowned self] symbol, args in
+                switch symbol {
+                case .postfix("%"):
+                    return self.view.superview.map { Double($0.frame.width) / 100 * args[0] }
+                default:
+                    return try self.common(symbol, args)
+                }
+            }
+        }
     }
     var top: String? {
-        didSet { props.removeAll() }
+        didSet {
+            props["top"] = Expression(top ?? "0") { [unowned self] symbol, args in
+                switch symbol {
+                case .postfix("%"):
+                    return self.view.superview.map { Double($0.frame.height) / 100 * args[0] }
+                default:
+                    return try self.common(symbol, args)
+                }
+            }
+        }
     }
     var width: String? {
-        didSet { props.removeAll() }
+        didSet {
+            props["width"] = Expression(width ?? "100%") { [unowned self] symbol, args in
+                switch symbol {
+                case .postfix("%"):
+                    return self.view.superview.map { Double($0.frame.width) / 100 * args[0] }
+                case .constant("auto"):
+                    if let superview = self.view.superview {
+                        return Double(self.view.systemLayoutSizeFitting(superview.frame.size).width)
+                    }
+                    return 0
+                default:
+                    return try self.common(symbol, args)
+                }
+            }
+        }
     }
     var height: String? {
-        didSet { props.removeAll() }
+        didSet {
+            props["height"] = Expression(height ?? "100%") { [unowned self] symbol, args in
+                switch symbol {
+                case .postfix("%"):
+                    return self.view.superview.map { Double($0.frame.height) / 100 * args[0] }
+                case .constant("auto"):
+                    if let superview = self.view.superview {
+                        return Double(self.view.systemLayoutSizeFitting(superview.frame.size).height)
+                    }
+                    return 0
+                default:
+                    return try self.common(symbol, args)
+                }
+            }
+        }
     }
-    var props: [String: Expression] = [:]
+    
+    private var props: [String: Expression] = [:]
+    
+    init(_ view: UIView) {
+        self.view = view
+        left = nil
+        top = nil
+        width = nil
+        height = nil
+    }
 }
 
 @IBDesignable
-extension UIView {
+public extension UIView {
 
-    var layout: LayoutData {
-        if let layout = objc_getAssociatedObject(self, &layoutKey) as? LayoutData {
+    fileprivate var layout: LayoutData? {
+        return layout(create: false)
+    }
+    
+    private func layout(create: Bool) -> LayoutData! {
+        let layout = layer.value(forKey: "layout") as? LayoutData
+        if layout == nil && create {
+            let layout = LayoutData(self)
+            layer.setValue(layout, forKey: "layout")
             return layout
         }
-        let layout = LayoutData()
-        objc_setAssociatedObject(self, &layoutKey, layout, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         return layout
     }
     
     @IBInspectable var key: String? {
-        get { return layout.key }
-        set { layout.key = newValue }
+        get { return layout?.key }
+        set { layout(create: true).key = newValue }
     }
     
     @IBInspectable var left: String? {
-        get { return layout.left }
-        set { layout.left = newValue }
+        get { return layout?.left }
+        set { layout(create: true).left = newValue }
     }
     
     @IBInspectable var top: String? {
-        get { return layout.top }
-        set { layout.top = newValue }
+        get { return layout?.top }
+        set { layout(create: true).top = newValue }
     }
     
     @IBInspectable var width: String? {
-        get { return layout.width }
-        set { layout.width = newValue }
+        get { return layout?.width }
+        set { layout(create: true).width = newValue }
     }
     
     @IBInspectable var height: String? {
-        get { return layout.height }
-        set { layout.height = newValue }
+        get { return layout?.height }
+        set { layout(create: true).height = newValue }
     }
     
-    func subview(forKey key: String) -> UIView? {
+    fileprivate func subview(forKey key: String) -> UIView? {
         if self.key == key {
             return self
         }
@@ -99,118 +199,15 @@ extension UIView {
         }
         return nil
     }
-    
-    func computedValue(forKey key: String) throws -> Double? {
-        if let expression = layout.props[key] {
-            return try expression.evaluate()
-        }
-        return nil
-    }
 
-    func updateLayout() throws {
-        if layout.props.isEmpty {
-            var inProgress = Set<String>()
-            
-            func beginEvaluating(_ key: String) throws {
-                if inProgress.contains(key) {
-                    throw Expression.Error.message("Circular reference: \(key) depends on itself")
-                }
-                inProgress.insert(key)
-            }
-            
-            let common: Expression.Evaluator = { [unowned self] symbol, args in
-                switch symbol {
-                case .constant("auto"):
-                    throw Expression.Error.message("`auto` can only be used for width or height")
-                case .constant(let name):
-                    let parts = name.components(separatedBy: ".")
-                    if parts.count == 2 {
-                        if let view = self.window?.subview(forKey: parts[0]) {
-                            return try view.computedValue(forKey: parts[1])
-                        }
-                        throw Expression.Error.message("No view found for key `\(parts[0])`")
-                    }
-                    return try self.computedValue(forKey: parts[0])
-                default:
-                    return nil
-                }
-            }
-            
-            layout.props["left"] = try Expression(left ?? "0") { [unowned self] symbol, args in
-                try beginEvaluating("left")
-                defer { inProgress.remove("left") }
-                
-                switch symbol {
-                case .postfix("%"):
-                    return self.superview.map { Double($0.frame.width) / 100 * args[0] }
-                default:
-                    return try common(symbol, args)
-                }
-            }
-            layout.props["top"] = try Expression(top ?? "0") { [unowned self] symbol, args in
-                try beginEvaluating("top")
-                defer { inProgress.remove("top") }
-                
-                switch symbol {
-                case .postfix("%"):
-                    return self.superview.map { Double($0.frame.height) / 100 * args[0] }
-                default:
-                    return try common(symbol, args)
-                }
-            }
-            layout.props["width"] = try Expression(width ?? "100%") { [unowned self] symbol, args in
-                try beginEvaluating("width")
-                defer { inProgress.remove("width") }
-                
-                switch symbol {
-                case .postfix("%"):
-                    return self.superview.map { Double($0.frame.width) / 100 * args[0] }
-                case .constant("auto"):
-                    let frame = self.frame
-                    self.frame = self.superview?.bounds ?? frame
-                    self.sizeToFit()
-                    let width = self.frame.size.width
-                    self.frame = frame
-                    return Double(width)
-                default:
-                    return try common(symbol, args)
-                }
-            }
-            layout.props["height"] = try Expression(height ?? "100%") { [unowned self] symbol, args in
-                try beginEvaluating("height")
-                defer { inProgress.remove("height") }
-                
-                switch symbol {
-                case .postfix("%"):
-                    return self.superview.map { Double($0.frame.height) / 100 * args[0] }
-                case .constant("auto"):
-                    let frame = self.frame
-                    self.frame.size.width = CGFloat(try self.layout.props["width"]!.evaluate())
-                    self.sizeToFit()
-                    let height = self.frame.size.height
-                    self.frame = frame
-                    return Double(height)
-                default:
-                    return try common(symbol, args)
-                }
-            }
-            layout.props["right"] = try Expression("left + width") { symbol, args in
-                try beginEvaluating("right")
-                defer { inProgress.remove("right") }
-                return try common(symbol, args)
-            }
-            layout.props["bottom"] = try Expression("top + height") { symbol, args in
-                try beginEvaluating("bottom")
-                defer { inProgress.remove("bottom") }
-                return try common(symbol, args)
-            }
+    public func updateLayout() throws {
+        guard let layout = self.layout(create: true) else {
+            return
         }
-
-        // calculate frame
-        frame = CGRect(x: try layout.props["left"]!.evaluate(),
-                       y: try layout.props["top"]!.evaluate(),
-                       width: try layout.props["width"]!.evaluate(),
-                       height: try layout.props["height"]!.evaluate())
+        frame = CGRect(x: try layout.computedValue(forKey: "left"),
+                       y: try layout.computedValue(forKey: "top"),
+                       width: try layout.computedValue(forKey: "width"),
+                       height: try layout.computedValue(forKey: "height"))
         
         for view in subviews {
             try view.updateLayout()

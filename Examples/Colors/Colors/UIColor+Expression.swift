@@ -9,9 +9,9 @@
 import UIKit
 import Expression
 
-extension UIColor {
+public extension UIColor {
     
-    convenience init(rgba: UInt32) {
+    public convenience init(rgba: UInt32) {
         let red = CGFloat((rgba & 0xFF000000) >> 24) / 255
         let green = CGFloat((rgba & 0x00FF0000) >> 16) / 255
         let blue = CGFloat((rgba & 0x0000FF00) >> 8) / 255
@@ -19,8 +19,8 @@ extension UIColor {
         self.init(red: red, green: green, blue: blue, alpha: alpha)
     }
     
-    convenience init(expression: String) throws {
-        let expression = try Expression(expression) { symbol, args in
+    public convenience init(expression: String) throws {
+        let expression = Expression(expression) { symbol, args in
             switch symbol {
             case .constant(var string):
                 if string.hasPrefix("#") {

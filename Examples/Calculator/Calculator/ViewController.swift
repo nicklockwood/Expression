@@ -57,8 +57,7 @@ class ViewController: UIViewController, UITextFieldDelegate {
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         if  let text = textField.text, text != "" {
             do {
-                let expression = try Expression(text)
-                let result = try expression.evaluate()
+                let result = try Expression(text).evaluate()
                 addOutput(String(format: "= %g", result), color: .black)
             } catch {
                 addOutput("\(error)", color: .red)

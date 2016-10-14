@@ -48,35 +48,35 @@ The default evaluator implements standard math functions and operators, so a cus
 ```swift
 // Basic usage
 
-let expression = try! Expression("5 + 6")
+let expression = Expression("5 + 6")
 let result = try! expression.evaluate() // 11
 
 // Advanced usage
 
+let expression = Expression("foo + bar(5)") { symbol, args in
+	switch symbol {
+	case .constant("foo"):
+		return 5
+	case .function("bar", arity: 1):
+		return args[0] + 1
+	default:
+		return nil // pass to default evaluator
+	}
+}
 do {
-    let expression = try Expression("foo + bar(5)") { symbol, args in
-        switch symbol {
-        case .constant("foo"):
-            return 5
-        case .function("bar", arity: 1):
-            return args[0] + 1
-        default:
-            return nil // pass to default evaluator
-        }
-    }
     let result = try expression.evaluate() // 11
 } catch {
     print("Error: \(error)")
 }
 ```
 
-Note that both the `Expression()` initializer and the `evaluate()` function can both throw an error. An error will be thrown during initialization if the expression is malformed, and during evaluation if it references an unknown symbol.
+Note that the `evaluate()` function can throw an error. An error will be thrown during evaluation if the expression is malformed, or if it references an unknown symbol.
 
 For a simple hard-coded expression like the first example, there is no possibility of an error being thrown, but if you are accepting user input as your expression you must always ensure that you catch and handle errors. The error messages produced by Expression are detailed and human-readable (but not localized, unfortunately).
 
 Your custom `Evaluator` function can return either a `Double` or `nil` or it can throw an error. It is generally recommended that if you do not recognize a symbol, you should return nil so that it can be handled by the default evaluator.
 
-In some case you may be certain that a symbol is incorrect,, however, and this is an opportunity to provide a more useful error message. In the example above, the evaluator matches the function `bar` with an arity of 1 (meaning that it takes one argument). This will only match calls to bar that take a single argument, and ignore calls with zero or multiple arguments.
+In some case you may be certain that a symbol is incorrect, however, and this is an opportunity to provide a more useful error message. In the example above, the evaluator matches the function `bar` with an arity of 1 (meaning that it takes one argument). This will only match calls to bar that take a single argument, and ignore calls with zero or multiple arguments.
 
 Since `bar` is a custom function, we know that it should only take one argument, so it is probably more helpful to throw an error if it is called with the wrong number of arguments. That would look something like this:
 
@@ -238,6 +238,12 @@ What's next?
      
 Release notes
 ----------------
+
+Version ?
+
+- `Expression.init` no longer throws
+- Validation of the expression is deferred until first evaluation
+- Improved evaluation performance for built-in symbols
 
 Version 0.1
 
