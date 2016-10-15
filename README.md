@@ -14,9 +14,10 @@ Expression is a library for Mac and iOS for evaluating numeric expressions at ru
 Why would I want to do that?
 -----------------------------
 
-There are many situations where it is useful to be able to evaluate a simple expression at runtime. I've included a couple of example apps with the library:
+There are many situations where it is useful to be able to evaluate a simple expression at runtime. I've included a few of example apps with the library:
 
 * A scientific calculator
+* A CSS color string parser
 * A basic layout engine, similar to AutoLayout
 
 but there are other possible applications, e.g.
@@ -27,7 +28,7 @@ but there are other possible applications, e.g.
 
 (If you find any other uses, let me know and I'll add them)
 
-Normally these kind of calculations would involve embedding a heavyweight interpreted language such as JavaScript or Lua into your app. Expression avoids that overhead, and is also more secure, as it reduces the risk of arbitrary code injection, or crashes due to infinite loops, etc.
+Normally these kind of calculations would involve embedding a heavyweight interpreted language such as JavaScript or Lua into your app. Expression avoids that overhead, and is also more secure as it reduces the risk of arbitrary code injection or crashes due to infinite loops, buffer overflows, etc.
 
 Expression is lightweight, well-tested, and written entirely in Swift 3.
 
@@ -35,55 +36,97 @@ Expression is lightweight, well-tested, and written entirely in Swift 3.
 How do I install it?
 ---------------------
 
-It's just a single class, so you can simply drag the `Expression.swift` file into your project to use it. There's also a framework for Mac and iOS if you like to make things complicated.
+It's just a single class, so you can simply drag the `Expression.swift` file into your project to use it. There's also a framework for Mac and iOS, or you can use CocoaPods or Carthage.
 
 
 How do I use it?
 ----------------
 
-You create an `Expression` instance by passing a string containing your expression, and (optionally) an `Evaluator` function to implement custom behavior. You can then calculate the result by calling the `Expression.evaluate()` function.
+You create an `Expression` instance by passing a string containing your expression, and (optionally) any or all of the following:
 
-The default evaluator implements standard math functions and operators, so a custom one is only needed if your app supports additional functions or variables:
+* A dictionary of named constants - this is the simplest way to specify predefined constants
+* A dictionary of symbols and callback functions - this is the most efficient way to provide custom functions or operators
+* A custom Evaluator function - this is the most flexible solution, and can support dynamic variable or function names
+
+You can then calculate the result by calling the `Expression.evaluate()` function.
+
+By default, Expression already implements standard math functions and operators, so you only need to provide a custom symbol dictionary or evaluator function if your app needs to support additional functions or variables.
+
+If you do need to support custom symbols, you should always choose the simplest implementation that meets your requirements, as it will be the fastest to calculate and provide the most detailed error feedback. Remember you can mix and match solutions, so if you have some custom constants and some custom functions or operators, you can provide separate constants and symbols dictionaries.
+
+Here are some examples:
 
 ```swift
-// Basic usage
+// Basic usage:
+// Only using built-in math functions
 
 let expression = Expression("5 + 6")
 let result = try! expression.evaluate() // 11
 
-// Advanced usage
+// Intermediate usage:
+// Custom constants and functions
 
-let expression = Expression("foo + bar(5)") { symbol, args in
-	switch symbol {
-	case .constant("foo"):
-		return 5
-	case .function("bar", arity: 1):
-		return args[0] + 1
-	default:
-		return nil // pass to default evaluator
+let expression = Expression("foo + bar(5) + rnd()", constants: [
+	"foo": 5,
+], symbols: [
+	.function("bar", arity: 1): { args in args[0] + 1 },
+	.function("rnd", arity: 0): { _ in arc4random() },
+])
+let result = try! expression.evaluate()
+
+// Advanced usage
+// Using custom Evaluator to decode hex color literals
+
+let hexColor = "#FF0000FF" // rrggbbaa
+let expression = Expression(hexColor) { symbol, args in
+	if case .constant(let name), name.hasPrefix("#") { {
+		let hex = String(name.characters.dropFirst())
+		return Double("0x" + hex)
 	}
+	return nil // pass to default evaluator
 }
+let color: UIColor = {
+	let rgba = UInt32(try! expression.evaluate())
+	let red = CGFloat((rgba & 0xFF000000) >> 24) / 255
+	let green = CGFloat((rgba & 0x00FF0000) >> 16) / 255
+	let blue = CGFloat((rgba & 0x0000FF00) >> 8) / 255
+	let alpha = CGFloat((rgba & 0x000000FF) >> 0) / 255
+	return UIColor(red: red, green: green, blue: blue, alpha: alpha)
+}()
+```
+
+Note that the `evaluate()` function can throw an error. An error will be thrown during evaluation if the expression is malformed, or if it references an unknown symbol.
+
+For a simple hard-coded expression like the first example, there is no possibility of an error being thrown, but if you are accepting user input as your expression you must always ensure that you catch and handle errors. The error messages produced by Expression are detailed and human-readable (but not localized, currently).
+
+```swift
 do {
-    let result = try expression.evaluate() // 11
+    let result = try expression.evaluate()
+    print("Result: \(result)")
 } catch {
     print("Error: \(error)")
 }
 ```
 
-Note that the `evaluate()` function can throw an error. An error will be thrown during evaluation if the expression is malformed, or if it references an unknown symbol.
+When using the `constants` and/or `symbols` dictionaries, error messaging is handled completely automatically by the Expression library. If you need to support dynamic symbol decoding (such as in the hex color example earlier), you will need to use a custom `Evaluator` function, which is a little bit more complex.
 
-For a simple hard-coded expression like the first example, there is no possibility of an error being thrown, but if you are accepting user input as your expression you must always ensure that you catch and handle errors. The error messages produced by Expression are detailed and human-readable (but not localized, unfortunately).
+Your custom `Evaluator` function can return either a `Double` or `nil` or it can throw an error. If you do not recognize a symbol, you should return nil so that it can be handled by the default evaluator.
 
-Your custom `Evaluator` function can return either a `Double` or `nil` or it can throw an error. It is generally recommended that if you do not recognize a symbol, you should return nil so that it can be handled by the default evaluator.
+In some case you may be certain that a symbol is incorrect, however, and this is an opportunity to provide a more useful error message. The folloing example matches a function `bar` with an arity of 1 (meaning that it takes one argument). This will only match calls to bar that take a single argument, and ignore calls with zero or multiple arguments.
 
-In some case you may be certain that a symbol is incorrect, however, and this is an opportunity to provide a more useful error message. In the example above, the evaluator matches the function `bar` with an arity of 1 (meaning that it takes one argument). This will only match calls to bar that take a single argument, and ignore calls with zero or multiple arguments.
+```swift
+switch symbol {
+case .function("bar", arity: 1):
+    return args[0] + 1
+default:
+    return nil // pass to default evaluator
+}
+```
 
 Since `bar` is a custom function, we know that it should only take one argument, so it is probably more helpful to throw an error if it is called with the wrong number of arguments. That would look something like this:
 
 ```swift
 switch symbol {
-case .constant("foo"):
-    return 5
 case .function("bar", let arity):
     guard arity == 1 else { throw Expression.Error.arityMismatch(symbol) }
     return args[0] + 1
@@ -94,12 +137,6 @@ default:
 
 Note that you can check the arity of the function either using pattern matching (as we did above), or just by checking args.count. These will always match.
 
-As a convenience, if you just need to include some custom constants, you can pass them as a dictionary to the `evaluate()` function:
-
-```swift
-let expression = try! Expression("foo + bar")
-let result = try! expression.evaluate(["foo": 5, "bar": 6]) // 11
-```
     
 Symbols
 --------------
@@ -114,7 +151,7 @@ The Expression library supports the following symbol types:
 
 This is an alphanumeric identifier representing a constant or variable in an expression. Identifiers can be any valid sequence of letters and numbers, beginning with a letter, underscore (_), dollar symbol ($), at sign (@) or pound sign (#).
 
-Like Swift, Expression allows certain unicode characters in identifier, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for namespacing (as demonstrated in the Layout app).
+Like Swift, Expression allows certain unicode characters in identifier, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for namespacing (as demonstrated in the Layout example app).
 
 ```swift
 .infix(String)
@@ -135,14 +172,33 @@ Operator precedence follows standard BODMAS order, with multiplication/division 
 Functions can be defined as any valid identifier followed by a comma-delimited sequence of arguments in parentheses. Functions can be overloaded to support different argument counts, but it is up to you to handle argument validation in your evaluator function.
      
      
-Default Evaluator
+Standard library
 -------------------
 
-The default evaluator implements a sort of "standard library" for Expressions. These consist of basic math functions and constants that arg egenrally useful, independent of a particular application.
+Expression implements a sort of "standard library" in the form of a default symbol dictionary. These consist of basic math functions and constants that are generally useful, independent of a particular application.
 
-If you use a custom evaluator function, you can override the default evaluator functions and operators by matching them and handling them in your own `switch` statement. You can fall back to the default evaluator's implementation by returning `nil` for unrecognized symbols.
+If you use a custom symbol dictionary, you can override any default symbol, or overload default functions with a different number of arguments (arity). Any sybols that you do not explicityl override will still be available. To individually disable symbols from the standard library, you can override them and throw an exception:
 
-If you do not want to invoke the standard library functions, throw an `Error` for unrecognized symbols instead of returning `nil`.
+```swift
+let expression = Expression("pow(2,3)", symbols: [
+	.function("pow", arity: 2): { _ in throw Expression.Error.undefinedSymbol(.function("pow", arity: 2)) }
+])
+try expression.evaluate() // this will thow an error because pow() has been undefined
+```
+
+If you have provided a custom `Evaluator` function, you can fall back to the standard library functions and operators by returning `nil` for unrecognized symbols. If you do not want to provide access to the standard library functions in your expression, throw an `Error` for unrecognized symbols instead of returning `nil`.
+
+```swift
+let expression = Expression("3 + 4") { symbol, args in
+	switch symbol {
+	case .function("foo", arity: 1):
+		return args[0] + 1
+	default:
+		throw Expression.Error.undefinedSymbol(symbol)
+	}
+}
+try expression.evaluate() // this will thow an error because no standard library operators are supported, including +
+```
 
 Here is current supported list of standard library symbols:
 
@@ -197,7 +253,7 @@ Colors Example
 
 The Colors example demonstrates how to use Expression to create a (mostly) CSS-compliant color parser. It takes a string containing a named color constant, hex color or rgb() function call and returns a UIColor object.
 
-Using Expression to parse colors is probably overkill, and it's a is a bit of a hack as it only works because it's possible to encode a color as a 32-bit Integer, which itself can be stored inside the Double returned by the Expression Evaluator. Still, it's a neat trick.
+Using Expression to parse colors is probably overkill, and it's a bit of a hack, as it only works because it's possible to encode a color as a 32-bit Integer, which itself can be stored inside the Double returned by the Expression Evaluator. Still, it's a neat trick.
 
 
 Layout Example
@@ -225,24 +281,17 @@ Here are some things to note:
 * Remember you can use functions like `min()` and `max()` to ensure that relative values don't go above or below a fixed threshold.
 
 This is just a toy example, but I think it has some interesting potential. Have fun with it, and maybe even try using `View+Layout.swift` in your own projects. I'll be exploring a more sophisticated implementation of this idea in the future.
-     
-
-What's next?
---------------
-
-* Support for more operator symbols
-* More default evaluator functions
-* Less boilerplate-y handling of arity errors
-* Performance tuning, etc.
 
      
 Release notes
 ----------------
 
-Version ?
+Version 0.2
 
-- `Expression.init` no longer throws
-- Validation of the expression is deferred until first evaluation
+- `Expression.init` no longer throws. The expression will still be compiled on init, but errors won't be thrown until first evaluation
+- Added optional `constants` and `symbols` arguments to `Expression.init` for simpler setup of custom functions and operators
+- Removed the `constants` param from the `evaluate()` function - this can now be provided in `Expression.init`
+- Added automatic error reporting for custom functions called with the wrong arity
 - Improved evaluation performance for built-in symbols
 
 Version 0.1

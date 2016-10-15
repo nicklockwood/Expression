@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.1
+//  Version 0.2
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -36,7 +36,7 @@
 /// than creating a new one each time you wish to evaluate an expression string.
 public class Expression: CustomStringConvertible {
     private let expression: String
-    private let evaluator: Evaluator?
+    private let evaluator: Evaluator
     private var root: Subexpression?
 
     /// Function prototype for evaluating an expression
@@ -46,42 +46,59 @@ public class Expression: CustomStringConvertible {
 
     /// Symbols that make up an expression
     public enum Symbol: CustomStringConvertible, Hashable {
+
+        /// A named constant
         case constant(String)
+
+        /// An infix operator
         case infix(String)
+
+        /// A prefix operator
         case prefix(String)
+
+        /// A postfix operator
         case postfix(String)
+
+        /// A function accepting a number of arguments specified by `arity`
         case function(String, arity: Int)
 
+        /// Evaluator for individual symbols
+        public typealias Evaluator = (_ args: [Double]) throws -> Double
+
+        /// The human-readable name of the symbol
         public var name: String {
             switch self {
-            case .constant(let string),
-                 .infix(let string),
-                 .prefix(let string),
-                 .postfix(let string),
-                 .function(let string, _):
-                return string
+            case .constant(let name),
+                 .infix(let name),
+                 .prefix(let name),
+                 .postfix(let name),
+                 .function(let name, _):
+                return name
             }
         }
 
+        /// The human-readable description of the symbol
         public var description: String {
             switch self {
-            case .constant:
+            case .constant(let name):
                 return "constant `\(name)`"
-            case .infix:
+            case .infix(let name):
                 return "infix operator `\(name)`"
-            case .prefix:
+            case .prefix(let name):
                 return "prefix operator `\(name)`"
-            case .postfix:
+            case .postfix(let name):
                 return "postfix operator `\(name)`"
-            case .function:
+            case .function(let name, _):
                 return "function `\(name)()`"
             }
         }
 
+        /// Required by the hashable protocol
         public var hashValue: Int {
-            return description.hashValue
+            return name.hashValue
         }
 
+        /// Required by the equatable protocol
         public static func ==(lhs: Symbol, rhs: Symbol) -> Bool {
             if case .function(_, let lhsarity) = lhs,
                 case .function(_, let rhsarity) = rhs,
@@ -94,12 +111,23 @@ public class Expression: CustomStringConvertible {
 
     /// Runtime error when parsing or evaluating an expression
     public enum Error: Swift.Error, CustomStringConvertible {
+
+        /// An application-specific error
         case message(String)
+
+        /// The parser encountered a sequence of characters it didn't recognize
         case unexpectedToken(String)
+
+        /// The parser expected to find a delimiter (e.g. closing paren) but didn't
         case missingDelimiter(String)
+
+        /// The specified constant, operator or function was not recognized
         case undefinedSymbol(Expression.Symbol)
+
+        /// A function was called with the wrong number of arguments (arity)
         case arityMismatch(Expression.Symbol)
 
+        /// The human-readable description of the error
         public var description: String {
             switch self {
             case .message(let message):
@@ -119,8 +147,8 @@ public class Expression: CustomStringConvertible {
                     arity = 2
                 case .postfix, .prefix:
                     arity = 1
-                case .function(_, let _arity):
-                    arity = _arity
+                case .function(_, let requiredArity):
+                    arity = requiredArity
                 }
                 let description = symbol.description
                 return String(description.characters.first!).uppercased() +
@@ -130,28 +158,72 @@ public class Expression: CustomStringConvertible {
         }
     }
 
-    /// Default constructor - creates an Expression object from a string but defers parsing
-    public init(_ expression: String, evaluator: Evaluator? = nil) {
-        self.expression = expression
-        self.evaluator = evaluator
-    }
+    /// Creates an Expression object from a string
+    /// Optionally accepts some or all of:
+    /// - A dictionary of constants for simple static values
+    /// - A dictionary of symbols, for implementing custom functions and operators
+    /// - A custom evaluator function for more complex symbol processing
+    public init(_ expression: String,
+        constants: [String: Double]? = nil,
+        symbols: [Symbol: Symbol.Evaluator]? = nil,
+        evaluator: Evaluator? = nil) {
 
-    /// Evaluate the expression using a dictionary of constants
-    public func evaluate(_ constants: [String: Double] = [:]) throws -> Double {
-        if root == nil {
-            var characters = expression.characters
-            self.root = try characters.parseSubexpression()
-        }
-        return try root!.evaluate { symbol, args in
-            if case Symbol.constant(let name) = symbol, let value = constants[name] {
+        // Parse expression
+        var characters = expression.characters
+        root = try? characters.parseSubexpression()
+        self.expression = root?.description ?? expression
+
+        // Build evaluator
+        self.evaluator = { symbol, args in
+            // Try constants
+            if let constants = constants,
+                case Symbol.constant(let name) = symbol,
+                let value = constants[name] {
                 return value
             }
-            return try self.evaluator?(symbol, args) ?? defaultEvaluator(symbol, args)
+            // Try symbols
+            if let symbols = symbols, let fn = symbols[symbol] {
+                return try fn(args)
+            }
+            // Try custom evaluator
+            if let value = try evaluator?(symbol, args) {
+                return value
+            }
+            // Try default symbols
+            if let fn = Expression.defaultSymbols[symbol] {
+                return try fn(args)
+            }
+            // Check for arity mismatch
+            if case .function(let called, let arity) = symbol {
+                var keys = Array(Expression.defaultSymbols.keys)
+                if symbols != nil {
+                    keys += Array(symbols!.keys)
+                }
+                var expectedArity: Int?
+                for case .function(let name, let requiredArity) in keys
+                    where name == called && arity != requiredArity {
+                    expectedArity = requiredArity
+                }
+                if let expectedArity = expectedArity {
+                    throw Error.arityMismatch(.function(called, arity: expectedArity))
+                }
+            }
+            return nil
         }
     }
 
-    // Standard library
-    static let defaultSymbols: [Symbol: ([Double]) -> Double] = {
+    /// Evaluate the expression
+    public func evaluate() throws -> Double {
+        guard let root = root else {
+            var characters = expression.characters
+            _ = try characters.parseSubexpression() // Must fail or root would already be set
+            preconditionFailure()
+        }
+        return try root.evaluate(evaluator)
+    }
+
+    // Expression's "standard library"
+    private static let defaultSymbols: [Symbol: Symbol.Evaluator] = {
         var symbols: [Symbol: ([Double]) -> Double] = [:]
 
         // constants
@@ -188,21 +260,6 @@ public class Expression: CustomStringConvertible {
 
         return symbols
     }()
-
-    // Default evaluator
-    private func defaultEvaluator(_ symbol: Expression.Symbol, _ args: [Double]) throws -> Double? {
-        if let fn = Expression.defaultSymbols[symbol] {
-            return fn(args)
-        } else if case .function(let called, let arity) = symbol {
-            for case .function(let name, let requiredArity) in
-            Expression.defaultSymbols.keys where name == called {
-                if arity != requiredArity {
-                    throw Error.arityMismatch(.function(name, arity: requiredArity))
-                }
-            }
-        }
-        return nil
-    }
 
     /// If expression has not yet been validated, returns the input expression
     /// Once validated, returns a pretty-printed version of the expression

@@ -1,6 +1,6 @@
 Expression
 
-Version 0.1, September 23rd, 2016
+Version 0.2, October 15th, 2016
 
 Copyright (c) 2016 Nick Lockwood
 
