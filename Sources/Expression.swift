@@ -34,6 +34,11 @@
 /// Immutable wrapper for a parsed expression
 /// Reusing the same Expression instance for multiple evaluations is more efficient
 /// than creating a new one each time you wish to evaluate an expression string.
+
+#if SWIFT_PACKAGE
+import Foundation
+#endif
+
 public class Expression: CustomStringConvertible {
     private let expression: String
     private let evaluator: Evaluator
