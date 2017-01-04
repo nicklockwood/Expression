@@ -281,19 +281,3 @@ Here are some things to note:
 * Remember you can use functions like `min()` and `max()` to ensure that relative values don't go above or below a fixed threshold.
 
 This is just a toy example, but I think it has some interesting potential. Have fun with it, and maybe even try using `View+Layout.swift` in your own projects. I'll be exploring a more sophisticated implementation of this idea in the future.
-
-     
-Release notes
-----------------
-
-Version 0.2
-
-- `Expression.init` no longer throws. The expression will still be compiled on init, but errors won't be thrown until first evaluation
-- Added optional `constants` and `symbols` arguments to `Expression.init` for simpler setup of custom functions and operators
-- Removed the `constants` param from the `evaluate()` function - this can now be provided in `Expression.init`
-- Added automatic error reporting for custom functions called with the wrong arity
-- Improved evaluation performance for built-in symbols
-
-Version 0.1
-
-- First release

@@ -39,7 +39,7 @@ class ViewController: UIViewController, UITextFieldDelegate {
     @IBOutlet private var heightField: UITextField!
     @IBOutlet private var errorLabel: UILabel!
     @IBOutlet private var layoutView: UIView!
-    
+
     var selectedView: UIView? {
         didSet {
             oldValue?.layer.borderWidth = 0
@@ -55,19 +55,19 @@ class ViewController: UIViewController, UITextFieldDelegate {
             heightField.text = selectedView?.height
         }
     }
-    
+
     @IBAction func didTap(sender: UITapGestureRecognizer) {
         let point = sender.location(in: layoutView)
         if let view = layoutView.hitTest(point, with: nil), view != layoutView {
             selectedView = view
         }
     }
-    
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updateLayout()
     }
-    
+
     func updateLayout() {
         do {
             for view in layoutView.subviews {
@@ -78,13 +78,13 @@ class ViewController: UIViewController, UITextFieldDelegate {
             errorLabel.text = "\(error)"
         }
     }
-    
+
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         textField.resignFirstResponder()
         return true
     }
-    
-    func textFieldDidEndEditing(_ textField: UITextField) {
+
+    func textFieldDidEndEditing(_: UITextField) {
         selectedView?.left = leftField.text
         selectedView?.top = topField.text
         selectedView?.width = widthField.text
@@ -92,4 +92,3 @@ class ViewController: UIViewController, UITextFieldDelegate {
         updateLayout()
     }
 }
-

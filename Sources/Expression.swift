@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.2
+//  Version 0.3
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -31,14 +31,11 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //
 
+import Foundation
+
 /// Immutable wrapper for a parsed expression
 /// Reusing the same Expression instance for multiple evaluations is more efficient
 /// than creating a new one each time you wish to evaluate an expression string.
-
-#if SWIFT_PACKAGE
-import Foundation
-#endif
-
 public class Expression: CustomStringConvertible {
     private let expression: String
     private let evaluator: Evaluator
@@ -169,9 +166,9 @@ public class Expression: CustomStringConvertible {
     /// - A dictionary of symbols, for implementing custom functions and operators
     /// - A custom evaluator function for more complex symbol processing
     public init(_ expression: String,
-        constants: [String: Double]? = nil,
-        symbols: [Symbol: Symbol.Evaluator]? = nil,
-        evaluator: Evaluator? = nil) {
+                constants: [String: Double]? = nil,
+                symbols: [Symbol: Symbol.Evaluator]? = nil,
+                evaluator: Evaluator? = nil) {
 
         // Parse expression
         var characters = expression.characters
@@ -560,6 +557,9 @@ fileprivate extension String.CharacterView {
                 try collapseStack(from: i)
                 return
             case .prefix(let name):
+                guard stack.count > i + 1 else {
+                    throw Expression.Error.unexpectedToken(name)
+                }
                 switch stack[i + 1] {
                 case .literal, .operand:
                     // prefix operator
@@ -572,6 +572,16 @@ fileprivate extension String.CharacterView {
                     return
                 }
             case .literal, .operand:
+                guard stack.count > i + 1 else {
+                    switch lhs {
+                    case .literal(let name):
+                        throw Expression.Error.unexpectedToken(name)
+                    case .operand(let symbol, _):
+                        throw Expression.Error.unexpectedToken(symbol.name)
+                    default:
+                        throw Expression.Error.message("Unknown error")
+                    }
+                }
                 switch stack[i + 1] {
                 case .literal(let value), .prefix(let value):
                     // cannot follow an operand

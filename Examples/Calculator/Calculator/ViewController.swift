@@ -36,26 +36,26 @@ class ViewController: UIViewController, UITextFieldDelegate {
 
     @IBOutlet private var inputField: UITextField!
     @IBOutlet private var outputView: UITextView!
-    
+
     private var output = NSMutableAttributedString()
-    
+
     private func addOutput(_ string: String, color: UIColor) {
         let text = NSAttributedString(string: string + "\n\n", attributes: [
             NSForegroundColorAttributeName: color,
             NSFontAttributeName: outputView.font!,
         ])
-        
+
         output.replaceCharacters(in: NSMakeRange(0, 0), with: text)
         outputView.attributedText = output
     }
-    
+
     override func viewDidLoad() {
         super.viewDidLoad()
         output.append(outputView.attributedText)
     }
-    
+
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        if  let text = textField.text, text != "" {
+        if let text = textField.text, text != "" {
             do {
                 let result = try Expression(text).evaluate()
                 addOutput(String(format: "= %g", result), color: .black)
@@ -66,4 +66,3 @@ class ViewController: UIViewController, UITextFieldDelegate {
         return false
     }
 }
-

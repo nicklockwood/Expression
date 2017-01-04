@@ -10,7 +10,7 @@ import UIKit
 import Expression
 
 public extension UIColor {
-    
+
     public convenience init(rgba: UInt32) {
         let red = CGFloat((rgba & 0xFF000000) >> 24) / 255
         let green = CGFloat((rgba & 0x00FF0000) >> 16) / 255
@@ -18,14 +18,14 @@ public extension UIColor {
         let alpha = CGFloat((rgba & 0x000000FF) >> 0) / 255
         self.init(red: red, green: green, blue: blue, alpha: alpha)
     }
-    
+
     public convenience init(expression: String) throws {
         let expression = Expression(expression) { symbol, args in
             switch symbol {
             case .constant(var string):
                 if string.hasPrefix("#") {
                     string = String(string.characters.dropFirst())
-                    switch (string.characters.count) {
+                    switch string.characters.count {
                     case 3:
                         string += "f"
                         fallthrough
@@ -40,7 +40,7 @@ public extension UIColor {
                     case 8:
                         break
                     default:
-                        //unsupported format
+                        // unsupported format
                         return nil
                     }
                     return Double("0x" + string)

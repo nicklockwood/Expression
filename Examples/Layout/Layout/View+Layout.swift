@@ -33,17 +33,17 @@ import UIKit
 import Expression
 
 fileprivate class LayoutData: NSObject {
-    
+
     private weak var view: UIView!
     private var inProgress = Set<String>()
-    
+
     func computedValue(forKey key: String) throws -> Double {
         if inProgress.contains(key) {
             throw Expression.Error.message("Circular reference: \(key) depends on itself")
         }
         defer { inProgress.remove(key) }
         inProgress.insert(key)
-        
+
         if let expression = props[key] {
             return try expression.evaluate()
         }
@@ -56,7 +56,7 @@ fileprivate class LayoutData: NSObject {
             throw Expression.Error.undefinedSymbol(.constant(key))
         }
     }
-    
+
     private func common(_ symbol: Expression.Symbol, _ args: [Double]) throws -> Double? {
         switch symbol {
         case .constant("auto"):
@@ -74,7 +74,7 @@ fileprivate class LayoutData: NSObject {
             return nil
         }
     }
-    
+
     var key: String?
     var left: String? {
         didSet {
@@ -88,6 +88,7 @@ fileprivate class LayoutData: NSObject {
             }
         }
     }
+
     var top: String? {
         didSet {
             props["top"] = Expression(top ?? "0") { [unowned self] symbol, args in
@@ -100,6 +101,7 @@ fileprivate class LayoutData: NSObject {
             }
         }
     }
+
     var width: String? {
         didSet {
             props["width"] = Expression(width ?? "100%") { [unowned self] symbol, args in
@@ -117,6 +119,7 @@ fileprivate class LayoutData: NSObject {
             }
         }
     }
+
     var height: String? {
         didSet {
             props["height"] = Expression(height ?? "100%") { [unowned self] symbol, args in
@@ -134,9 +137,9 @@ fileprivate class LayoutData: NSObject {
             }
         }
     }
-    
+
     private var props: [String: Expression] = [:]
-    
+
     init(_ view: UIView) {
         self.view = view
         left = nil
@@ -152,7 +155,7 @@ public extension UIView {
     fileprivate var layout: LayoutData? {
         return layout(create: false)
     }
-    
+
     private func layout(create: Bool) -> LayoutData! {
         let layout = layer.value(forKey: "layout") as? LayoutData
         if layout == nil && create {
@@ -162,32 +165,32 @@ public extension UIView {
         }
         return layout
     }
-    
+
     @IBInspectable var key: String? {
         get { return layout?.key }
         set { layout(create: true).key = newValue }
     }
-    
+
     @IBInspectable var left: String? {
         get { return layout?.left }
         set { layout(create: true).left = newValue }
     }
-    
+
     @IBInspectable var top: String? {
         get { return layout?.top }
         set { layout(create: true).top = newValue }
     }
-    
+
     @IBInspectable var width: String? {
         get { return layout?.width }
         set { layout(create: true).width = newValue }
     }
-    
+
     @IBInspectable var height: String? {
         get { return layout?.height }
         set { layout(create: true).height = newValue }
     }
-    
+
     fileprivate func subview(forKey key: String) -> UIView? {
         if self.key == key {
             return self
@@ -208,7 +211,7 @@ public extension UIView {
                        y: try layout.computedValue(forKey: "top"),
                        width: try layout.computedValue(forKey: "width"),
                        height: try layout.computedValue(forKey: "height"))
-        
+
         for view in subviews {
             try view.updateLayout()
         }

@@ -9,7 +9,7 @@
 import UIKit
 
 class ColorLabel: UILabel {
-    
+
     private func updateColor() {
         do {
             backgroundColor = .clear
@@ -27,7 +27,7 @@ class ColorLabel: UILabel {
             updateColor()
         }
     }
-    
+
     required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
         updateColor()
