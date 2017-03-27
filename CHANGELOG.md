@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.4.0](https://github.com/nicklockwood/Expression/releases/tag/0.4.0) (2017-03-21)
+
+- You can now get all symbols used by an expression via the `symbols` property
+
 ## [0.3](https://github.com/nicklockwood/Expression/releases/tag/0.3) (2017-01-04)
 
 - Fixed crash when processing malformed expression

@@ -314,4 +314,12 @@ class ExpressionTests: XCTestCase {
         let result = try! expression.evaluate()
         XCTAssertEqual(result, 19911919912912919291291291921929123)
     }
+
+    // MARK: Symbols
+
+    func testModExpressionSymbols() {
+        let expression = Expression("mod(foo, bar)", constants: ["foo": 5, "bar": 2.5])
+        let expected: Set<Expression.Symbol> = [.function("mod", arity: 2), .constant("foo"), .constant("bar")]
+        XCTAssertEqual(expression.symbols, expected)
+    }
 }

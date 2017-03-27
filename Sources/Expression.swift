@@ -263,11 +263,12 @@ public class Expression: CustomStringConvertible {
         return symbols
     }()
 
-    /// If expression has not yet been validated, returns the input expression
-    /// Once validated, returns a pretty-printed version of the expression
-    public var description: String {
-        return root?.description ?? expression
-    }
+    /// Returns the pretty-printed expression if it was valid
+    /// Otherwise, returns the original (invalid) expression string
+    public var description: String { return expression }
+
+    /// All symbols used in the expression
+    public var symbols: Set<Symbol> { return root?.symbols ?? [] }
 }
 
 fileprivate enum Subexpression: CustomStringConvertible {
@@ -317,6 +318,25 @@ fileprivate enum Subexpression: CustomStringConvertible {
             case .function(let name, _):
                 return "\(name)(\(args.map({ $0.description }).joined(separator: ", ")))"
             }
+        }
+    }
+
+    var symbols: Set<Expression.Symbol> {
+        switch self {
+        case .literal:
+            return []
+        case let .prefix(name):
+            return [.prefix(name)]
+        case let .postfix(name):
+            return [.postfix(name)]
+        case let .infix(name):
+            return [.infix(name)]
+        case let .operand(symbol, subexpressions):
+            var symbols = Set([symbol])
+            for subexpression in subexpressions {
+                symbols.formUnion(subexpression.symbols)
+            }
+            return symbols
         }
     }
 }
