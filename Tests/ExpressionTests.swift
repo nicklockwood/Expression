@@ -40,7 +40,7 @@ class ExpressionTests: XCTestCase {
         let expression = Expression("(1 + (2 + 3)")
         XCTAssertThrowsError(try expression.evaluate()) { error in
             switch error {
-            case Expression.Error.missingDelimiter(let delimiter):
+            case let Expression.Error.missingDelimiter(delimiter):
                 XCTAssertEqual(delimiter, ")")
             default:
                 print("error: \(error)")
@@ -53,7 +53,7 @@ class ExpressionTests: XCTestCase {
         let expression = Expression("1 + 2)")
         XCTAssertThrowsError(try expression.evaluate()) { error in
             switch error {
-            case Expression.Error.unexpectedToken(let string):
+            case let Expression.Error.unexpectedToken(string):
                 XCTAssertEqual(string, ")")
             default:
                 print("error: \(error)")
@@ -66,7 +66,7 @@ class ExpressionTests: XCTestCase {
         let expression = Expression("foo.")
         XCTAssertThrowsError(try expression.evaluate()) { error in
             switch error {
-            case Expression.Error.unexpectedToken(let string):
+            case let Expression.Error.unexpectedToken(string):
                 XCTAssertEqual(string, ".")
             default:
                 print("error: \(error)")
@@ -79,7 +79,7 @@ class ExpressionTests: XCTestCase {
         let expression = Expression("0 5")
         XCTAssertThrowsError(try expression.evaluate()) { error in
             switch error {
-            case Expression.Error.unexpectedToken(let string):
+            case let Expression.Error.unexpectedToken(string):
                 XCTAssertEqual(string, "5")
             default:
                 print("error: \(error)")
@@ -92,7 +92,7 @@ class ExpressionTests: XCTestCase {
         let expression = Expression("(5+%)")
         XCTAssertThrowsError(try expression.evaluate()) { error in
             switch error {
-            case Expression.Error.unexpectedToken(let string):
+            case let Expression.Error.unexpectedToken(string):
                 XCTAssertEqual(string, "%")
             default:
                 print("error: \(error)")

@@ -57,11 +57,11 @@ fileprivate class LayoutData: NSObject {
         }
     }
 
-    private func common(_ symbol: Expression.Symbol, _ args: [Double]) throws -> Double? {
+    private func common(_ symbol: Expression.Symbol, _: [Double]) throws -> Double? {
         switch symbol {
         case .constant("auto"):
             throw Expression.Error.message("`auto` can only be used for width or height")
-        case .constant(let name):
+        case let .constant(name):
             let parts = name.components(separatedBy: ".")
             if parts.count == 2 {
                 if let sublayout = view.window?.subview(forKey: parts[0])?.layout {

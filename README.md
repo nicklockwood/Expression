@@ -10,9 +10,11 @@ What is this?
 
 Expression is a library for Mac and iOS for evaluating numeric expressions at runtime.
 
+It is similar to the built in Foundation Expression class, but with better support for custom operators, and a *Swiftier* API.
 
-Why would I want to do that?
------------------------------
+
+Why would I want that?
+----------------------
 
 There are many situations where it is useful to be able to evaluate a simple expression at runtime. I've included a few of example apps with the library:
 
@@ -52,7 +54,7 @@ You can then calculate the result by calling the `Expression.evaluate()` functio
 
 By default, Expression already implements standard math functions and operators, so you only need to provide a custom symbol dictionary or evaluator function if your app needs to support additional functions or variables.
 
-If you do need to support custom symbols, you should always choose the simplest implementation that meets your requirements, as it will be the fastest to calculate and provide the most detailed error feedback. Remember you can mix and match solutions, so if you have some custom constants and some custom functions or operators, you can provide separate constants and symbols dictionaries.
+If you do need to support custom symbols, you should always choose the simplest implementation that meets your requirements, as it will be the fastest to calculate and provide the most detailed error feedback. Remember you can mix and match implementation, so if you have some custom constants and some custom functions or operators, you can provide separate constants and symbols dictionaries.
 
 Here are some examples:
 
@@ -67,37 +69,37 @@ let result = try! expression.evaluate() // 11
 // Custom constants and functions
 
 let expression = Expression("foo + bar(5) + rnd()", constants: [
-	"foo": 5,
+    "foo": 5,
 ], symbols: [
-	.function("bar", arity: 1): { args in args[0] + 1 },
-	.function("rnd", arity: 0): { _ in arc4random() },
+    .function("bar", arity: 1): { args in args[0] + 1 },
+    .function("rnd", arity: 0): { _ in arc4random() },
 ])
 let result = try! expression.evaluate()
 
 // Advanced usage
-// Using custom Evaluator to decode hex color literals
+// Using a custom Evaluator to decode hex color literals
 
 let hexColor = "#FF0000FF" // rrggbbaa
 let expression = Expression(hexColor) { symbol, args in
-	if case .constant(let name), name.hasPrefix("#") { {
-		let hex = String(name.characters.dropFirst())
-		return Double("0x" + hex)
-	}
-	return nil // pass to default evaluator
+    if case .constant(let name), name.hasPrefix("#") { {
+        let hex = String(name.characters.dropFirst())
+        return Double("0x" + hex)
+    }
+    return nil // pass to default evaluator
 }
 let color: UIColor = {
-	let rgba = UInt32(try! expression.evaluate())
-	let red = CGFloat((rgba & 0xFF000000) >> 24) / 255
-	let green = CGFloat((rgba & 0x00FF0000) >> 16) / 255
-	let blue = CGFloat((rgba & 0x0000FF00) >> 8) / 255
-	let alpha = CGFloat((rgba & 0x000000FF) >> 0) / 255
-	return UIColor(red: red, green: green, blue: blue, alpha: alpha)
+    let rgba = UInt32(try! expression.evaluate())
+    let red = CGFloat((rgba & 0xFF000000) >> 24) / 255
+    let green = CGFloat((rgba & 0x00FF0000) >> 16) / 255
+    let blue = CGFloat((rgba & 0x0000FF00) >> 8) / 255
+    let alpha = CGFloat((rgba & 0x000000FF) >> 0) / 255
+    return UIColor(red: red, green: green, blue: blue, alpha: alpha)
 }()
 ```
 
 Note that the `evaluate()` function can throw an error. An error will be thrown during evaluation if the expression is malformed, or if it references an unknown symbol.
 
-For a simple hard-coded expression like the first example, there is no possibility of an error being thrown, but if you are accepting user input as your expression you must always ensure that you catch and handle errors. The error messages produced by Expression are detailed and human-readable (but not localized, currently).
+For a simple, hard-coded expression like the first example, there is no possibility of an error being thrown. If you accept user-entered expressions, you must always ensure that you catch and handle errors. The error messages produced by Expression are detailed and human-readable (but not localized, currently).
 
 ```swift
 do {
@@ -108,11 +110,11 @@ do {
 }
 ```
 
-When using the `constants` and/or `symbols` dictionaries, error messaging is handled completely automatically by the Expression library. If you need to support dynamic symbol decoding (such as in the hex color example earlier), you will need to use a custom `Evaluator` function, which is a little bit more complex.
+When using the `constants` and/or `symbols` dictionaries, error message generation is handled automatically by the Expression library. If you need to support dynamic symbol decoding (such as in the hex color example earlier), you will need to use a custom `Evaluator` function, which is a little bit more complex.
 
 Your custom `Evaluator` function can return either a `Double` or `nil` or it can throw an error. If you do not recognize a symbol, you should return nil so that it can be handled by the default evaluator.
 
-In some case you may be certain that a symbol is incorrect, however, and this is an opportunity to provide a more useful error message. The folloing example matches a function `bar` with an arity of 1 (meaning that it takes one argument). This will only match calls to bar that take a single argument, and ignore calls with zero or multiple arguments.
+In some cases you may be *certain* that a symbol is incorrect, and this is an opportunity to provide a more useful error message. The following example matches a function `bar` with an arity of 1 (meaning that it takes one argument). This will only match calls to bar that take a single argument, and ignore calls with zero or multiple arguments.
 
 ```swift
 switch symbol {
@@ -149,9 +151,9 @@ The Expression library supports the following symbol types:
 .constant(String)
 ```
 
-This is an alphanumeric identifier representing a constant or variable in an expression. Identifiers can be any valid sequence of letters and numbers, beginning with a letter, underscore (_), dollar symbol ($), at sign (@) or pound sign (#).
+This is an alphanumeric identifier representing a constant or variable in an expression. Identifiers can be any valid sequence of letters and numbers, beginning with a letter, underscore (_), dollar symbol ($), at sign (@) or hash/pound sign (#).
 
-Like Swift, Expression allows certain unicode characters in identifier, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for namespacing (as demonstrated in the Layout example app).
+Like Swift, Expression allows certain unicode characters in identifiers, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for name-spacing (as demonstrated in the Layout example app).
 
 ```swift
 .infix(String)
@@ -159,7 +161,7 @@ Like Swift, Expression allows certain unicode characters in identifier, such as 
 .postfix(String)
 ```
 
-These symbols represent operators. Currently operators must be a single character, but can be almost any symbol that wouldn't conflict with the possible identifier names. You can overload existing infix operators with a post/prefix variant, or vice-versa. Disambiguation depends on the white-space surrounding the operator (which is the same approach used by Swift), although where possible, Expression will attempt to disambiguate from context as well.
+These symbols represent operators. Currently operators must be a single character, but can be almost any symbol that wouldn't conflict with the valid identifier names. You can overload existing infix operators with a post/prefix variant, or vice-versa. Disambiguation depends on the white-space surrounding the operator (which is the same approach used by Swift), although Expression will attempt to disambiguate based on the surrounding operator and operands as well.
 
 Any valid identifier may also be used as a postfix operator, by placing it after an operator or literal value. For example, you could define `m` and `cm` as postfix operators when handling distance logic, or `hours`, `minutes` and `seconds` operators for computing times.
 
@@ -169,38 +171,38 @@ Operator precedence follows standard BODMAS order, with multiplication/division 
 .function(String, arity: Int)
 ```
 
-Functions can be defined as any valid identifier followed by a comma-delimited sequence of arguments in parentheses. Functions can be overloaded to support different argument counts, but it is up to you to handle argument validation in your evaluator function.
+Functions can be defined using any valid identifier followed by a comma-delimited sequence of arguments in parentheses. Functions can be overloaded to support different argument counts, but it is up to you to handle argument validation in your evaluator function.
      
      
 Standard library
 -------------------
 
-Expression implements a sort of "standard library" in the form of a default symbol dictionary. These consist of basic math functions and constants that are generally useful, independent of a particular application.
+Expression implements a sort of "standard library" in the form of a default symbol dictionary. This contains basic math functions and constants that are generally useful, independent of a particular application.
 
-If you use a custom symbol dictionary, you can override any default symbol, or overload default functions with a different number of arguments (arity). Any sybols that you do not explicityl override will still be available. To individually disable symbols from the standard library, you can override them and throw an exception:
+If you use a custom symbol dictionary, you can override any default symbol, or overload default functions with a different number of arguments (arity). Any symbols from the standard library that you do not explicitly override will still be available. To explicitly disable individual symbols from the standard library, you can override them and throw an exception:
 
 ```swift
 let expression = Expression("pow(2,3)", symbols: [
-	.function("pow", arity: 2): { _ in throw Expression.Error.undefinedSymbol(.function("pow", arity: 2)) }
+    .function("pow", arity: 2): { _ in throw Expression.Error.undefinedSymbol(.function("pow", arity: 2)) }
 ])
-try expression.evaluate() // this will thow an error because pow() has been undefined
+try expression.evaluate() // this will throw an error because pow() has been undefined
 ```
 
 If you have provided a custom `Evaluator` function, you can fall back to the standard library functions and operators by returning `nil` for unrecognized symbols. If you do not want to provide access to the standard library functions in your expression, throw an `Error` for unrecognized symbols instead of returning `nil`.
 
 ```swift
 let expression = Expression("3 + 4") { symbol, args in
-	switch symbol {
-	case .function("foo", arity: 1):
-		return args[0] + 1
-	default:
-		throw Expression.Error.undefinedSymbol(symbol)
-	}
+    switch symbol {
+    case .function("foo", arity: 1):
+        return args[0] + 1
+    default:
+        throw Expression.Error.undefinedSymbol(symbol)
+    }
 }
-try expression.evaluate() // this will thow an error because no standard library operators are supported, including +
+try expression.evaluate() // this will throw an error because no standard library operators are supported, including +
 ```
 
-Here is current supported list of standard library symbols:
+Here is the current supported list of standard library symbols:
 
 **constants**
 
@@ -251,9 +253,9 @@ Not much to say about this. It's a calculator. You can type expressions into it,
 Colors Example
 ----------------
 
-The Colors example demonstrates how to use Expression to create a (mostly) CSS-compliant color parser. It takes a string containing a named color constant, hex color or rgb() function call and returns a UIColor object.
+The Colors example demonstrates how to use Expression to create a (mostly) CSS-compliant color parser. It takes a string containing a named color, hex color or rgb() function call, and returns a UIColor object.
 
-Using Expression to parse colors is probably overkill, and it's a bit of a hack, as it only works because it's possible to encode a color as a 32-bit Integer, which itself can be stored inside the Double returned by the Expression Evaluator. Still, it's a neat trick.
+Using Expression to parse colors is a bit of a hack, as it only works because it's possible to encode a color as a 32-bit Integer, which itself can be stored inside the Double returned by the Expression Evaluator. Still, it's a neat trick.
 
 
 Layout Example

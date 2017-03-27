@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.3
+//  Version 0.4.0
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -70,11 +70,11 @@ public class Expression: CustomStringConvertible {
         /// The human-readable name of the symbol
         public var name: String {
             switch self {
-            case .constant(let name),
-                 .infix(let name),
-                 .prefix(let name),
-                 .postfix(let name),
-                 .function(let name, _):
+            case let .constant(name),
+                 let .infix(name),
+                 let .prefix(name),
+                 let .postfix(name),
+                 let .function(name, _):
                 return name
             }
         }
@@ -82,15 +82,15 @@ public class Expression: CustomStringConvertible {
         /// The human-readable description of the symbol
         public var description: String {
             switch self {
-            case .constant(let name):
+            case let .constant(name):
                 return "constant `\(name)`"
-            case .infix(let name):
+            case let .infix(name):
                 return "infix operator `\(name)`"
-            case .prefix(let name):
+            case let .prefix(name):
                 return "prefix operator `\(name)`"
-            case .postfix(let name):
+            case let .postfix(name):
                 return "postfix operator `\(name)`"
-            case .function(let name, _):
+            case let .function(name, _):
                 return "function `\(name)()`"
             }
         }
@@ -102,8 +102,8 @@ public class Expression: CustomStringConvertible {
 
         /// Required by the equatable protocol
         public static func ==(lhs: Symbol, rhs: Symbol) -> Bool {
-            if case .function(_, let lhsarity) = lhs,
-                case .function(_, let rhsarity) = rhs,
+            if case let .function(_, lhsarity) = lhs,
+                case let .function(_, rhsarity) = rhs,
                 lhsarity != rhsarity {
                 return false
             }
@@ -132,15 +132,15 @@ public class Expression: CustomStringConvertible {
         /// The human-readable description of the error
         public var description: String {
             switch self {
-            case .message(let message):
+            case let .message(message):
                 return message
-            case .unexpectedToken(let string):
+            case let .unexpectedToken(string):
                 return "Unexpected token `\(string)`"
-            case .missingDelimiter(let string):
+            case let .missingDelimiter(string):
                 return "Missing `\(string)`"
-            case .undefinedSymbol(let symbol):
+            case let .undefinedSymbol(symbol):
                 return "Undefined \(symbol)"
-            case .arityMismatch(let symbol):
+            case let .arityMismatch(symbol):
                 let arity: Int
                 switch symbol {
                 case .constant:
@@ -149,7 +149,7 @@ public class Expression: CustomStringConvertible {
                     arity = 2
                 case .postfix, .prefix:
                     arity = 1
-                case .function(_, let requiredArity):
+                case let .function(_, requiredArity):
                     arity = requiredArity
                 }
                 let description = symbol.description
@@ -179,7 +179,7 @@ public class Expression: CustomStringConvertible {
         self.evaluator = { symbol, args in
             // Try constants
             if let constants = constants,
-                case Symbol.constant(let name) = symbol,
+                case let Symbol.constant(name) = symbol,
                 let value = constants[name] {
                 return value
             }
@@ -196,13 +196,13 @@ public class Expression: CustomStringConvertible {
                 return try fn(args)
             }
             // Check for arity mismatch
-            if case .function(let called, let arity) = symbol {
+            if case let .function(called, arity) = symbol {
                 var keys = Array(Expression.defaultSymbols.keys)
                 if symbols != nil {
                     keys += Array(symbols!.keys)
                 }
                 var expectedArity: Int?
-                for case .function(let name, let requiredArity) in keys
+                for case let .function(name, requiredArity) in keys
                     where name == called && arity != requiredArity {
                     expectedArity = requiredArity
                 }
@@ -280,42 +280,42 @@ fileprivate enum Subexpression: CustomStringConvertible {
 
     func evaluate(_ evaluator: Expression.Evaluator) throws -> Double {
         switch self {
-        case .literal(let value):
+        case let .literal(value):
             if let value = Double(value) {
                 return value
             }
             throw Expression.Error.unexpectedToken(value)
-        case .operand(let symbol, let args):
+        case let .operand(symbol, args):
             let argValues = try args.map { try $0.evaluate(evaluator) }
             if let value = try evaluator(symbol, argValues) {
                 return value
             }
             throw Expression.Error.undefinedSymbol(symbol)
-        case .infix(let name),
-             .prefix(let name),
-             .postfix(let name):
+        case let .infix(name),
+             let .prefix(name),
+             let .postfix(name):
             throw Expression.Error.unexpectedToken(name)
         }
     }
 
     var description: String {
         switch self {
-        case .literal(let string),
-             .infix(let string),
-             .prefix(let string),
-             .postfix(let string):
+        case let .literal(string),
+             let .infix(string),
+             let .prefix(string),
+             let .postfix(string):
             return string
-        case .operand(let symbol, let args):
+        case let .operand(symbol, args):
             switch symbol {
-            case .prefix(let name):
+            case let .prefix(name):
                 return "\(name)\(args[0])"
-            case .postfix(let name):
+            case let .postfix(name):
                 return "\(args[0])\(name)"
-            case .infix(let name):
+            case let .infix(name):
                 return "\(args[0]) \(name) \(args[1])"
-            case .constant(let name):
+            case let .constant(name):
                 return name
-            case .function(let name, _):
+            case let .function(name, _):
                 return "\(name)(\(args.map({ $0.description }).joined(separator: ", ")))"
             }
         }
@@ -571,12 +571,12 @@ fileprivate extension String.CharacterView {
             }
             let lhs = stack[i]
             switch lhs {
-            case .infix(let name), .postfix(let name):
+            case let .infix(name), let .postfix(name):
                 // probably miscategorized - try treating as prefix
                 stack[i] = .prefix(name)
                 try collapseStack(from: i)
                 return
-            case .prefix(let name):
+            case let .prefix(name):
                 guard stack.count > i + 1 else {
                     throw Expression.Error.unexpectedToken(name)
                 }
@@ -594,20 +594,20 @@ fileprivate extension String.CharacterView {
             case .literal, .operand:
                 guard stack.count > i + 1 else {
                     switch lhs {
-                    case .literal(let name):
+                    case let .literal(name):
                         throw Expression.Error.unexpectedToken(name)
-                    case .operand(let symbol, _):
+                    case let .operand(symbol, _):
                         throw Expression.Error.unexpectedToken(symbol.name)
                     default:
                         throw Expression.Error.message("Unknown error")
                     }
                 }
                 switch stack[i + 1] {
-                case .literal(let value), .prefix(let value):
+                case let .literal(value), let .prefix(value):
                     // cannot follow an operand
                     throw Expression.Error.unexpectedToken(String(value))
-                case .operand(let symbol, _):
-                    if case .constant(let name) = symbol {
+                case let .operand(symbol, _):
+                    if case let .constant(name) = symbol {
                         // treat as a postfix operator
                         stack[i ... i + 1] = [.operand(.postfix(name), [stack[i]])]
                         try collapseStack(from: 0)
@@ -616,11 +616,11 @@ fileprivate extension String.CharacterView {
                     // operand cannot follow another operand
                     // TODO: the symbol may not be the first part of the operand
                     throw Expression.Error.unexpectedToken(symbol.name)
-                case .postfix(let op1):
+                case let .postfix(op1):
                     stack[i ... i + 1] = [.operand(.postfix(op1), [lhs])]
                     try collapseStack(from: 0)
                     return
-                case .infix(let op1):
+                case let .infix(op1):
                     let rhs = stack[i + 2]
                     switch rhs {
                     case .infix, .postfix:
@@ -640,7 +640,7 @@ fileprivate extension String.CharacterView {
                         return
                     }
                     switch stack[i + 3] {
-                    case .infix(let op2):
+                    case let .infix(op2):
                         if precedence(op1) >= precedence(op2) {
                             stack[i ... i + 2] = [.operand(.infix(op1), [lhs, rhs])]
                             try collapseStack(from: 0)
@@ -678,12 +678,12 @@ fileprivate extension String.CharacterView {
                 }
                 scopes.removeLast()
                 if let previous = oldStack.last {
-                    if case .operand(.constant(let name), _) = previous {
+                    if case let .operand(.constant(name), _) = previous {
                         // function call
                         oldStack.removeLast()
                         if stack.count > 0 {
                             // unwrap comma-delimited expression
-                            while case .operand(.infix(","), let args) = stack.first! {
+                            while case let .operand(.infix(","), args) = stack.first! {
                                 stack = args + stack.dropFirst()
                             }
                         }
@@ -696,7 +696,7 @@ fileprivate extension String.CharacterView {
                     stack[stack.count - 1] = .postfix(op)
                 }
                 stack.append(expression)
-            case .infix(let name):
+            case let .infix(name):
                 if precededByWhitespace {
                     if followedByWhitespace {
                         stack.append(expression)

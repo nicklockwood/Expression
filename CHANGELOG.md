@@ -1,8 +1,9 @@
 # Change Log
 
-## [0.4.0](https://github.com/nicklockwood/Expression/releases/tag/0.4.0) (2017-03-21)
+## [0.4.0](https://github.com/nicklockwood/Expression/releases/tag/0.4.0) (2017-03-27)
 
 - You can now get all symbols used by an expression via the `symbols` property
+- Fixed crash with postfix operators followed by comma or closing paren
 
 ## [0.3](https://github.com/nicklockwood/Expression/releases/tag/0.3) (2017-01-04)
 

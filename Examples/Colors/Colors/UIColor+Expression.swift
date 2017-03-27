@@ -22,7 +22,7 @@ public extension UIColor {
     public convenience init(expression: String) throws {
         let expression = Expression(expression) { symbol, args in
             switch symbol {
-            case .constant(var string):
+            case var .constant(string):
                 if string.hasPrefix("#") {
                     string = String(string.characters.dropFirst())
                     switch string.characters.count {
@@ -59,7 +59,7 @@ public extension UIColor {
                     "white": 0xFFFFFFFF,
                 ]
                 return constants[string.lowercased()]
-            case .function("rgb", let arity):
+            case let .function("rgb", arity):
                 if arity != 3 {
                     throw Expression.Error.arityMismatch(symbol)
                 }
@@ -67,7 +67,7 @@ public extension UIColor {
                 let green = Int(min(255, max(0, args[1]))) << 16
                 let blue = Int(min(255, max(0, args[2]))) << 8
                 return Double(red + green + blue + 255)
-            case .function("rgba", let arity):
+            case let .function("rgba", arity):
                 if arity != 4 {
                     throw Expression.Error.arityMismatch(symbol)
                 }
