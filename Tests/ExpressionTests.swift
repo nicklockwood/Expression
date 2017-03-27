@@ -133,24 +133,12 @@ class ExpressionTests: XCTestCase {
 
     func testOverridePow() {
         let expression = Expression("pow(3)", symbols: [.function("pow", arity: 1): { $0[0] * $0[0] }])
-        do {
-            let result = try expression.evaluate()
-            XCTAssertEqual(result, 9)
-        } catch {
-            print("error: \(error)")
-            XCTFail()
-        }
+        XCTAssertEqual(try expression.evaluate(), 9)
     }
 
     func testOverriddenPow() {
         let expression = Expression("pow(3,3)", symbols: [.function("pow", arity: 1): { $0[0] * $0[0] }])
-        do {
-            let result = try expression.evaluate()
-            XCTAssertEqual(result, 27)
-        } catch {
-            print("error: \(error)")
-            XCTFail()
-        }
+        XCTAssertEqual(try expression.evaluate(), 27)
     }
 
     func testCustomOverriddenFunction() {
@@ -164,13 +152,7 @@ class ExpressionTests: XCTestCase {
                 return nil
             }
         }
-        do {
-            let result = try expression.evaluate()
-            XCTAssertEqual(result, 6)
-        } catch {
-            print("error: \(error)")
-            XCTFail()
-        }
+        XCTAssertEqual(try expression.evaluate(), 6)
     }
 
     // MARK: Function blocking
@@ -195,124 +177,130 @@ class ExpressionTests: XCTestCase {
 
     func testLiteral() {
         let expression = Expression("5")
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, 5)
+        XCTAssertEqual(try expression.evaluate(), 5)
     }
 
     func testNegativeLiteral() {
         let expression = Expression("- 12")
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, -12)
+        XCTAssertEqual(try expression.evaluate(), -12)
     }
 
     func testVariable() {
         let expression = Expression("foo", constants: ["foo": 15.5])
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, 15.5)
+        XCTAssertEqual(try expression.evaluate(), 15.5)
     }
 
     func testNegativeVariable() {
         let expression = Expression("-foo", constants: ["foo": 7])
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, -7)
+        XCTAssertEqual(try expression.evaluate(), -7)
     }
 
     func testLiteralAddition() {
         let expression = Expression("5 + 4")
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, 9)
+        XCTAssertEqual(try expression.evaluate(), 9)
     }
 
     func testLiteralPlusVariable() {
         let expression = Expression("3 + foo", constants: ["foo": -7])
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, -4)
+        XCTAssertEqual(try expression.evaluate(), -4)
     }
 
     func testLiteralPlusNegativeLiteral() {
         let expression = Expression("5+-4")
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, 1)
+        XCTAssertEqual(try expression.evaluate(), 1)
     }
 
     func testLiteralTimesNegativeLiteral() {
         let expression = Expression("5*-4")
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, -20)
+        XCTAssertEqual(try expression.evaluate(), -20)
     }
 
     func testMultiplePrefixMinusOperators() {
         let expression = Expression("5---4")
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, 1)
+        XCTAssertEqual(try expression.evaluate(), 1)
     }
 
     func testTwoAdditions() {
         let expression = Expression("5 + foo + 4", constants: ["foo": 1.5])
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, 10.5)
+        XCTAssertEqual(try expression.evaluate(), 10.5)
     }
 
     func testAdditionThenMultiplication() {
         let expression = Expression("5 + foo * 4", constants: ["foo": 1.5])
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, 11)
+        XCTAssertEqual(try expression.evaluate(), 11)
     }
 
     func testAdditionThenMultiplicationWithPrefixMinus() {
         let expression = Expression("5 + foo * -4", constants: ["foo": 1.5])
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, -1)
+        XCTAssertEqual(try expression.evaluate(), -1)
     }
 
     func testMultiplicationThenAddition() {
         let expression = Expression("5 * foo + 4", constants: ["foo": 1.5])
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, 11.5)
+        XCTAssertEqual(try expression.evaluate(), 11.5)
     }
 
     func testParenthesizedAdditionThenMultiplication() {
         let expression = Expression("(5 + foo) * 4", constants: ["foo": 1.5])
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, 26)
+        XCTAssertEqual(try expression.evaluate(), 26)
     }
 
     func testNestedParenthese() {
         let expression = Expression("((5 + 3) * ((2 - 3) - 1))")
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, -16)
+        XCTAssertEqual(try expression.evaluate(), -16)
     }
 
     func testModFunction() {
         let expression = Expression("mod(-4, 2.5)")
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, -1.5)
+        XCTAssertEqual(try expression.evaluate(), -1.5)
     }
 
     func testSqrtFunction() {
         let expression = Expression("7 + sqrt(9)")
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, 10)
+        XCTAssertEqual(try expression.evaluate(), 10)
     }
 
     func testPowFunction() {
         let expression = Expression("7 + pow(9, 1/2)")
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, 10)
+        XCTAssertEqual(try expression.evaluate(), 10)
+    }
+
+    // MARK: Postfix operator parsing
+
+    func testPostfixOperatorBeforeComma() {
+        let expression = Expression("max(50%, 0.6)") { symbol, args in
+            switch symbol {
+            case .postfix("%"):
+                return args[0] / 100
+            default:
+                return nil
+            }
+        }
+        XCTAssertEqual(try expression.evaluate(), 0.6)
+    }
+
+    func testPostfixOperatorBeforeClosingParen() {
+        let expression = Expression("min(0.3, 50%)") { symbol, args in
+            switch symbol {
+            case .postfix("%"):
+                return args[0] / 100
+            default:
+                return nil
+            }
+        }
+        XCTAssertEqual(try expression.evaluate(), 0.3)
     }
 
     // MARK: Math errors
 
     func testDivideByZero() {
         let expression = Expression("1 / 0")
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, Double.infinity)
+        XCTAssertEqual(try expression.evaluate(), Double.infinity)
     }
 
     func testHugeNumber() {
         let expression = Expression("19911919912912919291291291921929123")
-        let result = try! expression.evaluate()
-        XCTAssertEqual(result, 19911919912912919291291291921929123)
+        XCTAssertEqual(try expression.evaluate(), 19911919912912919291291291921929123)
     }
 
     // MARK: Symbols

@@ -669,6 +669,9 @@ fileprivate extension String.CharacterView {
                 scopes.append(stack)
                 stack = []
             case .infix(")"):
+                if let previous = stack.last, case let .infix(op) = previous {
+                    stack[stack.count - 1] = .postfix(op)
+                }
                 try collapseStack(from: 0)
                 guard var oldStack = scopes.last else {
                     throw Expression.Error.unexpectedToken(")")
@@ -689,6 +692,9 @@ fileprivate extension String.CharacterView {
                 }
                 stack = oldStack + stack
             case .infix(","):
+                if let previous = stack.last, case let .infix(op) = previous {
+                    stack[stack.count - 1] = .postfix(op)
+                }
                 stack.append(expression)
             case .infix(let name):
                 if precededByWhitespace {
