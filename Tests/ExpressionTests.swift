@@ -34,70 +34,67 @@ import XCTest
 
 class ExpressionTests: XCTestCase {
 
+    // MARK: Description
+
+    func testDescriptionSpacing() {
+        let expression = Expression("a+b")
+        XCTAssertEqual(expression.description, "a + b")
+    }
+
+    func testDescriptionParensAdded() {
+        let expression = Expression("a+b+c")
+        XCTAssertEqual(expression.description, "(a + b) + c")
+    }
+
+    func testDescriptionParensPreserved() {
+        let expression = Expression("a+(b+c)")
+        XCTAssertEqual(expression.description, "a + (b + c)")
+    }
+
+    func testIntExpressionDescription() {
+        let expression = Expression("32 + 200014")
+        XCTAssertEqual(expression.description, "32 + 200014")
+    }
+
+    func testFloatExpressionDescription() {
+        let expression = Expression("2.4 + 7.65")
+        XCTAssertEqual(expression.description, "2.4 + 7.65")
+    }
+
     // MARK: Syntax errors
 
     func testMissingCloseParen() {
         let expression = Expression("(1 + (2 + 3)")
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case let Expression.Error.missingDelimiter(delimiter):
-                XCTAssertEqual(delimiter, ")")
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
+            XCTAssertEqual(error as? Expression.Error, .missingDelimiter(")"))
         }
     }
 
     func testMissingOpenParen() {
         let expression = Expression("1 + 2)")
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case let Expression.Error.unexpectedToken(string):
-                XCTAssertEqual(string, ")")
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken(")"))
+        }
+    }
+
+    func testMissingRHS() {
+        let expression = Expression("1 + ")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.postfix("+")))
         }
     }
 
     func testInvalidToken() {
         let expression = Expression("foo.")
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case let Expression.Error.unexpectedToken(string):
-                XCTAssertEqual(string, ".")
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("."))
         }
     }
 
     func testInvalidExpression() {
         let expression = Expression("0 5")
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case let Expression.Error.unexpectedToken(string):
-                XCTAssertEqual(string, "5")
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
-        }
-    }
-
-    func testMissingOperand() {
-        let expression = Expression("(5+%)")
-        XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case let Expression.Error.unexpectedToken(string):
-                XCTAssertEqual(string, "%")
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("5"))
         }
     }
 
@@ -106,26 +103,14 @@ class ExpressionTests: XCTestCase {
     func testTooFewArguments() {
         let expression = Expression("pow(4)")
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case Expression.Error.arityMismatch(.function("pow", arity: 2)):
-                break
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("pow", arity: 2)))
         }
     }
 
     func testTooManyArguments() {
         let expression = Expression("pow(4,5,6)")
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case Expression.Error.arityMismatch(.function("pow", arity: 2)):
-                break
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("pow", arity: 2)))
         }
     }
 
@@ -215,11 +200,6 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), -20)
     }
 
-    func testMultiplePrefixMinusOperators() {
-        let expression = Expression("5---4")
-        XCTAssertEqual(try expression.evaluate(), 1)
-    }
-
     func testTwoAdditions() {
         let expression = Expression("5 + foo + 4", constants: ["foo": 1.5])
         XCTAssertEqual(try expression.evaluate(), 10.5)
@@ -306,8 +286,52 @@ class ExpressionTests: XCTestCase {
     // MARK: Symbols
 
     func testModExpressionSymbols() {
-        let expression = Expression("mod(foo, bar)", constants: ["foo": 5, "bar": 2.5])
+        let expression = Expression("mod(foo, bar)", symbols: [
+            .constant("foo"): { _ in 5 },
+            .constant("bar"): { _ in 2.5 }
+        ])
         let expected: Set<Expression.Symbol> = [.function("mod", arity: 2), .constant("foo"), .constant("bar")]
         XCTAssertEqual(expression.symbols, expected)
+    }
+
+    // MARK: Optimization
+
+    func testConstantSymbolsInlined() {
+        let expression = Expression("foo(bar, baz)", constants: ["bar": 5, "baz": 2.5])
+        let expected: Set<Expression.Symbol> = [.function("foo", arity: 2)]
+        XCTAssertEqual(expression.symbols, expected)
+    }
+
+    func testConstantExpressionEvaluatedCorrectly() {
+        let expression = Expression("5 + foo", constants: ["foo": 5])
+        XCTAssertEqual(try expression.evaluate(), 10)
+    }
+
+    // MARK: Ternary operator
+
+    func testTernaryTrue() {
+        let expression = Expression("0 ? 1 : 2", symbols: [.infix("?:"): { $0[0] == 0 ? $0[2] : $0[1] }])
+        XCTAssertEqual(try expression.evaluate(), 2)
+    }
+
+    func testTernaryFalse() {
+        let expression = Expression("1 ? 1 : 2", symbols: [.infix("?:"): { $0[0] == 0 ? $0[2] : $0[1] }])
+        XCTAssertEqual(try expression.evaluate(), 1)
+    }
+
+    func testTernaryPrecedence() {
+        let expression = Expression("1 - 1 ? 3 * 5 : 2 * 3", symbols: [.infix("?:"): { $0[0] == 0 ? $0[2] : $0[1] }])
+        XCTAssertEqual(expression.description, "(1 - 1) ? (3 * 5) : (2 * 3)")
+        XCTAssertEqual(try expression.evaluate(), 6)
+    }
+
+    func testUndefinedTernaryOperator() {
+        let symbols: [Expression.Symbol: Expression.Symbol.Evaluator] = [
+            .infix("?"): { $0[0] != 0 ? $0[1] : 0 },
+            .infix(":"): { $0[0] != 0 ? $0[0] : $0[1] },
+        ]
+        let expression = Expression("1 - 1 ? 3 * 5 : 2 * 3", symbols: symbols)
+        XCTAssertEqual(expression.description, "(1 - 1) ? (3 * 5) : (2 * 3)")
+        XCTAssertEqual(try expression.evaluate(), 6)
     }
 }

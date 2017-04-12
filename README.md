@@ -1,8 +1,8 @@
-[![Travis](https://img.shields.io/travis/nicklockwood/Expression.svg?maxAge=2592000)](https://travis-ci.org/nicklockwood/Expression)
-[![License](https://img.shields.io/badge/license-zlib-lightgrey.svg?maxAge=2592000)](https://opensource.org/licenses/Zlib)
-[![CocoaPods](https://img.shields.io/cocoapods/p/Expression.svg?maxAge=2592000)](https://cocoapods.org/pods/Expression)
-[![CocoaPods](https://img.shields.io/cocoapods/metrics/doc-percent/Expression.svg?maxAge=2592000)](http://cocoadocs.org/docsets/Expression/)
-[![Twitter](https://img.shields.io/badge/twitter-@nicklockwood-blue.svg?maxAge=2592000)](http://twitter.com/nicklockwood)
+[![Travis](https://img.shields.io/travis/nicklockwood/Expression.svg)](https://travis-ci.org/nicklockwood/Expression)
+[![License](https://img.shields.io/badge/license-zlib-lightgrey.svg)](https://opensource.org/licenses/Zlib)
+[![CocoaPods](https://img.shields.io/cocoapods/p/Expression.svg)](https://cocoapods.org/pods/Expression)
+[![CocoaPods](https://img.shields.io/cocoapods/metrics/doc-percent/Expression.svg)](http://cocoadocs.org/docsets/Expression/)
+[![Twitter](https://img.shields.io/badge/twitter-@nicklockwood-blue.svg)](http://twitter.com/nicklockwood)
 
 
 What is this?
@@ -10,13 +10,13 @@ What is this?
 
 Expression is a library for Mac and iOS for evaluating numeric expressions at runtime.
 
-It is similar to the built in Foundation Expression class, but with better support for custom operators, and a *Swiftier* API.
+It is similar to Foundation's built-in Expression class, but with better support for custom operators, and a simpler API.
 
 
 Why would I want that?
 ----------------------
 
-There are many situations where it is useful to be able to evaluate a simple expression at runtime. I've included a few of example apps with the library:
+There are many situations where it is useful to be able to evaluate a simple expression at runtime. Some such cases are demonstrated in the example apps included with the library:
 
 * A scientific calculator
 * A CSS color string parser
@@ -52,9 +52,9 @@ You create an `Expression` instance by passing a string containing your expressi
 
 You can then calculate the result by calling the `Expression.evaluate()` function.
 
-By default, Expression already implements standard math functions and operators, so you only need to provide a custom symbol dictionary or evaluator function if your app needs to support additional functions or variables.
+By default, Expression already implements most standard math functions and operators, so you only need to provide a custom symbol dictionary or evaluator function if your app needs to support additional functions or variables.
 
-If you do need to support custom symbols, you should always choose the simplest implementation that meets your requirements, as it will be the fastest to calculate and provide the most detailed error feedback. Remember you can mix and match implementation, so if you have some custom constants and some custom functions or operators, you can provide separate constants and symbols dictionaries.
+If you do need to support custom symbols, you should always choose the simplest implementation that meets your requirements, as it will be the fastest to calculate, and provide the most detailed error feedback. Remember you can mix and match implementations, so if you have some custom constants and some custom functions or operators, you can provide separate constants and symbols dictionaries.
 
 Here are some examples:
 
@@ -153,7 +153,7 @@ The Expression library supports the following symbol types:
 
 This is an alphanumeric identifier representing a constant or variable in an expression. Identifiers can be any valid sequence of letters and numbers, beginning with a letter, underscore (_), dollar symbol ($), at sign (@) or hash/pound sign (#).
 
-Like Swift, Expression allows certain unicode characters in identifiers, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for name-spacing (as demonstrated in the Layout example app).
+Like Swift, Expression allows unicode characters in identifiers, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for name-spacing (as demonstrated in the Layout example app).
 
 ```swift
 .infix(String)
@@ -161,11 +161,14 @@ Like Swift, Expression allows certain unicode characters in identifiers, such as
 .postfix(String)
 ```
 
-These symbols represent operators. Currently operators must be a single character, but can be almost any symbol that wouldn't conflict with the valid identifier names. You can overload existing infix operators with a post/prefix variant, or vice-versa. Disambiguation depends on the white-space surrounding the operator (which is the same approach used by Swift), although Expression will attempt to disambiguate based on the surrounding operator and operands as well.
+These symbols represent operators. Operators can be one or more characters long, and can contain almost any symbol that wouldn't conflict with a valid identifier name. You can overload existing infix operators with a post/prefix variant, or vice-versa. Disambiguation depends on the white-space surrounding the operator (which is the same approach used by Swift).
 
 Any valid identifier may also be used as a postfix operator, by placing it after an operator or literal value. For example, you could define `m` and `cm` as postfix operators when handling distance logic, or `hours`, `minutes` and `seconds` operators for computing times.
 
 Operator precedence follows standard BODMAS order, with multiplication/division given precedence over addition/subtraction. Prefix operators take precedence over postfix operators, which take precedence over infix ones. There is currently no way to specify precedence for custom operators - they all have equal priority to addition/subtraction.
+
+**Note**: Although there are currently no built-in boolean operators, if you wish to implement these then it should work as expected, with the caveat that short-circuiting is not supported. The parser will also recognize the ternary `?:` operator, treating `a ? b : c` as a single infix operator, but with three arguments.
+
 
 ```swift
 .function(String, arity: Int)
@@ -279,7 +282,7 @@ Here are some things to note:
 * Every view has a bottom and right property. These are computed, and cannot be set directly, but they can be used in expressions.
 * Circular references (a property whose value depends on itself) are forbidden, and will be detected by the system.
 * The `width` and `height` properties can use the `auto` constant, which does nothing useful for ordinary views, but can be used with text labels to calculate the optimal height for a given width, based on the amount of text.
-* Numeric values are measures screen points. Percentage values are relative to the superview's `width` or `height` property.
+* Numeric values are measured in screen points. Percentage values are relative to the superview's `width` or `height` property.
 * Remember you can use functions like `min()` and `max()` to ensure that relative values don't go above or below a fixed threshold.
 
 This is just a toy example, but I think it has some interesting potential. Have fun with it, and maybe even try using `View+Layout.swift` in your own projects. I'll be exploring a more sophisticated implementation of this idea in the future.

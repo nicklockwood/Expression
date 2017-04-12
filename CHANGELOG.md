@@ -1,5 +1,16 @@
 # Change Log
 
+## [0.5.0](https://github.com/nicklockwood/Expression/releases/tag/0.5.0) (2017-04-12)
+
+- Added support for multi-character operators, and precedence rules for most standard operators
+- Added special-case support for implementing a ternary `?:` operator with 3 arguments
+- Static constants are now replaced by their literal values at initialization time, reducing lookup overhead
+- Constant expressions are now computed once at initialization time and then cached
+- Numeric literals are now stored as Doubles instead of Strings, avoiding conversion overhead
+- Fixed bug where printing an expression omitted the parens around sub-expressions
+- Fixed crash when parsing a trailing postfix operator preceded by a space
+- Fixed bug in Colors example when running on 32-bit
+
 ## [0.4.0](https://github.com/nicklockwood/Expression/releases/tag/0.4.0) (2017-03-27)
 
 - You can now get all symbols used by an expression via the `symbols` property

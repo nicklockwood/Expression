@@ -63,18 +63,18 @@ public extension UIColor {
                 if arity != 3 {
                     throw Expression.Error.arityMismatch(symbol)
                 }
-                let red = Int(min(255, max(0, args[0]))) << 24
-                let green = Int(min(255, max(0, args[1]))) << 16
-                let blue = Int(min(255, max(0, args[2]))) << 8
+                let red = UInt32(min(255, max(0, args[0]))) << 24
+                let green = UInt32(min(255, max(0, args[1]))) << 16
+                let blue = UInt32(min(255, max(0, args[2]))) << 8
                 return Double(red + green + blue + 255)
             case let .function("rgba", arity):
                 if arity != 4 {
                     throw Expression.Error.arityMismatch(symbol)
                 }
-                let red = Int(min(255, max(0, args[0]))) << 24
-                let green = Int(min(255, max(0, args[1]))) << 16
-                let blue = Int(min(255, max(0, args[2]))) << 8
-                let alpha = Int(min(1, max(0, args[3])) * 255)
+                let red = UInt32(min(255, max(0, args[0]))) << 24
+                let green = UInt32(min(255, max(0, args[1]))) << 16
+                let blue = UInt32(min(255, max(0, args[2]))) << 8
+                let alpha = UInt32(min(1, max(0, args[3])) * 255)
                 return Double(red + green + blue + alpha)
             default:
                 return nil
