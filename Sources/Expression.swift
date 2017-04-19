@@ -190,8 +190,12 @@ public class Expression: CustomStringConvertible {
 
         // Build evaluator
         self.evaluator = { symbol, args in
+            // Try constants
+            if case let .constant(name) = symbol, let value = constants?[name] {
+                return value
+            }
             // Try symbols
-            if let symbols = symbols, let fn = symbols[symbol] {
+            if let fn = symbols?[symbol] {
                 return try fn(args)
             }
             // Try custom evaluator
@@ -204,17 +208,13 @@ public class Expression: CustomStringConvertible {
             }
             // Check for arity mismatch
             if case let .function(called, arity) = symbol {
-                var keys = Array(Expression.defaultSymbols.keys)
-                if symbols != nil {
-                    keys += Array(symbols!.keys)
+                var keys = Set(Expression.defaultSymbols.keys)
+                if let symbols = symbols {
+                    keys.formUnion(symbols.keys)
                 }
-                var expectedArity: Int?
                 for case let .function(name, requiredArity) in keys
                     where name == called && arity != requiredArity {
-                    expectedArity = requiredArity
-                }
-                if let expectedArity = expectedArity {
-                    throw Error.arityMismatch(.function(called, arity: expectedArity))
+                        throw Error.arityMismatch(.function(called, arity: requiredArity))
                 }
             }
             return nil
@@ -226,13 +226,18 @@ public class Expression: CustomStringConvertible {
             let root = try characters.parseSubexpression()
 
             // Optimize expression
-            let pure = (symbols ?? [:]).isEmpty && evaluator == nil
-            let optimizedRoot = root.optimized(with: constants)
-            if pure, let value = try? optimizedRoot.evaluate(self.evaluator) {
-                self.root = .literal(value)
-            } else {
-                self.root = optimizedRoot
+            var pureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
+            for symbol in root.symbols {
+                if case let .constant(name) = symbol, let value = constants?[name] {
+                    pureSymbols[symbol] = { _ in value }
+                } else if symbols?[symbol] != nil {
+                    break // Can't be certain that it's pure
+                } else if evaluator == nil, let fn = Expression.defaultSymbols[symbol] {
+                    // If there's no evaluator, we can assume that default symbols are pure
+                    pureSymbols[symbol] = fn
+                }
             }
+            self.root = root.optimized(with: pureSymbols)
         } catch {
             // Parsing failed
             root = .error(error as! Error, expression)
@@ -385,21 +390,25 @@ fileprivate enum Subexpression: CustomStringConvertible {
         }
     }
 
-    func optimized(with constants: [String: Double]?) -> Subexpression {
-        switch self {
-        case let .operand(symbol, args):
-            switch symbol {
-            case let .constant(name):
-                if let value = constants?[name] {
-                    return .literal(value)
-                }
-                return self
-            default:
-                return .operand(symbol, args.map { $0.optimized(with: constants) })
-            }
-        default:
+    func optimized(with pureSymbols: [Expression.Symbol: Expression.Symbol.Evaluator]) -> Subexpression {
+        guard case .operand(let symbol, var args) = self else {
             return self
         }
+        args = args.map { $0.optimized(with: pureSymbols) }
+        guard let fn = pureSymbols[symbol] else {
+            return .operand(symbol, args)
+        }
+        var argValues = [Double]()
+        for arg in args {
+            guard case let .literal(value) = arg else {
+                return .operand(symbol, args)
+            }
+            argValues.append(value)
+        }
+        guard let result = try? fn(argValues) else {
+            return .operand(symbol, args)
+        }
+        return .literal(result)
     }
 }
 

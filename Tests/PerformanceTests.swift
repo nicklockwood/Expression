@@ -81,7 +81,7 @@ let reallyLongExpression: String = {
     return "foo(" + parts.joined(separator: "+") + " + bar(5), a) + b"
 }()
 
-let repetitions = 100
+let repetitions = 200
 
 class PerformanceTests: XCTestCase {
 

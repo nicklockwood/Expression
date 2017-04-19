@@ -298,13 +298,49 @@ class ExpressionTests: XCTestCase {
 
     func testConstantSymbolsInlined() {
         let expression = Expression("foo(bar, baz)", constants: ["bar": 5, "baz": 2.5])
-        let expected: Set<Expression.Symbol> = [.function("foo", arity: 2)]
-        XCTAssertEqual(expression.symbols, expected)
+        XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
+        XCTAssertEqual(expression.description, "foo(5, 2.5)")
     }
 
     func testConstantExpressionEvaluatedCorrectly() {
         let expression = Expression("5 + foo", constants: ["foo": 5])
         XCTAssertEqual(try expression.evaluate(), 10)
+    }
+
+    func testConstantInlined() {
+        let expression = Expression("5 + foo", constants: ["foo": 5])
+        XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(expression.description, "10")
+    }
+
+    func testConstantInlined2() {
+        let expression = Expression("5 + foo", constants: ["foo": 5], symbols: [.constant("bar"): { _ in 6 }])
+        XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(expression.description, "10")
+    }
+
+    func testPotentiallyImpureConstantNotInlined() {
+        let expression = Expression("5 + foo", symbols: [.constant("foo"): { _ in 5 }])
+        XCTAssertEqual(expression.symbols, [.constant("foo"), .infix("+")])
+        XCTAssertEqual(expression.description, "5 + foo")
+    }
+
+    func testPureExpressionInlined() {
+        let expression = Expression("min(5, 6) + a")
+        XCTAssertEqual(expression.symbols, [.constant("a"), .infix("+")])
+        XCTAssertEqual(expression.description, "5 + a")
+    }
+
+    func testPotentiallyImpureExpressionNotInlined() {
+        let expression = Expression("min(5, 6) + a", symbols: [.function("min", arity: 2): { min($0[0], $0[1]) }])
+        XCTAssertEqual(expression.symbols, [.function("min", arity: 2), .constant("a"), .infix("+")])
+        XCTAssertEqual(expression.description, "min(5, 6) + a")
+    }
+
+    func testPotentiallyImpureExpressionNotInlined2() {
+        let expression = Expression("min(5, 6) + a", evaluator: { _ in nil })
+        XCTAssertEqual(expression.symbols, [.function("min", arity: 2), .constant("a"), .infix("+")])
+        XCTAssertEqual(expression.description, "min(5, 6) + a")
     }
 
     // MARK: Ternary operator
@@ -321,7 +357,7 @@ class ExpressionTests: XCTestCase {
 
     func testTernaryPrecedence() {
         let expression = Expression("1 - 1 ? 3 * 5 : 2 * 3", symbols: [.infix("?:"): { $0[0] == 0 ? $0[2] : $0[1] }])
-        XCTAssertEqual(expression.description, "(1 - 1) ? (3 * 5) : (2 * 3)")
+        XCTAssertEqual(expression.description, "0 ? 15 : 6")
         XCTAssertEqual(try expression.evaluate(), 6)
     }
 
@@ -331,7 +367,7 @@ class ExpressionTests: XCTestCase {
             .infix(":"): { $0[0] != 0 ? $0[0] : $0[1] },
         ]
         let expression = Expression("1 - 1 ? 3 * 5 : 2 * 3", symbols: symbols)
-        XCTAssertEqual(expression.description, "(1 - 1) ? (3 * 5) : (2 * 3)")
+        XCTAssertEqual(expression.description, "0 ? 15 : 6")
         XCTAssertEqual(try expression.evaluate(), 6)
     }
 }
