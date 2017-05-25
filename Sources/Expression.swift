@@ -37,9 +37,8 @@ import Foundation
 /// Reusing the same Expression instance for multiple evaluations is more efficient
 /// than creating a new one each time you wish to evaluate an expression string.
 public class Expression: CustomStringConvertible {
-    private let expression: String
     private let evaluator: Evaluator
-    private let root: Subexpression?
+    private let root: Subexpression
 
     /// Function prototype for evaluating an expression
     /// Return nil for an unrecognized symbol, or throw an error if the symbol is recognized
@@ -189,16 +188,6 @@ public class Expression: CustomStringConvertible {
                 symbols: [Symbol: Symbol.Evaluator]? = nil,
                 evaluator: Evaluator? = nil) {
 
-        // Parse expression
-        var characters = expression.unicodeScalars
-        guard let root = try? characters.parseSubexpression() else {
-            self.root = nil
-            self.expression = expression
-            self.evaluator = { _ in nil }
-            return
-        }
-        self.expression = root.description(parenthesized: false)
-
         // Build evaluator
         self.evaluator = { symbol, args in
             // Try symbols
@@ -231,23 +220,27 @@ public class Expression: CustomStringConvertible {
             return nil
         }
 
-        // Optimize expression
-        let pure = (symbols ?? [:]).isEmpty && evaluator == nil
-        let optimizedRoot = root.optimized(with: constants)
-        if pure, let value = try? optimizedRoot.evaluate(self.evaluator) {
-            self.root = .literal(value)
-        } else {
-            self.root = optimizedRoot
+        do {
+            // Parse expression
+            var characters = expression.unicodeScalars
+            let root = try characters.parseSubexpression()
+
+            // Optimize expression
+            let pure = (symbols ?? [:]).isEmpty && evaluator == nil
+            let optimizedRoot = root.optimized(with: constants)
+            if pure, let value = try? optimizedRoot.evaluate(self.evaluator) {
+                self.root = .literal(value)
+            } else {
+                self.root = optimizedRoot
+            }
+        } catch {
+            // Parsing failed
+            root = .error(error as! Error, expression)
         }
     }
 
     /// Evaluate the expression
     public func evaluate() throws -> Double {
-        guard let root = root else {
-            var characters = expression.unicodeScalars
-            _ = try characters.parseSubexpression() // Must fail or root would already be set
-            preconditionFailure()
-        }
         return try root.evaluate(evaluator)
     }
 
@@ -295,12 +288,12 @@ public class Expression: CustomStringConvertible {
         return symbols
     }()
 
-    /// Returns the pretty-printed expression if it was valid
+    /// Returns the optmized, pretty-printed expression if it was valid
     /// Otherwise, returns the original (invalid) expression string
-    public var description: String { return expression }
+    public var description: String { return root.description(parenthesized: false) }
 
     /// All symbols used in the expression
-    public var symbols: Set<Symbol> { return root?.symbols ?? [] }
+    public var symbols: Set<Symbol> { return root.symbols }
 }
 
 fileprivate enum Subexpression: CustomStringConvertible {
@@ -309,6 +302,7 @@ fileprivate enum Subexpression: CustomStringConvertible {
     case prefix(String)
     case postfix(String)
     case operand(Expression.Symbol, [Subexpression])
+    case error(Expression.Error, String)
 
     func evaluate(_ evaluator: Expression.Evaluator) throws -> Double {
         switch self {
@@ -329,6 +323,8 @@ fileprivate enum Subexpression: CustomStringConvertible {
              let .prefix(name),
              let .postfix(name):
             throw Expression.Error.unexpectedToken(name)
+        case let .error(error, _):
+            throw error
         }
     }
 
@@ -361,6 +357,8 @@ fileprivate enum Subexpression: CustomStringConvertible {
             case let .function(name, _):
                 return "\(name)(\(args.map({ $0.description }).joined(separator: ", ")))"
             }
+        case let .error(_, expression):
+            return expression
         }
     }
 
@@ -370,7 +368,7 @@ fileprivate enum Subexpression: CustomStringConvertible {
 
     var symbols: Set<Expression.Symbol> {
         switch self {
-        case .literal:
+        case .literal, .error:
             return []
         case let .prefix(name):
             return [.prefix(name)]
@@ -660,6 +658,8 @@ fileprivate extension String.UnicodeScalarView {
                 case .prefix, .infix, .postfix:
                     // nested prefix operator?
                     try collapseStack(from: i + 1)
+                case let .error(error, _):
+                    throw error
                 }
             case .literal where stack.count <= i + 1:
                 throw Expression.Error.unexpectedToken("\(lhs)")
@@ -705,9 +705,14 @@ fileprivate extension String.UnicodeScalarView {
                             stack[i ... i + 2] = [.operand(.infix(op1), [lhs, rhs])]
                         }
                         try collapseStack(from: 0)
+                    case let .error(error, _):
+                        throw error
                     }
-                default: break
+                case let .error(error, _):
+                    throw error
                 }
+            case let .error(error, _):
+                throw error
             }
         }
 

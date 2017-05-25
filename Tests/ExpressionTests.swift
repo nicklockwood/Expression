@@ -53,12 +53,12 @@ class ExpressionTests: XCTestCase {
 
     func testIntExpressionDescription() {
         let expression = Expression("32 + 200014")
-        XCTAssertEqual(expression.description, "32 + 200014")
+        XCTAssertEqual(expression.description, "200046")
     }
 
     func testFloatExpressionDescription() {
         let expression = Expression("2.4 + 7.65")
-        XCTAssertEqual(expression.description, "2.4 + 7.65")
+        XCTAssertEqual(expression.description, "10.05")
     }
 
     // MARK: Syntax errors
