@@ -10,7 +10,7 @@ What is this?
 
 Expression is a library for Mac and iOS for evaluating numeric expressions at runtime.
 
-It is similar to Foundation's built-in Expression class, but with better support for custom operators, and a simpler API.
+It is similar to Foundation's built-in Expression class, but with better support for custom operators, and a more Swift-friendly API.
 
 
 Why would I want that?
@@ -46,6 +46,7 @@ How do I use it?
 
 You create an `Expression` instance by passing a string containing your expression, and (optionally) any or all of the following:
 
+* A set of configuration options - used to enabled or disable certain features
 * A dictionary of named constants - this is the simplest way to specify predefined constants
 * A dictionary of symbols and callback functions - this is the most efficient way to provide custom functions or operators
 * A custom Evaluator function - this is the most flexible solution, and can support dynamic variable or function names
@@ -167,7 +168,7 @@ Any valid identifier may also be used as a postfix operator, by placing it after
 
 Operator precedence follows standard BODMAS order, with multiplication/division given precedence over addition/subtraction. Prefix operators take precedence over postfix operators, which take precedence over infix ones. There is currently no way to specify precedence for custom operators - they all have equal priority to addition/subtraction.
 
-**Note**: Although there are currently no built-in boolean operators, if you wish to implement these then it should work as expected, with the caveat that short-circuiting is not supported. The parser will also recognize the ternary `?:` operator, treating `a ? b : c` as a single infix operator, but with three arguments.
+**Note**: Although there are currently no built-in boolean operators, if you wish to implement these then it should work as expected, with the caveat that short-circuiting (where the right-hand argument is not evaluated if the left-hand-side is false) is not supported. The parser will also recognize the ternary `?:` operator, treating `a ? b : c` as a single infix operator with three arguments.
 
 
 ```swift
@@ -175,8 +176,24 @@ Operator precedence follows standard BODMAS order, with multiplication/division 
 ```
 
 Functions can be defined using any valid identifier followed by a comma-delimited sequence of arguments in parentheses. Functions can be overloaded to support different argument counts, but it is up to you to handle argument validation in your evaluator function.
-     
-     
+
+
+Caching & Optimization
+-----------------------
+
+By default, Expression caches parsed expressions and optimizes the expression where possible to make evaluation more efficient. Depending on your use case, these features may be undesirable, in which case you can disable them using the `options` argument, as follows:
+
+```swift
+let expression = Expression("foo + bar(5) + rnd()", options: [.noCache, .noOptimize], ...)
+```
+
+The expression cache is unlimited in size. In most applications this is very unlikely to ever be a problem - expressions are tiny, and even the most complex expression you can imagine is probably well under 1KB, so it would take a hell of a lot of them to cause memory pressure - But if for some reason you do ever need to reclaim the memory used by cached expressions, you can do so by calling the `flushCache()` method:
+
+```swift
+Expression.flushCache())
+```
+
+
 Standard library
 -------------------
 
@@ -256,7 +273,7 @@ Not much to say about this. It's a calculator. You can type expressions into it,
 Colors Example
 ----------------
 
-The Colors example demonstrates how to use Expression to create a (mostly) CSS-compliant color parser. It takes a string containing a named color, hex color or rgb() function call, and returns a UIColor object.
+The Colors example demonstrates how to use Expression to create a (mostly) CSS-compliant color parser. It takes a string containing a named color, hex color or `rgb()` function call, and returns a UIColor object.
 
 Using Expression to parse colors is a bit of a hack, as it only works because it's possible to encode a color as a 32-bit Integer, which itself can be stored inside the Double returned by the Expression Evaluator. Still, it's a neat trick.
 

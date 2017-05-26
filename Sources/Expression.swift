@@ -178,24 +178,43 @@ public class Expression: CustomStringConvertible {
         }
     }
 
+    /// Options for configuring an expression
+    public struct Options: OptionSet {
+
+        /// Disable caching of parsed expressions
+        public static let noCache = Options(rawValue: 1 << 0)
+
+        /// Disable optimizations such as constant substitution
+        public static let noOptimize = Options(rawValue: 1 << 1)
+
+        /// Packed bitfield of options
+        public let rawValue: Int
+
+        /// Designated initializer
+        public init(rawValue: Int) {
+            self.rawValue = rawValue
+        }
+    }
+
     /// Creates an Expression object from a string
     /// Optionally accepts some or all of:
     /// - A dictionary of constants for simple static values
     /// - A dictionary of symbols, for implementing custom functions and operators
     /// - A custom evaluator function for more complex symbol processing
     public init(_ expression: String,
-                constants: [String: Double]? = nil,
-                symbols: [Symbol: Symbol.Evaluator]? = nil,
+                options: Options = [],
+                constants: [String: Double] = [:],
+                symbols: [Symbol: Symbol.Evaluator] = [:],
                 evaluator: Evaluator? = nil) {
 
         // Build evaluator
         self.evaluator = { symbol, args in
             // Try constants
-            if case let .constant(name) = symbol, let value = constants?[name] {
+            if case let .constant(name) = symbol, let value = constants[name] {
                 return value
             }
             // Try symbols
-            if let fn = symbols?[symbol] {
+            if let fn = symbols[symbol] {
                 return try fn(args)
             }
             // Try custom evaluator
@@ -208,10 +227,7 @@ public class Expression: CustomStringConvertible {
             }
             // Check for arity mismatch
             if case let .function(called, arity) = symbol {
-                var keys = Set(Expression.defaultSymbols.keys)
-                if let symbols = symbols {
-                    keys.formUnion(symbols.keys)
-                }
+                let keys = Set(Expression.defaultSymbols.keys).union(symbols.keys)
                 for case let .function(name, requiredArity) in keys
                     where name == called && arity != requiredArity {
                         throw Error.arityMismatch(.function(called, arity: requiredArity))
@@ -222,14 +238,18 @@ public class Expression: CustomStringConvertible {
 
         do {
             // Parse expression
-            let root = try expression.parseSubexpression()
+            let root = try expression.parseSubexpression(usingCache: !options.contains(.noCache))
+            guard !options.contains(.noOptimize) else {
+                self.root = root
+                return
+            }
 
             // Optimize expression
             var pureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
             for symbol in root.symbols {
-                if case let .constant(name) = symbol, let value = constants?[name] {
+                if case let .constant(name) = symbol, let value = constants[name] {
                     pureSymbols[symbol] = { _ in value }
-                } else if symbols?[symbol] != nil {
+                } else if symbols[symbol] != nil {
                     break // Can't be certain that it's pure
                 } else if evaluator == nil, let fn = Expression.defaultSymbols[symbol] {
                     // If there's no evaluator, we can assume that default symbols are pure
@@ -323,12 +343,10 @@ fileprivate enum Subexpression: CustomStringConvertible {
                 return value
             }
             throw Expression.Error.undefinedSymbol(symbol)
-        case let .infix(name),
-             let .prefix(name),
-             let .postfix(name):
-            throw Expression.Error.unexpectedToken(name)
         case let .error(error, _):
             throw error
+        case .infix, .prefix, .postfix:
+            preconditionFailure()
         }
     }
 
@@ -807,14 +825,24 @@ fileprivate extension String.UnicodeScalarView {
 private var cache = [String: Subexpression]()
 private let queue = DispatchQueue(label: "com.Expression")
 
+public extension Expression {
+
+    /// Clear the expression cache (useful for testing, or in low memory situations)
+    static func clearCache() {
+        queue.sync { cache.removeAll() }
+    }
+}
+
 fileprivate extension String {
-    func parseSubexpression() throws -> Subexpression {
+    func parseSubexpression(usingCache: Bool) throws -> Subexpression {
 
         // Check cache
-        var cachedExpression: Subexpression?
-        queue.sync { cachedExpression = cache[self] }
-        if let expression = cachedExpression {
-            return expression
+        if usingCache {
+            var cachedExpression: Subexpression?
+            queue.sync { cachedExpression = cache[self] }
+            if let expression = cachedExpression {
+                return expression
+            }
         }
 
         // Parse
@@ -822,7 +850,9 @@ fileprivate extension String {
         let expression = try characters.parseSubexpression()
 
         // Store
-        queue.async { cache[self] = expression }
+        if usingCache {
+            queue.async { cache[self] = expression }
+        }
         return expression
     }
 }
