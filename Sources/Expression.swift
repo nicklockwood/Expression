@@ -222,8 +222,7 @@ public class Expression: CustomStringConvertible {
 
         do {
             // Parse expression
-            var characters = expression.unicodeScalars
-            let root = try characters.parseSubexpression()
+            let root = try expression.parseSubexpression()
 
             // Optimize expression
             var pureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
@@ -802,5 +801,28 @@ fileprivate extension String.UnicodeScalarView {
             throw Expression.Error.missingDelimiter(")")
         }
         return stack[0]
+    }
+}
+
+private var cache = [String: Subexpression]()
+private let queue = DispatchQueue(label: "com.Expression")
+
+fileprivate extension String {
+    func parseSubexpression() throws -> Subexpression {
+
+        // Check cache
+        var cachedExpression: Subexpression?
+        queue.sync { cachedExpression = cache[self] }
+        if let expression = cachedExpression {
+            return expression
+        }
+
+        // Parse
+        var characters = unicodeScalars
+        let expression = try characters.parseSubexpression()
+
+        // Store
+        queue.async { cache[self] = expression }
+        return expression
     }
 }
