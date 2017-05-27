@@ -187,6 +187,9 @@ public class Expression: CustomStringConvertible {
         /// Disable optimizations such as constant substitution
         public static let noOptimize = Options(rawValue: 1 << 1)
 
+        /// Enable standard boolean operators and constants
+        public static let boolSymbols = Options(rawValue: 1 << 2)
+
         /// Packed bitfield of options
         public let rawValue: Int
 
@@ -208,6 +211,7 @@ public class Expression: CustomStringConvertible {
                 evaluator: Evaluator? = nil) {
 
         // Build evaluator
+        let boolSymbols = options.contains(.boolSymbols) ? Expression.boolSymbols : [:]
         self.evaluator = { symbol, args in
             // Try constants
             if case let .variable(name) = symbol, let value = constants[name] {
@@ -222,12 +226,15 @@ public class Expression: CustomStringConvertible {
                 return value
             }
             // Try default symbols
-            if let fn = Expression.defaultSymbols[symbol] {
+            if let fn = Expression.mathSymbols[symbol] {
+                return try fn(args)
+            }
+            if let fn = boolSymbols[symbol] {
                 return try fn(args)
             }
             // Check for arity mismatch
             if case let .function(called, arity) = symbol {
-                let keys = Set(Expression.defaultSymbols.keys).union(symbols.keys)
+                let keys = Set(Expression.mathSymbols.keys).union(boolSymbols.keys).union(symbols.keys)
                 for case let .function(name, requiredArity) in keys
                     where name == called && arity != requiredArity {
                         throw Error.arityMismatch(.function(called, arity: requiredArity))
@@ -251,7 +258,7 @@ public class Expression: CustomStringConvertible {
                     pureSymbols[symbol] = { _ in value }
                 } else if symbols[symbol] != nil {
                     break // Can't be certain that it's pure
-                } else if evaluator == nil, let fn = Expression.defaultSymbols[symbol] {
+                } else if evaluator == nil, let fn = Expression.mathSymbols[symbol] ?? boolSymbols[symbol] {
                     // If there's no evaluator, we can assume that default symbols are pure
                     pureSymbols[symbol] = fn
                 }
@@ -268,8 +275,8 @@ public class Expression: CustomStringConvertible {
         return try root.evaluate(evaluator)
     }
 
-    // Expression's "standard library"
-    private static let defaultSymbols: [Symbol: Symbol.Evaluator] = {
+    // Stand math symbols
+    private static let mathSymbols: [Symbol: Symbol.Evaluator] = {
         var symbols: [Symbol: ([Double]) -> Double] = [:]
 
         // constants
@@ -309,6 +316,38 @@ public class Expression: CustomStringConvertible {
         symbols[.function("min", arity: 2)] = { min($0[0], $0[1]) }
         symbols[.function("atan2", arity: 2)] = { atan2($0[0], $0[1]) }
         symbols[.function("mod", arity: 2)] = { fmod($0[0], $0[1]) }
+
+        return symbols
+    }()
+
+    // Stand boolean symbols
+    private static let boolSymbols: [Symbol: Symbol.Evaluator] = {
+        var symbols: [Symbol: ([Double]) -> Double] = [:]
+
+        // boolean constants
+        symbols[.variable("true")] = { _ in 1 }
+        symbols[.variable("false")] = { _ in 0 }
+
+        // boolean infix operators
+        symbols[.infix("==")] = { (args: [Double]) -> Double in args[0] == args[1] ? 1 : 0 }
+        symbols[.infix("!=")] = { (args: [Double]) -> Double in args[0] != args[1] ? 1 : 0 }
+        symbols[.infix(">")] = { (args: [Double]) -> Double in args[0] > args[1] ? 1 : 0 }
+        symbols[.infix(">=")] = { (args: [Double]) -> Double in args[0] >= args[1] ? 1 : 0 }
+        symbols[.infix("<")] = { (args: [Double]) -> Double in args[0] < args[1] ? 1 : 0 }
+        symbols[.infix("<=")] = { (args: [Double]) -> Double in args[0] <= args[1] ? 1 : 0 }
+        symbols[.infix("&&")] = { (args: [Double]) -> Double in args[0] != 0 && args[1] != 0 ? 1 : 0 }
+        symbols[.infix("||")] = { (args: [Double]) -> Double in args[0] != 0 || args[1] != 0 ? 1 : 0 }
+
+        // boolean prefix operators
+        symbols[.prefix("!")] = { (args: [Double]) -> Double in args[0] == 0 ? 1 : 0 }
+
+        // ternary operator
+        symbols[.infix("?:")] = { (args: [Double]) -> Double in
+            if args.count == 3 {
+                return args[0] != 0 ? args[1] : args[2]
+            }
+            return args[0] != 0 ? args[0] : args[1]
+        }
 
         return symbols
     }()

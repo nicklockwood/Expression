@@ -415,21 +415,27 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "min(5, 6) + a")
     }
 
+    func testBooleanExpressionsInlined() {
+        let expression = Expression("1 || 1 ? 3 * 5 : 2 * 3", options: .boolSymbols)
+        XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(expression.description, "15")
+    }
+
+
     // MARK: Ternary operator
 
     func testTernaryTrue() {
-        let expression = Expression("0 ? 1 : 2", symbols: [.infix("?:"): { $0[0] == 0 ? $0[2] : $0[1] }])
+        let expression = Expression("0 ? 1 : 2", options: .boolSymbols)
         XCTAssertEqual(try expression.evaluate(), 2)
     }
 
     func testTernaryFalse() {
-        let expression = Expression("1 ? 1 : 2", symbols: [.infix("?:"): { $0[0] == 0 ? $0[2] : $0[1] }])
+        let expression = Expression("1 ? 1 : 2", options: .boolSymbols)
         XCTAssertEqual(try expression.evaluate(), 1)
     }
 
     func testTernaryPrecedence() {
-        let expression = Expression("1 - 1 ? 3 * 5 : 2 * 3", symbols: [.infix("?:"): { $0[0] == 0 ? $0[2] : $0[1] }])
-        XCTAssertEqual(expression.description, "0 ? 15 : 6")
+        let expression = Expression("1 - 1 ? 3 * 5 : 2 * 3", options: .boolSymbols)
         XCTAssertEqual(try expression.evaluate(), 6)
     }
 

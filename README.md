@@ -142,7 +142,7 @@ Note that you can check the arity of the function either using pattern matching 
 
     
 Symbols
---------------
+--------
 
 Expressions are formed from symbols, defined by the `Expression.Symbol` enum type. The default evaluator defines several of these, but you are free to define your own in your custom evaluator function.
 
@@ -168,8 +168,7 @@ Any valid identifier may also be used as a postfix operator, by placing it after
 
 Operator precedence follows standard BODMAS order, with multiplication/division given precedence over addition/subtraction. Prefix operators take precedence over postfix operators, which take precedence over infix ones. There is currently no way to specify precedence for custom operators - they all have equal priority to addition/subtraction.
 
-**Note**: Although there are currently no built-in boolean operators, if you wish to implement these then it should work as expected, with the caveat that short-circuiting (where the right-hand argument is not evaluated if the left-hand-side is false) is not supported. The parser will also recognize the ternary `?:` operator, treating `a ? b : c` as a single infix operator with three arguments.
-
+Standard boolean operators are supported, and follow the normal precidence rules, with the caveat that short-circuiting (where the right-hand argument is not evaluated if the left-hand-side is false) is not supported. The parser will also recognize the ternary `?:` operator, treating `a ? b : c` as a single infix operator with three arguments.
 
 ```swift
 .function(String, arity: Int)
@@ -194,8 +193,8 @@ Expression.flushCache())
 ```
 
 
-Standard library
--------------------
+Standard math symbols
+----------------------
 
 Expression implements a sort of "standard library" in the form of a default symbol dictionary. This contains basic math functions and constants that are generally useful, independent of a particular application.
 
@@ -222,7 +221,7 @@ let expression = Expression("3 + 4") { symbol, args in
 try expression.evaluate() // this will throw an error because no standard library operators are supported, including +
 ```
 
-Here is the current supported list of standard library symbols:
+Here are the currently supported math symbols:
 
 **constants**
 
@@ -263,7 +262,54 @@ min(x,y)
 atan2(x,y)
 mod(x,y)
 ```
-    
+
+
+Standard boolean symbols
+-------------------------
+
+In addition to math, Expression also supports boolean logic, following the C convention that zero is false and any nonzero value is true. The standard boolean symbols are not enabled by default, but you can enable them using the `.boolSymbols` option:
+
+```swift
+let expression = Expression("foo ? bar : baz", options: [.boolSymbols], ...)
+```
+
+As with the math symbols, all standard boolean operators can be individually overriden or disabled for a given expression using the `symbols` or `evaluator` constructor arguments.
+
+Here are the currently supported boolean symbols:
+
+**constants**
+
+```swift
+true
+false
+```
+
+**infix operators**
+
+```swift
+==
+!=
+>
+>=
+<
+<=
+&&
+||
+```
+
+**prefix operators**
+
+```swift
+!
+```
+
+**ternary operator**
+
+```swift
+?:
+```
+
+
 Calculator Example
 --------------------
 
