@@ -61,6 +61,78 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "10.05")
     }
 
+    // MARK: Numbers
+
+    func testZero() {
+        let expression = Expression("0")
+        XCTAssertEqual(try expression.evaluate(), 0)
+    }
+
+    func testSmallInteger() {
+        let expression = Expression("5")
+        XCTAssertEqual(try expression.evaluate(), 5)
+    }
+
+    func testLargeInteger() {
+        let expression = Expression("12345678901234567890")
+        XCTAssertEqual(try expression.evaluate(), 12345678901234567890)
+    }
+
+    func testNegativeInteger() {
+        let expression = Expression("-7")
+        XCTAssertEqual(try expression.evaluate(), -7)
+    }
+
+    func testSmallFloat() {
+        let expression = Expression("0.2")
+        XCTAssertEqual(try expression.evaluate(), 0.2)
+    }
+
+    func testLargeFloat() {
+        let expression = Expression("1234.567890")
+        XCTAssertEqual(try expression.evaluate(), 1234.567890)
+    }
+
+    func testNegativeFloat() {
+        let expression = Expression("-0.34")
+        XCTAssertEqual(try expression.evaluate(), -0.34)
+    }
+
+    func testExponential() {
+        let expression = Expression("1234e5")
+        XCTAssertEqual(try expression.evaluate(), 1234e5)
+    }
+
+    func testPositiveExponential() {
+        let expression = Expression("0.123e+4")
+        XCTAssertEqual(try expression.evaluate(), 0.123e+4)
+    }
+
+    func testNegativeExponential() {
+        let expression = Expression("0.123e-4")
+        XCTAssertEqual(try expression.evaluate(), 0.123e-4)
+    }
+
+    func testCapitalExponential() {
+        let expression = Expression("0.123E-4")
+        XCTAssertEqual(try expression.evaluate(), 0.123E-4)
+    }
+
+    func testInvalidExponential() {
+        let expression = Expression("123.e5")
+        XCTAssertThrowsError(try expression.evaluate())
+    }
+
+    func testLeadingZeros() {
+        let expression = Expression("0005")
+        XCTAssertEqual(try expression.evaluate(), 0005)
+    }
+
+    func testHex() {
+        let expression = Expression("0x2A")
+        XCTAssertEqual(try expression.evaluate(), 0x2A)
+    }
+
     // MARK: Syntax errors
 
     func testMissingCloseParen() {

@@ -485,32 +485,50 @@ fileprivate extension String.UnicodeScalarView {
             }
         }
 
-        var number = ""
-        if let integer = scanInteger() {
-            number = integer
-            let endOfInt = self
-            if scanCharacter(".") {
-                if let fraction = scanInteger() {
-                    number += "." + fraction
-                } else {
-                    self = endOfInt
+        func scanHex() -> String? {
+            return scanCharacters {
+                switch $0 {
+                case "0" ... "9", "A" ... "F", "a" ... "f":
+                    return true
+                default:
+                    return false
                 }
             }
-            let endOfFloat = self
+        }
+
+        func scanExponent() -> String? {
             if let e = scanCharacter({ $0 == "e" || $0 == "E" }) {
                 let sign = scanCharacter({ $0 == "-" || $0 == "+" }) ?? ""
                 if let exponent = scanInteger() {
-                    number += e + sign + exponent
-                } else {
-                    self = endOfFloat
+                    return e + sign + exponent
                 }
             }
-            guard let value = Double(number) else {
-                throw Expression.Error.unexpectedToken(number)
-            }
-            return .literal(value)
+            return nil
         }
-        return nil
+
+        guard var number = scanInteger() else {
+            return nil
+        }
+
+        let endOfInt = self
+        if scanCharacter(".") {
+            if let fraction = scanInteger() {
+                number += "." + fraction + (scanExponent() ?? "")
+            } else {
+                self = endOfInt
+            }
+            number += scanExponent() ?? ""
+        } else if let exponent = scanExponent() {
+            number += exponent
+        } else if number == "0" {
+            if scanCharacter("x") {
+                number = "0x" + (scanHex() ?? "")
+            }
+        }
+        guard let value = Double(number) else {
+            throw Expression.Error.unexpectedToken(number)
+        }
+        return .literal(value)
     }
 
     mutating func parseOperator() -> Subexpression? {
