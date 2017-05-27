@@ -1,5 +1,16 @@
 # Change Log
 
+## [0.6.0](https://github.com/nicklockwood/Expression/releases/tag/0.6.0) (2017-05-27)
+
+- BREAKING CHANGE: `constant` symbols have now been renamed to `variable` to more accurately reflect their behavior
+- Minor breaking change: `description` now returns the optimized description
+- Added built-in symbol library for boolean operations
+- Added thread-safe in-memory caching of previously parsed expressions
+- Improved optimizer - now pre-evaluates subexpressions with constant arguments
+- Added configuration options for enabling/disabling optimizations and boolean arguments
+- Added modulo `%` operator to the standard math symbol library
+- Added support for hexadecimal literals
+
 ## [0.5.0](https://github.com/nicklockwood/Expression/releases/tag/0.5.0) (2017-04-12)
 
 - Added support for multi-character operators, and precedence rules for most standard operators

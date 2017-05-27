@@ -30,9 +30,9 @@ but there are other possible applications, e.g.
 
 (If you find any other uses, let me know and I'll add them)
 
-Normally these kind of calculations would involve embedding a heavyweight interpreted language such as JavaScript or Lua into your app. Expression avoids that overhead, and is also more secure as it reduces the risk of arbitrary code injection or crashes due to infinite loops, buffer overflows, etc.
+Normally these kind of calculations would involve embedding a heavyweight interpreted language such as JavaScript or Lua into your app. Expression avoids that overhead, and is also more secure, as it reduces the risk of arbitrary code injection or crashes due to infinite loops, buffer overflows, etc.
 
-Expression is lightweight, well-tested, and written entirely in Swift 3.
+Expression is lightweight, well-tested, and written entirely in Swift.
 
 
 How do I install it?
