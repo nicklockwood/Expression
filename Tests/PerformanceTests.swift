@@ -33,11 +33,11 @@ import XCTest
 import Expression
 
 let symbols: [Expression.Symbol: Expression.Symbol.Evaluator] = [
-    .constant("a"): { _ in 5 },
-    .constant("b"): { _ in 6 },
-    .constant("c"): { _ in 7 },
-    .constant("hello"): { _ in -5 },
-    .constant("world"): { _ in -3 },
+    .variable("a"): { _ in 5 },
+    .variable("b"): { _ in 6 },
+    .variable("c"): { _ in 7 },
+    .variable("hello"): { _ in -5 },
+    .variable("world"): { _ in -3 },
     .function("foo", arity: 0): { _ in .pi },
     .function("foo", arity: 2): { $0[0] - $0[1] },
     .function("bar", arity: 1): { $0[0] - 2 },

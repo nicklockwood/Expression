@@ -287,10 +287,10 @@ class ExpressionTests: XCTestCase {
 
     func testModExpressionSymbols() {
         let expression = Expression("mod(foo, bar)", symbols: [
-            .constant("foo"): { _ in 5 },
-            .constant("bar"): { _ in 2.5 }
+            .variable("foo"): { _ in 5 },
+            .variable("bar"): { _ in 2.5 }
         ])
-        let expected: Set<Expression.Symbol> = [.function("mod", arity: 2), .constant("foo"), .constant("bar")]
+        let expected: Set<Expression.Symbol> = [.function("mod", arity: 2), .variable("foo"), .variable("bar")]
         XCTAssertEqual(expression.symbols, expected)
     }
 
@@ -314,32 +314,32 @@ class ExpressionTests: XCTestCase {
     }
 
     func testConstantInlined2() {
-        let expression = Expression("5 + foo", constants: ["foo": 5], symbols: [.constant("bar"): { _ in 6 }])
+        let expression = Expression("5 + foo", constants: ["foo": 5], symbols: [.variable("bar"): { _ in 6 }])
         XCTAssertEqual(expression.symbols, [])
         XCTAssertEqual(expression.description, "10")
     }
 
     func testPotentiallyImpureConstantNotInlined() {
-        let expression = Expression("5 + foo", symbols: [.constant("foo"): { _ in 5 }])
-        XCTAssertEqual(expression.symbols, [.constant("foo"), .infix("+")])
+        let expression = Expression("5 + foo", symbols: [.variable("foo"): { _ in 5 }])
+        XCTAssertEqual(expression.symbols, [.variable("foo"), .infix("+")])
         XCTAssertEqual(expression.description, "5 + foo")
     }
 
     func testPureExpressionInlined() {
         let expression = Expression("min(5, 6) + a")
-        XCTAssertEqual(expression.symbols, [.constant("a"), .infix("+")])
+        XCTAssertEqual(expression.symbols, [.variable("a"), .infix("+")])
         XCTAssertEqual(expression.description, "5 + a")
     }
 
     func testPotentiallyImpureExpressionNotInlined() {
         let expression = Expression("min(5, 6) + a", symbols: [.function("min", arity: 2): { min($0[0], $0[1]) }])
-        XCTAssertEqual(expression.symbols, [.function("min", arity: 2), .constant("a"), .infix("+")])
+        XCTAssertEqual(expression.symbols, [.function("min", arity: 2), .variable("a"), .infix("+")])
         XCTAssertEqual(expression.description, "min(5, 6) + a")
     }
 
     func testPotentiallyImpureExpressionNotInlined2() {
         let expression = Expression("min(5, 6) + a", evaluator: { _ in nil })
-        XCTAssertEqual(expression.symbols, [.function("min", arity: 2), .constant("a"), .infix("+")])
+        XCTAssertEqual(expression.symbols, [.function("min", arity: 2), .variable("a"), .infix("+")])
         XCTAssertEqual(expression.description, "min(5, 6) + a")
     }
 

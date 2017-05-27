@@ -53,15 +53,15 @@ fileprivate class LayoutData: NSObject {
         case "bottom":
             return try computedValue(forKey: "top") + computedValue(forKey: "height")
         default:
-            throw Expression.Error.undefinedSymbol(.constant(key))
+            throw Expression.Error.undefinedSymbol(.variable(key))
         }
     }
 
     private func common(_ symbol: Expression.Symbol, _: [Double]) throws -> Double? {
         switch symbol {
-        case .constant("auto"):
+        case .variable("auto"):
             throw Expression.Error.message("`auto` can only be used for width or height")
-        case let .constant(name):
+        case let .variable(name):
             let parts = name.components(separatedBy: ".")
             if parts.count == 2 {
                 if let sublayout = view.window?.subview(forKey: parts[0])?.layout {
@@ -108,7 +108,7 @@ fileprivate class LayoutData: NSObject {
                 switch symbol {
                 case .postfix("%"):
                     return self.view.superview.map { Double($0.frame.width) / 100 * args[0] }
-                case .constant("auto"):
+                case .variable("auto"):
                     if let superview = self.view.superview {
                         return Double(self.view.systemLayoutSizeFitting(superview.frame.size).width)
                     }
@@ -126,7 +126,7 @@ fileprivate class LayoutData: NSObject {
                 switch symbol {
                 case .postfix("%"):
                     return self.view.superview.map { Double($0.frame.height) / 100 * args[0] }
-                case .constant("auto"):
+                case .variable("auto"):
                     if let superview = self.view.superview {
                         return Double(self.view.systemLayoutSizeFitting(superview.frame.size).height)
                     }

@@ -48,8 +48,8 @@ public class Expression: CustomStringConvertible {
     /// Symbols that make up an expression
     public enum Symbol: CustomStringConvertible, Hashable {
 
-        /// A named constant
-        case constant(String)
+        /// A named variable
+        case variable(String)
 
         /// An infix operator
         case infix(String)
@@ -69,7 +69,7 @@ public class Expression: CustomStringConvertible {
         /// The human-readable name of the symbol
         public var name: String {
             switch self {
-            case let .constant(name),
+            case let .variable(name),
                  let .infix(name),
                  let .prefix(name),
                  let .postfix(name),
@@ -81,8 +81,8 @@ public class Expression: CustomStringConvertible {
         /// The human-readable description of the symbol
         public var description: String {
             switch self {
-            case let .constant(name):
-                return "constant `\(name)`"
+            case let .variable(name):
+                return "variable `\(name)`"
             case let .infix(name):
                 return "infix operator `\(name)`"
             case let .prefix(name):
@@ -142,7 +142,7 @@ public class Expression: CustomStringConvertible {
             case let .arityMismatch(symbol):
                 let arity: Int
                 switch symbol {
-                case .constant:
+                case .variable:
                     arity = 0
                 case .infix:
                     arity = 2
@@ -210,7 +210,7 @@ public class Expression: CustomStringConvertible {
         // Build evaluator
         self.evaluator = { symbol, args in
             // Try constants
-            if case let .constant(name) = symbol, let value = constants[name] {
+            if case let .variable(name) = symbol, let value = constants[name] {
                 return value
             }
             // Try symbols
@@ -247,7 +247,7 @@ public class Expression: CustomStringConvertible {
             // Optimize expression
             var pureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
             for symbol in root.symbols {
-                if case let .constant(name) = symbol, let value = constants[name] {
+                if case let .variable(name) = symbol, let value = constants[name] {
                     pureSymbols[symbol] = { _ in value }
                 } else if symbols[symbol] != nil {
                     break // Can't be certain that it's pure
@@ -273,7 +273,7 @@ public class Expression: CustomStringConvertible {
         var symbols: [Symbol: ([Double]) -> Double] = [:]
 
         // constants
-        symbols[.constant("pi")] = { _ in .pi }
+        symbols[.variable("pi")] = { _ in .pi }
 
         // infix operators
         symbols[.infix("+")] = { $0[0] + $0[1] }
@@ -374,7 +374,7 @@ fileprivate enum Subexpression: CustomStringConvertible {
             case let .infix(name):
                 let description = "\(args[0]) \(name) \(args[1])"
                 return parenthesized ? "(\(description))" : description
-            case let .constant(name):
+            case let .variable(name):
                 return name
             case let .function(name, _):
                 return "\(name)(\(args.map({ $0.description }).joined(separator: ", ")))"
@@ -633,7 +633,7 @@ fileprivate extension String.UnicodeScalarView {
         }
 
         if let identifier = scanIdentifier() {
-            return .operand(.constant(identifier), [])
+            return .operand(.variable(identifier), [])
         }
         return nil
     }
@@ -698,7 +698,7 @@ fileprivate extension String.UnicodeScalarView {
                     // cannot follow an operand
                     throw Expression.Error.unexpectedToken("\(rhs)")
                 case let .operand(symbol, _):
-                    guard case let .constant(name) = symbol else {
+                    guard case let .variable(name) = symbol else {
                         // operand cannot follow another operand
                         // TODO: the symbol may not be the first part of the operand
                         throw Expression.Error.unexpectedToken(symbol.name)
@@ -765,7 +765,7 @@ fileprivate extension String.UnicodeScalarView {
                 }
                 scopes.removeLast()
                 if let previous = oldStack.last {
-                    if case let .operand(.constant(name), _) = previous {
+                    if case let .operand(.variable(name), _) = previous {
                         // function call
                         oldStack.removeLast()
                         if stack.count > 0 {

@@ -22,7 +22,7 @@ public extension UIColor {
     public convenience init(expression: String) throws {
         let expression = Expression(expression) { symbol, args in
             switch symbol {
-            case var .constant(string):
+            case var .variable(string):
                 if string.hasPrefix("#") {
                     string = String(string.characters.dropFirst())
                     switch string.characters.count {

@@ -82,7 +82,7 @@ let result = try! expression.evaluate()
 
 let hexColor = "#FF0000FF" // rrggbbaa
 let expression = Expression(hexColor) { symbol, args in
-    if case .constant(let name), name.hasPrefix("#") { {
+    if case .variable(let name), name.hasPrefix("#") { {
         let hex = String(name.characters.dropFirst())
         return Double("0x" + hex)
     }
@@ -149,7 +149,7 @@ Expressions are formed from symbols, defined by the `Expression.Symbol` enum typ
 The Expression library supports the following symbol types:
 
 ```swift
-.constant(String)
+.variable(String)
 ```
 
 This is an alphanumeric identifier representing a constant or variable in an expression. Identifiers can be any valid sequence of letters and numbers, beginning with a letter, underscore (_), dollar symbol ($), at sign (@) or hash/pound sign (#).
@@ -298,7 +298,7 @@ Here are some things to note:
 * Any expression-based property of any view can reference any other property (of the same view, or any other view), and can even reference multiple properties.
 * Every view has a bottom and right property. These are computed, and cannot be set directly, but they can be used in expressions.
 * Circular references (a property whose value depends on itself) are forbidden, and will be detected by the system.
-* The `width` and `height` properties can use the `auto` constant, which does nothing useful for ordinary views, but can be used with text labels to calculate the optimal height for a given width, based on the amount of text.
+* The `width` and `height` properties can use the `auto` variable, which does nothing useful for ordinary views, but can be used with text labels to calculate the optimal height for a given width, based on the amount of text.
 * Numeric values are measured in screen points. Percentage values are relative to the superview's `width` or `height` property.
 * Remember you can use functions like `min()` and `max()` to ensure that relative values don't go above or below a fixed threshold.
 
