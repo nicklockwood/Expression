@@ -280,6 +280,7 @@ public class Expression: CustomStringConvertible {
         symbols[.infix("-")] = { $0[0] - $0[1] }
         symbols[.infix("*")] = { $0[0] * $0[1] }
         symbols[.infix("/")] = { $0[0] / $0[1] }
+        symbols[.infix("%")] = { fmod($0[0], $0[1]) }
 
         // workaround for operator spacing rules
         symbols[.infix("+-")] = { $0[0] - $0[1] }

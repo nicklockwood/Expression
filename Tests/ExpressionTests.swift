@@ -370,4 +370,36 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "0 ? 15 : 6")
         XCTAssertEqual(try expression.evaluate(), 6)
     }
+
+    // MARK: Modulo operator
+
+    func testPostiveIntegerModulo() {
+        let expression = Expression("5 % 2")
+        XCTAssertEqual(try expression.evaluate(), 1)
+    }
+
+    func testNegativeIntegerModulo() {
+        let expression = Expression("5 % -2")
+        XCTAssertEqual(try expression.evaluate(), 1)
+    }
+
+    func testNegativeIntegerModulo2() {
+        let expression = Expression("-5 % 2")
+        XCTAssertEqual(try expression.evaluate(), -1)
+    }
+
+    func testNegativeIntegerModulo3() {
+        let expression = Expression("-5 % -2")
+        XCTAssertEqual(try expression.evaluate(), -1)
+    }
+
+    func testPostiveFloatModulo() {
+        let expression = Expression("5.5 % 2")
+        XCTAssertEqual(try expression.evaluate(), 1.5)
+    }
+
+    func testNegativeFloatModulo() {
+        let expression = Expression("5.5 % -2")
+        XCTAssertEqual(try expression.evaluate(), 1.5)
+    }
 }

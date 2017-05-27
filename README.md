@@ -233,7 +233,7 @@ pi
 **infix operators**
 
 ```swift
-+ - / *
++ - / * %
 ```
 
 **prefix operators**
