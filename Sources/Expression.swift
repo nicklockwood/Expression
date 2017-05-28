@@ -256,10 +256,9 @@ public class Expression: CustomStringConvertible {
             for symbol in root.symbols {
                 if case let .variable(name) = symbol, let value = constants[name] {
                     pureSymbols[symbol] = { _ in value }
-                } else if symbols[symbol] != nil {
-                    break // Can't be certain that it's pure
-                } else if evaluator == nil, let fn = Expression.mathSymbols[symbol] ?? boolSymbols[symbol] {
-                    // If there's no evaluator, we can assume that default symbols are pure
+                } else if evaluator == nil, symbols[symbol] == nil,
+                    let fn = Expression.mathSymbols[symbol] ?? boolSymbols[symbol] {
+                    // If there's no evaluator and no custom symbol, we can assume default symbols are pure
                     pureSymbols[symbol] = fn
                 }
             }

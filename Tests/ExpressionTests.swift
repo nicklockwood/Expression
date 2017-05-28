@@ -421,6 +421,17 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "15")
     }
 
+    func testVariableDoesntBreakOptimizer() {
+        let expression = Expression(
+            "foo ? bar : baz",
+            options: .boolSymbols,
+            constants: ["bar": 5, "baz": 6],
+            symbols: [.variable("foo"): { _ in 1 }]
+        )
+        XCTAssertEqual(expression.symbols, [.variable("foo"), .infix("?:")])
+        XCTAssertEqual(expression.description, "foo ? 5 : 6")
+    }
+
 
     // MARK: Ternary operator
 
