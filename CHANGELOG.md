@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.6.1](https://github.com/nicklockwood/Expression/releases/tag/0.6.1) (2017-05-28)
+
+- Fixed bug where optimizer stopped as soon as it encountered a custom symbol in the expression
+
 ## [0.6.0](https://github.com/nicklockwood/Expression/releases/tag/0.6.0) (2017-05-27)
 
 - BREAKING CHANGE: `constant` symbols have now been renamed to `variable` to more accurately reflect their behavior

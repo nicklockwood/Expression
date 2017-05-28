@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.6.0
+//  Version 0.6.1
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
