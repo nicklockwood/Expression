@@ -92,7 +92,7 @@ class PerformanceTests: XCTestCase {
         self.measure {
             for _ in 0 ..< repetitions {
                 for exp in expressions {
-                    _ = Expression(exp)
+                    _ = Expression(exp, options: [.noCache, .noOptimize])
                 }
             }
         }
@@ -103,7 +103,7 @@ class PerformanceTests: XCTestCase {
         self.measure {
             for _ in 0 ..< repetitions {
                 for exp in expressions {
-                    _ = Expression(exp)
+                    _ = Expression(exp, options: [.noCache, .noOptimize])
                 }
             }
         }
@@ -114,7 +114,7 @@ class PerformanceTests: XCTestCase {
         self.measure {
             for _ in 0 ..< repetitions {
                 for exp in expressions {
-                    _ = Expression(exp)
+                    _ = Expression(exp, options: [.noCache, .noOptimize])
                 }
             }
         }
@@ -124,7 +124,61 @@ class PerformanceTests: XCTestCase {
         let exp = reallyLongExpression
         self.measure {
             for _ in 0 ..< repetitions {
-                _ = Expression(exp)
+                _ = Expression(exp, options: [.noCache, .noOptimize])
+            }
+        }
+    }
+
+    // MARK: optimizing
+
+    func testOptimizingShortExpressions() {
+        let expressions = shortExpressions
+        for exp in expressions {
+            _ = Expression(exp)
+        }
+        self.measure {
+            for _ in 0 ..< repetitions {
+                for exp in expressions {
+                    _ = Expression(exp, symbols: symbols)
+                }
+            }
+        }
+    }
+
+    func testOptimizingMediumExpressions() {
+        let expressions = mediumExpressions
+        for exp in expressions {
+            _ = Expression(exp)
+        }
+        self.measure {
+            for _ in 0 ..< repetitions {
+                for exp in expressions {
+                    _ = Expression(exp, symbols: symbols)
+                }
+            }
+        }
+    }
+
+    func testOptimizingLongExpressions() {
+        let expressions = longExpressions
+        for exp in expressions {
+            _ = Expression(exp)
+        }
+        self.measure {
+            for _ in 0 ..< repetitions {
+                for exp in expressions {
+                    _ = Expression(exp, symbols: symbols)
+                }
+            }
+        }
+    }
+
+    func testOptimizingReallyLongExpressions() {
+        let exp = reallyLongExpression
+        _ = Expression(exp)
+        self.measure {
+            for _ in 0 ..< repetitions {
+                _ = Expression(exp, symbols: symbols)
             }
         }
     }
