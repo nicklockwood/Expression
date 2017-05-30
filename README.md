@@ -10,7 +10,7 @@ What is this?
 
 Expression is a library for Mac and iOS for evaluating numeric expressions at runtime.
 
-It is similar to Foundation's built-in Expression class, but with better support for custom operators, and a more Swift-friendly API.
+It is similar to Foundation's built-in Expression class, but with better support for custom operators, a more Swift-friendly API, and a focus on performance.
 
 
 Why would I want that?
@@ -32,7 +32,7 @@ but there are other possible applications, e.g.
 
 Normally these kind of calculations would involve embedding a heavyweight interpreted language such as JavaScript or Lua into your app. Expression avoids that overhead, and is also more secure, as it reduces the risk of arbitrary code injection or crashes due to infinite loops, buffer overflows, etc.
 
-Expression is lightweight, well-tested, and written entirely in Swift.
+Expression is fast, lightweight, well-tested, and written entirely in Swift.
 
 
 How do I install it?
@@ -191,6 +191,12 @@ The expression cache is unlimited in size. In most applications this is very unl
 ```swift
 Expression.flushCache())
 ```
+
+To take full advantage of the optimizer, ensure you follow these guidelines:
+
+* Always pass constant values via the `constants` argument instead of as a variable in the `symbols` dictionary or `evaluator` function. Constant values can be inlined, whereas variables must be re-computed each time the function is evaluated in case they have changed.
+
+* Wherever possible, use the `symbols` dictionary to specify custom variables, operators or functions, instead of an `evaluator` function. Just having an `evaluator` function (even one that returns nil for everything) introduces uncertainty that prohibits most optimizations, so if you don't need it, don't include it.
 
 
 Standard math symbols
