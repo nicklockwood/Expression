@@ -37,7 +37,6 @@ import Foundation
 /// Reusing the same Expression instance for multiple evaluations is more efficient
 /// than creating a new one each time you wish to evaluate an expression string.
 public class Expression: CustomStringConvertible {
-    private let evaluator: Evaluator
     private let root: Subexpression
 
     /// Function prototype for evaluating an expression
@@ -209,60 +208,82 @@ public class Expression: CustomStringConvertible {
                 constants: [String: Double] = [:],
                 symbols: [Symbol: Symbol.Evaluator] = [:],
                 evaluator: Evaluator? = nil) {
-
-        // Build evaluator
-        let boolSymbols = options.contains(.boolSymbols) ? Expression.boolSymbols : [:]
-        self.evaluator = { symbol, args in
-            // Try constants
-            if case let .variable(name) = symbol, let value = constants[name] {
-                return value
-            }
-            // Try symbols
-            if let fn = symbols[symbol] {
-                return try fn(args)
-            }
-            // Try custom evaluator
-            if let value = try evaluator?(symbol, args) {
-                return value
-            }
-            // Try default symbols
-            if let fn = Expression.mathSymbols[symbol] {
-                return try fn(args)
-            }
-            if let fn = boolSymbols[symbol] {
-                return try fn(args)
-            }
-            // Check for arity mismatch
-            if case let .function(called, arity) = symbol {
-                let keys = Set(Expression.mathSymbols.keys).union(boolSymbols.keys).union(symbols.keys)
-                for case let .function(name, requiredArity) in keys
-                    where name == called && arity != requiredArity {
-                        throw Error.arityMismatch(.function(called, arity: requiredArity))
-                }
-            }
-            return nil
-        }
-
         do {
             // Parse expression
             let root = try expression.parseSubexpression(usingCache: !options.contains(.noCache))
-            guard !options.contains(.noOptimize) else {
-                self.root = root
-                return
-            }
 
-            // Optimize expression
-            var pureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
-            for symbol in root.symbols {
-                if case let .variable(name) = symbol, let value = constants[name] {
-                    pureSymbols[symbol] = { _ in value }
-                } else if evaluator == nil, symbols[symbol] == nil,
-                    let fn = Expression.mathSymbols[symbol] ?? boolSymbols[symbol] {
-                    // If there's no evaluator and no custom symbol, we can assume default symbols are pure
-                    pureSymbols[symbol] = fn
+            // Evaluators
+            let boolSymbols = options.contains(.boolSymbols) ? Expression.boolSymbols : [:]
+            func symbolEvaluator(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator? {
+                if let fn = symbols[symbol] {
+                    return fn
+                } else if boolSymbols.isEmpty, case .infix("?:") = symbol,
+                    let lhs = symbols[.infix("?")], let rhs = symbols[.infix(":")] {
+                    return { args in try rhs([lhs([args[0], args[1]]), args[2]]) }
+                }
+                return nil
+            }
+            func customEvaluator(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator? {
+                guard let evaluator = evaluator else {
+                    return nil
+                }
+                let fallback = defaultEvaluator(for: symbol)
+                return { args in
+                    // Try custom evaluator
+                    if let value = try evaluator(symbol, args) {
+                        return value
+                    }
+                    // Special case for ternary
+                    if args.count == 3, boolSymbols.isEmpty, case .infix("?:") = symbol,
+                        let lhs = try evaluator(.infix("?"), [args[0], args[1]]),
+                        let value = try evaluator(.infix(":"), [lhs, args[2]]) {
+                        return value
+                    }
+                    // Try default evaluator
+                    return try fallback(args)
                 }
             }
-            self.root = root.optimized(with: pureSymbols)
+            func defaultEvaluator(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator {
+                // Check default symbols
+                if let fn = Expression.mathSymbols[symbol] ?? boolSymbols[symbol] {
+                    return fn
+                }
+                // Check for arity mismatch
+                if case let .function(called, arity) = symbol {
+                    let keys = Set(Expression.mathSymbols.keys).union(boolSymbols.keys).union(symbols.keys)
+                    for case let .function(name, requiredArity) in keys
+                        where name == called && arity != requiredArity {
+                            return { _ in throw Error.arityMismatch(.function(called, arity: requiredArity)) }
+                    }
+                }
+                // Not found
+                return { _ in throw Error.undefinedSymbol(symbol) }
+            }
+
+            // Resolve symbols and optimize expression
+            var impureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
+            var pureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
+            if options.contains(.noOptimize) {
+                for symbol in root.symbols {
+                    if case let .variable(name) = symbol, let value = constants[name] {
+                        impureSymbols[symbol] = { _ in value }
+                    } else {
+                        impureSymbols[symbol] = symbolEvaluator(for: symbol) ??
+                            customEvaluator(for: symbol) ?? defaultEvaluator(for: symbol)
+                    }
+                }
+            } else {
+                for symbol in root.symbols {
+                    if case let .variable(name) = symbol, let value = constants[name] {
+                        pureSymbols[symbol] = { _ in value }
+                    } else if let fn = symbolEvaluator(for: symbol) ?? customEvaluator(for: symbol) {
+                        impureSymbols[symbol] = fn
+                    } else {
+                        pureSymbols[symbol] = defaultEvaluator(for: symbol)
+                    }
+                }
+            }
+            self.root = root.optimized(withSymbols: impureSymbols, pureSymbols: pureSymbols)
         } catch {
             // Parsing failed
             root = .error(error as! Error, expression)
@@ -271,7 +292,7 @@ public class Expression: CustomStringConvertible {
 
     /// Evaluate the expression
     public func evaluate() throws -> Double {
-        return try root.evaluate(evaluator)
+        return try root.evaluate()
     }
 
     // Stand math symbols
@@ -359,29 +380,21 @@ public class Expression: CustomStringConvertible {
     public var symbols: Set<Symbol> { return root.symbols }
 }
 
-fileprivate enum Subexpression: CustomStringConvertible {
+private enum Subexpression: CustomStringConvertible {
     case literal(Double)
     case infix(String)
     case prefix(String)
     case postfix(String)
-    case operand(Expression.Symbol, [Subexpression])
+    case operand(Expression.Symbol, [Subexpression], Expression.Symbol.Evaluator)
     case error(Expression.Error, String)
 
-    func evaluate(_ evaluator: Expression.Evaluator) throws -> Double {
+    func evaluate() throws -> Double {
         switch self {
         case let .literal(value):
             return value
-        case let .operand(symbol, args):
-            let argValues = try args.map { try $0.evaluate(evaluator) }
-            if let value = try evaluator(symbol, argValues) {
-                return value
-            }
-            if args.count == 3, case .infix("?:") = symbol, // Decompose ternary into two operators
-                let lhs = try evaluator(.infix("?"), [argValues[0], argValues[1]]),
-                let value = try evaluator(.infix(":"), [lhs, argValues[2]]) {
-                return value
-            }
-            throw Expression.Error.undefinedSymbol(symbol)
+        case let .operand(_, args, fn):
+            let argValues = try args.map { try $0.evaluate() }
+            return try fn(argValues)
         case let .error(error, _):
             throw error
         case .infix, .prefix, .postfix:
@@ -401,7 +414,7 @@ fileprivate enum Subexpression: CustomStringConvertible {
              let .prefix(string),
              let .postfix(string):
             return string
-        case let .operand(symbol, args):
+        case let .operand(symbol, args, _):
             switch symbol {
             case let .prefix(name):
                 return "\(name)\(args[0])"
@@ -437,7 +450,7 @@ fileprivate enum Subexpression: CustomStringConvertible {
             return [.postfix(name)]
         case let .infix(name):
             return [.infix(name)]
-        case let .operand(symbol, subexpressions):
+        case let .operand(symbol, subexpressions, _):
             var symbols = Set([symbol])
             for subexpression in subexpressions {
                 symbols.formUnion(subexpression.symbols)
@@ -446,29 +459,35 @@ fileprivate enum Subexpression: CustomStringConvertible {
         }
     }
 
-    func optimized(with pureSymbols: [Expression.Symbol: Expression.Symbol.Evaluator]) -> Subexpression {
-        guard case .operand(let symbol, var args) = self else {
+    func optimized(withSymbols impureSymbols: [Expression.Symbol: Expression.Symbol.Evaluator],
+                   pureSymbols: [Expression.Symbol: Expression.Symbol.Evaluator]) -> Subexpression
+    {
+        guard case .operand(let symbol, var args, _) = self else {
             return self
         }
-        args = args.map { $0.optimized(with: pureSymbols) }
+        args = args.map { $0.optimized(withSymbols: impureSymbols, pureSymbols: pureSymbols) }
         guard let fn = pureSymbols[symbol] else {
-            return .operand(symbol, args)
+            return .operand(symbol, args, impureSymbols[symbol] ?? { _ in
+                throw Expression.Error.undefinedSymbol(symbol)
+            })
         }
         var argValues = [Double]()
         for arg in args {
             guard case let .literal(value) = arg else {
-                return .operand(symbol, args)
+                return .operand(symbol, args, fn)
             }
             argValues.append(value)
         }
         guard let result = try? fn(argValues) else {
-            return .operand(symbol, args)
+            return .operand(symbol, args, fn)
         }
         return .literal(result)
     }
 }
 
-fileprivate extension String.UnicodeScalarView {
+private let placeholder: Expression.Symbol.Evaluator = { _ in preconditionFailure() }
+
+private extension String.UnicodeScalarView {
 
     mutating func scanCharacters(_ matching: (UnicodeScalar) -> Bool) -> String? {
         var index = endIndex
@@ -690,7 +709,7 @@ fileprivate extension String.UnicodeScalarView {
         }
 
         if let identifier = scanIdentifier() {
-            return .operand(.variable(identifier), [])
+            return .operand(.variable(identifier), [], placeholder)
         }
         return nil
     }
@@ -736,7 +755,7 @@ fileprivate extension String.UnicodeScalarView {
                 switch rhs {
                 case .literal, .operand:
                     // prefix operator
-                    stack[i ... i + 1] = [.operand(.prefix(name), [rhs])]
+                    stack[i ... i + 1] = [.operand(.prefix(name), [rhs], placeholder)]
                     try collapseStack(from: 0)
                 case .prefix, .infix, .postfix:
                     // nested prefix operator?
@@ -746,7 +765,7 @@ fileprivate extension String.UnicodeScalarView {
                 }
             case .literal where stack.count <= i + 1:
                 throw Expression.Error.unexpectedToken("\(lhs)")
-            case let .operand(symbol, _) where stack.count <= i + 1:
+            case let .operand(symbol, _, _) where stack.count <= i + 1:
                 throw Expression.Error.unexpectedToken(symbol.name)
             case .literal, .operand:
                 let rhs = stack[i + 1]
@@ -754,21 +773,21 @@ fileprivate extension String.UnicodeScalarView {
                 case .literal:
                     // cannot follow an operand
                     throw Expression.Error.unexpectedToken("\(rhs)")
-                case let .operand(symbol, _):
+                case let .operand(symbol, _, _):
                     guard case let .variable(name) = symbol else {
                         // operand cannot follow another operand
                         // TODO: the symbol may not be the first part of the operand
                         throw Expression.Error.unexpectedToken(symbol.name)
                     }
                     // treat as a postfix operator
-                    stack[i ... i + 1] = [.operand(.postfix(name), [lhs])]
+                    stack[i ... i + 1] = [.operand(.postfix(name), [lhs], placeholder)]
                     try collapseStack(from: 0)
                 case let .postfix(op1):
-                    stack[i ... i + 1] = [.operand(.postfix(op1), [lhs])]
+                    stack[i ... i + 1] = [.operand(.postfix(op1), [lhs], placeholder)]
                     try collapseStack(from: 0)
                 case let .infix(op1), let .prefix(op1): // treat as infix
                     guard stack.count > i + 2 else { // treat as postfix
-                        stack[i ... i + 1] = [.operand(.postfix(op1), [lhs])]
+                        stack[i ... i + 1] = [.operand(.postfix(op1), [lhs], placeholder)]
                         try collapseStack(from: 0)
                         return
                     }
@@ -782,10 +801,10 @@ fileprivate extension String.UnicodeScalarView {
                         }
                         try collapseStack(from: i + 2)
                     case .literal, .operand:
-                        if op1 == ":", case let .operand(.infix("?"), args) = lhs { // ternary
-                            stack[i ... i + 2] = [.operand(.infix("?:"), [args[0], args[1], rhs])]
+                        if op1 == ":", case let .operand(.infix("?"), args, placeholder) = lhs { // ternary
+                            stack[i ... i + 2] = [.operand(.infix("?:"), [args[0], args[1], rhs], placeholder)]
                         } else {
-                            stack[i ... i + 2] = [.operand(.infix(op1), [lhs, rhs])]
+                            stack[i ... i + 2] = [.operand(.infix(op1), [lhs, rhs], placeholder)]
                         }
                         try collapseStack(from: 0)
                     case let .error(error, _):
@@ -822,16 +841,16 @@ fileprivate extension String.UnicodeScalarView {
                 }
                 scopes.removeLast()
                 if let previous = oldStack.last {
-                    if case let .operand(.variable(name), _) = previous {
+                    if case let .operand(.variable(name), _, _) = previous {
                         // function call
                         oldStack.removeLast()
                         if stack.count > 0 {
                             // unwrap comma-delimited expression
-                            while case let .operand(.infix(","), args) = stack.first! {
+                            while case let .operand(.infix(","), args, _) = stack.first! {
                                 stack = args + stack.dropFirst()
                             }
                         }
-                        stack = [.operand(.function(name, arity: stack.count), stack)]
+                        stack = [.operand(.function(name, arity: stack.count), stack, placeholder)]
                     }
                 }
                 stack = oldStack + stack
@@ -890,7 +909,7 @@ public extension Expression {
     }
 }
 
-fileprivate extension String {
+private extension String {
     func parseSubexpression(usingCache: Bool) throws -> Subexpression {
 
         // Check cache
