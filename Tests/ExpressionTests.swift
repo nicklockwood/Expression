@@ -410,7 +410,12 @@ class ExpressionTests: XCTestCase {
     }
 
     func testPotentiallyImpureExpressionNotInlined2() {
-        let expression = Expression("min(5, 6) + a", evaluator: { _ in nil })
+        let expression = Expression("min(5, 6) + a", evaluator: { symbol, args in
+            if case .function("min", 2) = symbol {
+                return min(args[0], args[1])
+            }
+            return nil
+        })
         XCTAssertEqual(expression.symbols, [.function("min", arity: 2), .variable("a"), .infix("+")])
         XCTAssertEqual(expression.description, "min(5, 6) + a")
     }
@@ -432,6 +437,92 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "foo ? 5 : 6")
     }
 
+    // MARK: Pure symbols
+
+    func testOverriddenBuiltInConstantNotInlined() {
+        let expression = Expression("5 + pi", symbols: [.variable("pi"): { _ in 5 }])
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
+        XCTAssertEqual(expression.description, "5 + pi")
+    }
+
+    func testOverriddenBuiltInConstantNotInlinedWithPureSymbols() {
+        let expression = Expression("5 + pi", options: .pureSymbols, symbols: [.variable("pi"): { _ in 5 }])
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
+        XCTAssertEqual(expression.description, "5 + pi")
+    }
+
+    func testBuiltInConstantNotInlinedWithEmptyEvaluator() {
+        let expression = Expression("5 + pi") { _ in nil }
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
+        XCTAssertEqual(expression.description, "5 + pi")
+    }
+
+    func testOverriddenBuiltInConstantNotInlinedWithEvaluator() {
+        let expression = Expression("5 + pi") { symbol, args in
+            if case .variable("pi") = symbol {
+                return 4
+            }
+            return nil
+        }
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
+        XCTAssertEqual(expression.description, "5 + pi")
+    }
+
+    func testOverriddenBuiltInConstantNotInlinedWithPureEvaluator() {
+        let expression = Expression("5 + pi", options: .pureSymbols) { symbol, args in
+            if case .variable("pi") = symbol {
+                return 4
+            }
+            return nil
+        }
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
+        XCTAssertEqual(expression.description, "5 + pi")
+    }
+
+    func testOverriddenBuiltInFunctionNotInlined() {
+        let expression = Expression("5 + floor(1.5)", symbols: [
+            .function("floor", arity: 1): { args in ceil(args[0]) }
+        ])
+        XCTAssertEqual(expression.symbols, [.infix("+"), .function("floor", arity: 1)])
+        XCTAssertEqual(expression.description, "5 + floor(1.5)")
+    }
+
+    func testOverriddenBuiltInFunctionInlinedWithPureSymbols() {
+        let expression = Expression("5 + floor(1.5)", options: .pureSymbols, symbols: [
+            .function("floor", arity: 1): { args in ceil(args[0]) }
+        ])
+        XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(expression.description, "7")
+    }
+
+    func testBuiltInFunctionNotInlinedWithEmptyEvaluator() {
+        let expression = Expression("5 + floor(1.5)") { _ in nil }
+        XCTAssertEqual(expression.symbols, [.infix("+"), .function("floor", arity: 1)])
+        XCTAssertEqual(expression.description, "5 + floor(1.5)")
+    }
+
+    func testOverriddenBuiltInFunctionNotInlinedWithEvaluator() {
+        let expression = Expression("5 + floor(1.5)") { symbol, args in
+            if case .function("floor", arity: 1) = symbol {
+                return ceil(args[0])
+            }
+            return nil
+        }
+        XCTAssertEqual(expression.symbols, [.infix("+"), .function("floor", arity: 1)])
+        XCTAssertEqual(expression.description, "5 + floor(1.5)")
+    }
+
+    func testCustomFunctionNotInlined() {
+        let expression = Expression("5 + foo()", symbols: [.function("foo", arity: 0): { _ in 5 }])
+        XCTAssertEqual(expression.symbols, [.infix("+"), .function("foo", arity: 0)])
+        XCTAssertEqual(expression.description, "5 + foo()")
+    }
+
+    func testCustomFunctionInlinedWithPureSymbols() {
+        let expression = Expression("5 + foo()", options: .pureSymbols, symbols: [.function("foo", arity: 0): { _ in 5 }])
+        XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(expression.description, "10")
+    }
 
     // MARK: Ternary operator
 

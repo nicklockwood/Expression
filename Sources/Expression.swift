@@ -189,6 +189,11 @@ public class Expression: CustomStringConvertible {
         /// Enable standard boolean operators and constants
         public static let boolSymbols = Options(rawValue: 1 << 2)
 
+        /// Assume all functions and operators in `symbols` are "pure", i.e.
+        /// they have no side effects, and always produce the same output
+        /// for a given set of arguments
+        public static let pureSymbols = Options(rawValue: 1 << 3)
+
         /// Packed bitfield of options
         public let rawValue: Int
 
@@ -276,7 +281,15 @@ public class Expression: CustomStringConvertible {
                 for symbol in root.symbols {
                     if case let .variable(name) = symbol, let value = constants[name] {
                         pureSymbols[symbol] = { _ in value }
-                    } else if let fn = symbolEvaluator(for: symbol) ?? customEvaluator(for: symbol) {
+                    } else if let fn = symbolEvaluator(for: symbol) {
+                        if case .variable = symbol {
+                            impureSymbols[symbol] = fn
+                        } else if options.contains(.pureSymbols) {
+                            pureSymbols[symbol] = fn
+                        } else {
+                            impureSymbols[symbol] = fn
+                        }
+                    } else if let fn = customEvaluator(for: symbol) {
                         impureSymbols[symbol] = fn
                     } else {
                         pureSymbols[symbol] = defaultEvaluator(for: symbol)

@@ -198,6 +198,8 @@ To take full advantage of the optimizer, ensure you follow these guidelines:
 
 * Wherever possible, use the `symbols` dictionary to specify custom variables, operators or functions, instead of an `evaluator` function. Just having an `evaluator` function (even one that returns nil for everything) introduces uncertainty that prohibits most optimizations, so if you don't need it, don't include it.
 
+* If your custom functions and operators are all *pure* - i.e. they have no side effects, and always return the same output for a given set of argument values - then you should set the `pureSymbols` option for your expression. This option tells the optimizer that it's safe to inline any functions or operators in the `symbols` dictionary if all their arguments are constant. Note that the `pureSymbols` option does not affect variables (which are never inlined), nor any symbols matched by the `evaluator` function.
+
 
 Standard math symbols
 ----------------------

@@ -140,7 +140,7 @@ class PerformanceTests: XCTestCase {
         self.measure {
             for _ in 0 ..< parseRepetitions {
                 for exp in expressions {
-                    _ = Expression(exp, symbols: symbols)
+                    _ = Expression(exp, options: .pureSymbols, symbols: symbols)
                 }
             }
         }
@@ -154,7 +154,7 @@ class PerformanceTests: XCTestCase {
         self.measure {
             for _ in 0 ..< parseRepetitions {
                 for exp in expressions {
-                    _ = Expression(exp, symbols: symbols)
+                    _ = Expression(exp, options: .pureSymbols, symbols: symbols)
                 }
             }
         }
@@ -168,7 +168,7 @@ class PerformanceTests: XCTestCase {
         self.measure {
             for _ in 0 ..< parseRepetitions {
                 for exp in expressions {
-                    _ = Expression(exp, symbols: symbols)
+                    _ = Expression(exp, options: .pureSymbols, symbols: symbols)
                 }
             }
         }
@@ -179,7 +179,7 @@ class PerformanceTests: XCTestCase {
         _ = Expression(exp)
         self.measure {
             for _ in 0 ..< parseRepetitions {
-                _ = Expression(exp, symbols: symbols)
+                _ = Expression(exp, options: .pureSymbols, symbols: symbols)
             }
         }
     }
@@ -187,7 +187,7 @@ class PerformanceTests: XCTestCase {
     // MARK: evaluating
 
     func testEvaluatingShortExpressions() {
-        let expressions = shortExpressions.map { Expression($0, symbols: symbols) }
+        let expressions = shortExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) }
         self.measure {
             for _ in 0 ..< evalRepetitions {
                 for exp in expressions {
@@ -198,7 +198,7 @@ class PerformanceTests: XCTestCase {
     }
 
     func testEvaluatingMediumExpressions() {
-        let expressions = mediumExpressions.map { Expression($0, symbols: symbols) }
+        let expressions = mediumExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) }
         self.measure {
             for _ in 0 ..< evalRepetitions {
                 for exp in expressions {
@@ -209,7 +209,7 @@ class PerformanceTests: XCTestCase {
     }
 
     func testEvaluatingLongExpressions() {
-        let expressions = mediumExpressions.map { Expression($0, symbols: symbols) }
+        let expressions = mediumExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) }
         self.measure {
             for _ in 0 ..< evalRepetitions {
                 for exp in expressions {
@@ -220,7 +220,7 @@ class PerformanceTests: XCTestCase {
     }
 
     func testEvaluatingReallyLongExpression() {
-        let exp = Expression(reallyLongExpression, symbols: symbols)
+        let exp = Expression(reallyLongExpression, options: .pureSymbols, symbols: symbols)
         self.measure {
             for _ in 0 ..< evalRepetitions {
                 _ = try! exp.evaluate()
