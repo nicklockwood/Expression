@@ -181,6 +181,7 @@ public class Expression: CustomStringConvertible {
     public struct Options: OptionSet {
 
         /// Disable caching of parsed expressions
+        @available(*, deprecated)
         public static let noCache = Options(rawValue: 1 << 0)
 
         /// Disable optimizations such as constant substitution
@@ -208,100 +209,160 @@ public class Expression: CustomStringConvertible {
     /// - A dictionary of constants for simple static values
     /// - A dictionary of symbols, for implementing custom functions and operators
     /// - A custom evaluator function for more complex symbol processing
-    public init(_ expression: String,
+    public convenience init(_ expression: String,
                 options: Options = [],
                 constants: [String: Double] = [:],
                 symbols: [Symbol: Symbol.Evaluator] = [:],
                 evaluator: Evaluator? = nil) {
-        do {
-            // Parse expression
-            let root = try expression.parseSubexpression(usingCache: !options.contains(.noCache))
 
-            // Evaluators
-            let boolSymbols = options.contains(.boolSymbols) ? Expression.boolSymbols : [:]
-            func symbolEvaluator(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator? {
-                if let fn = symbols[symbol] {
-                    return fn
-                } else if boolSymbols.isEmpty, case .infix("?:") = symbol,
-                    let lhs = symbols[.infix("?")], let rhs = symbols[.infix(":")] {
-                    return { args in try rhs([lhs([args[0], args[1]]), args[2]]) }
-                }
+        self.init(
+            Expression.parse(expression, usingCache: !options.contains(.noCache)),
+            options: options,
+            constants: constants,
+            symbols: symbols,
+            evaluator: evaluator
+        )
+    }
+
+    /// Alternative constructor that accepts a pre-parsed expression
+    public init(_ expression: ParsedExpression,
+                options: Options = [],
+                constants: [String: Double] = [:],
+                symbols: [Symbol: Symbol.Evaluator] = [:],
+                evaluator: Evaluator? = nil) {
+
+        // Evaluators
+        let boolSymbols = options.contains(.boolSymbols) ? Expression.boolSymbols : [:]
+        func symbolEvaluator(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator? {
+            if let fn = symbols[symbol] {
+                return fn
+            } else if boolSymbols.isEmpty, case .infix("?:") = symbol,
+                let lhs = symbols[.infix("?")], let rhs = symbols[.infix(":")] {
+                return { args in try rhs([lhs([args[0], args[1]]), args[2]]) }
+            }
+            return nil
+        }
+        func customEvaluator(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator? {
+            guard let evaluator = evaluator else {
                 return nil
             }
-            func customEvaluator(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator? {
-                guard let evaluator = evaluator else {
-                    return nil
+            let fallback = defaultEvaluator(for: symbol)
+            return { args in
+                // Try custom evaluator
+                if let value = try evaluator(symbol, args) {
+                    return value
                 }
-                let fallback = defaultEvaluator(for: symbol)
-                return { args in
-                    // Try custom evaluator
-                    if let value = try evaluator(symbol, args) {
-                        return value
-                    }
-                    // Special case for ternary
-                    if args.count == 3, boolSymbols.isEmpty, case .infix("?:") = symbol,
-                        let lhs = try evaluator(.infix("?"), [args[0], args[1]]),
-                        let value = try evaluator(.infix(":"), [lhs, args[2]]) {
-                        return value
-                    }
-                    // Try default evaluator
-                    return try fallback(args)
+                // Special case for ternary
+                if args.count == 3, boolSymbols.isEmpty, case .infix("?:") = symbol,
+                    let lhs = try evaluator(.infix("?"), [args[0], args[1]]),
+                    let value = try evaluator(.infix(":"), [lhs, args[2]]) {
+                    return value
+                }
+                // Try default evaluator
+                return try fallback(args)
+            }
+        }
+        func defaultEvaluator(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator {
+            // Check default symbols
+            if let fn = Expression.mathSymbols[symbol] ?? boolSymbols[symbol] {
+                return fn
+            }
+            // Check for arity mismatch
+            if case let .function(called, arity) = symbol {
+                let keys = Set(Expression.mathSymbols.keys).union(boolSymbols.keys).union(symbols.keys)
+                for case let .function(name, requiredArity) in keys
+                    where name == called && arity != requiredArity {
+                        return { _ in throw Error.arityMismatch(.function(called, arity: requiredArity)) }
                 }
             }
-            func defaultEvaluator(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator {
-                // Check default symbols
-                if let fn = Expression.mathSymbols[symbol] ?? boolSymbols[symbol] {
-                    return fn
-                }
-                // Check for arity mismatch
-                if case let .function(called, arity) = symbol {
-                    let keys = Set(Expression.mathSymbols.keys).union(boolSymbols.keys).union(symbols.keys)
-                    for case let .function(name, requiredArity) in keys
-                        where name == called && arity != requiredArity {
-                            return { _ in throw Error.arityMismatch(.function(called, arity: requiredArity)) }
-                    }
-                }
-                // Not found
-                return { _ in throw Error.undefinedSymbol(symbol) }
-            }
+            // Not found
+            return { _ in throw Error.undefinedSymbol(symbol) }
+        }
 
-            // Resolve symbols and optimize expression
-            var impureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
-            var pureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
-            if options.contains(.noOptimize) {
-                for symbol in root.symbols {
-                    if case let .variable(name) = symbol, let value = constants[name] {
-                        impureSymbols[symbol] = { _ in value }
-                    } else {
-                        impureSymbols[symbol] = symbolEvaluator(for: symbol) ??
-                            customEvaluator(for: symbol) ?? defaultEvaluator(for: symbol)
-                    }
-                }
-            } else {
-                for symbol in root.symbols {
-                    if case let .variable(name) = symbol, let value = constants[name] {
-                        pureSymbols[symbol] = { _ in value }
-                    } else if let fn = symbolEvaluator(for: symbol) {
-                        if case .variable = symbol {
-                            impureSymbols[symbol] = fn
-                        } else if options.contains(.pureSymbols) {
-                            pureSymbols[symbol] = fn
-                        } else {
-                            impureSymbols[symbol] = fn
-                        }
-                    } else if let fn = customEvaluator(for: symbol) {
-                        impureSymbols[symbol] = fn
-                    } else {
-                        pureSymbols[symbol] = defaultEvaluator(for: symbol)
-                    }
+        // Resolve symbols and optimize expression
+        var impureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
+        var pureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
+        if options.contains(.noOptimize) {
+            for symbol in expression.root.symbols {
+                if case let .variable(name) = symbol, let value = constants[name] {
+                    impureSymbols[symbol] = { _ in value }
+                } else {
+                    impureSymbols[symbol] = symbolEvaluator(for: symbol) ??
+                        customEvaluator(for: symbol) ?? defaultEvaluator(for: symbol)
                 }
             }
-            self.root = root.optimized(withSymbols: impureSymbols, pureSymbols: pureSymbols)
+        } else {
+            for symbol in expression.root.symbols {
+                if case let .variable(name) = symbol, let value = constants[name] {
+                    pureSymbols[symbol] = { _ in value }
+                } else if let fn = symbolEvaluator(for: symbol) {
+                    if case .variable = symbol {
+                        impureSymbols[symbol] = fn
+                    } else if options.contains(.pureSymbols) {
+                        pureSymbols[symbol] = fn
+                    } else {
+                        impureSymbols[symbol] = fn
+                    }
+                } else if let fn = customEvaluator(for: symbol) {
+                    impureSymbols[symbol] = fn
+                } else {
+                    pureSymbols[symbol] = defaultEvaluator(for: symbol)
+                }
+            }
+        }
+        root = expression.root.optimized(withSymbols: impureSymbols, pureSymbols: pureSymbols)
+    }
+
+    private static var cache = [String: Subexpression]()
+    private static let queue = DispatchQueue(label: "com.Expression")
+
+    /// Parse an expression and optionally cache it for future use.
+    /// Returns an opaque struct that cannot be evaluated but can be queried
+    /// for symbols or used to construct an executable Expression instance
+    public static func parse(_ expression: String, usingCache: Bool = true) -> ParsedExpression {
+
+        // Check cache
+        if usingCache {
+            var cachedExpression: Subexpression?
+            queue.sync { cachedExpression = cache[expression] }
+            if let subexpression = cachedExpression {
+                return ParsedExpression(root: subexpression)
+            }
+        }
+
+        // Parse
+        let subexpression: Subexpression
+        do {
+            var characters = expression.unicodeScalars
+            subexpression = try characters.parseSubexpression()
         } catch {
-            // Parsing failed
-            root = .error(error as! Error, expression)
+            subexpression = .error(error as! Error, expression)
+        }
+
+        // Store
+        if usingCache {
+            queue.async { cache[expression] = subexpression }
+        }
+        return ParsedExpression(root: subexpression)
+    }
+
+    /// Clear the expression cache (useful for testing, or in low memory situations)
+    static func clearCache(for expression: String? = nil) {
+        queue.async {
+            if let expression = expression {
+                cache.removeValue(forKey: expression)
+            } else {
+                cache.removeAll()
+            }
         }
     }
+
+    /// Returns the optmized, pretty-printed expression if it was valid
+    /// Otherwise, returns the original (invalid) expression string
+    public var description: String { return root.description(parenthesized: false) }
+
+    /// All symbols used in the expression
+    public var symbols: Set<Symbol> { return root.symbols }
 
     /// Evaluate the expression
     public func evaluate() throws -> Double {
@@ -384,15 +445,29 @@ public class Expression: CustomStringConvertible {
 
         return symbols
     }()
+}
 
-    /// Returns the optmized, pretty-printed expression if it was valid
+/// An opaque wrapper for a parsed expression
+public struct ParsedExpression: CustomStringConvertible {
+    fileprivate let root: Subexpression
+
+    /// Returns the pretty-printed expression if it was valid
     /// Otherwise, returns the original (invalid) expression string
     public var description: String { return root.description(parenthesized: false) }
 
     /// All symbols used in the expression
-    public var symbols: Set<Symbol> { return root.symbols }
+    public var symbols: Set<Expression.Symbol> { return root.symbols }
+
+    /// Any error detected during parsing
+    public var error: Expression.Error? {
+        if case let .error(error, _) = root {
+            return error
+        }
+        return nil
+    }
 }
 
+// The internal expression implementation
 private enum Subexpression: CustomStringConvertible {
     case literal(Double)
     case infix(String)
@@ -500,6 +575,7 @@ private enum Subexpression: CustomStringConvertible {
 
 private let placeholder: Expression.Symbol.Evaluator = { _ in preconditionFailure() }
 
+// Expression parsing logic
 private extension String.UnicodeScalarView {
 
     mutating func scanCharacters(_ matching: (UnicodeScalar) -> Bool) -> String? {
@@ -908,40 +984,5 @@ private extension String.UnicodeScalarView {
             throw Expression.Error.missingDelimiter(")")
         }
         return stack[0]
-    }
-}
-
-private var cache = [String: Subexpression]()
-private let queue = DispatchQueue(label: "com.Expression")
-
-public extension Expression {
-
-    /// Clear the expression cache (useful for testing, or in low memory situations)
-    static func clearCache() {
-        queue.sync { cache.removeAll() }
-    }
-}
-
-private extension String {
-    func parseSubexpression(usingCache: Bool) throws -> Subexpression {
-
-        // Check cache
-        if usingCache {
-            var cachedExpression: Subexpression?
-            queue.sync { cachedExpression = cache[self] }
-            if let expression = cachedExpression {
-                return expression
-            }
-        }
-
-        // Parse
-        var characters = unicodeScalars
-        let expression = try characters.parseSubexpression()
-
-        // Store
-        if usingCache {
-            queue.async { cache[self] = expression }
-        }
-        return expression
     }
 }
