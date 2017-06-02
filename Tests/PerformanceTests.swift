@@ -217,4 +217,48 @@ class PerformanceTests: XCTestCase {
             }
         }
     }
+
+    // MARK: evaluating with empty evaluator
+
+    func testEvaluatingShortExpressionsWithEmptyEvaluator() {
+        let expressions = shortExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) { _ in nil } }
+        self.measure {
+            for _ in 0 ..< evalRepetitions {
+                for exp in expressions {
+                    _ = try! exp.evaluate()
+                }
+            }
+        }
+    }
+
+    func testEvaluatingMediumExpressionsWithEmptyEvaluator() {
+        let expressions = mediumExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) { _ in nil } }
+        self.measure {
+            for _ in 0 ..< evalRepetitions {
+                for exp in expressions {
+                    _ = try! exp.evaluate()
+                }
+            }
+        }
+    }
+
+    func testEvaluatingLongExpressionsWithEmptyEvaluator() {
+        let expressions = mediumExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) { _ in nil } }
+        self.measure {
+            for _ in 0 ..< evalRepetitions {
+                for exp in expressions {
+                    _ = try! exp.evaluate()
+                }
+            }
+        }
+    }
+
+    func testEvaluatingReallyLongExpressionWithEmptyEvaluator() {
+        let exp = Expression(reallyLongExpression, options: .pureSymbols, symbols: symbols) { _ in nil }
+        self.measure {
+            for _ in 0 ..< evalRepetitions {
+                _ = try! exp.evaluate()
+            }
+        }
+    }
 }
