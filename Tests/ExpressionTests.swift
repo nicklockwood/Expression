@@ -451,23 +451,6 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "5 + pi")
     }
 
-    func testBuiltInConstantNotInlinedWithEmptyEvaluator() {
-        let expression = Expression("5 + pi") { _ in nil }
-        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
-        XCTAssertEqual(expression.description, "5 + pi")
-    }
-
-    func testOverriddenBuiltInConstantNotInlinedWithEvaluator() {
-        let expression = Expression("5 + pi") { symbol, args in
-            if case .variable("pi") = symbol {
-                return 4
-            }
-            return nil
-        }
-        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
-        XCTAssertEqual(expression.description, "5 + pi")
-    }
-
     func testOverriddenBuiltInConstantNotInlinedWithPureEvaluator() {
         let expression = Expression("5 + pi", options: .pureSymbols) { symbol, args in
             if case .variable("pi") = symbol {
@@ -495,10 +478,50 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "7")
     }
 
-    func testBuiltInFunctionNotInlinedWithEmptyEvaluator() {
+    func testCustomFunctionNotInlined() {
+        let expression = Expression("5 + foo()", symbols: [.function("foo", arity: 0): { _ in 5 }])
+        XCTAssertEqual(expression.symbols, [.infix("+"), .function("foo", arity: 0)])
+        XCTAssertEqual(expression.description, "5 + foo()")
+    }
+
+    func testCustomFunctionInlinedWithPureSymbols() {
+        let expression = Expression("5 + foo()", options: .pureSymbols, symbols: [.function("foo", arity: 0): { _ in 5 }])
+        XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(expression.description, "10")
+    }
+
+    // MARK: Deferred optimization
+
+    func testBuiltInConstantInlinedAfterEvaluationWithEmptyEvaluator() {
+        let expression = Expression("5 + pi") { _ in nil }
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
+        XCTAssertEqual(expression.description, "5 + pi")
+        XCTAssertEqual(try expression.evaluate(), 5 + .pi)
+        XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(expression.description, "\(5.0 + .pi)")
+    }
+
+    func testOverriddenBuiltInConstantNotInlinedWithEvaluator() {
+        let expression = Expression("5 + pi") { symbol, args in
+            if case .variable("pi") = symbol {
+                return 4
+            }
+            return nil
+        }
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
+        XCTAssertEqual(expression.description, "5 + pi")
+        XCTAssertEqual(try expression.evaluate(), 9)
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
+        XCTAssertEqual(expression.description, "5 + pi")
+    }
+
+    func testBuiltInFunctionInlinedAfterEvaluationWithEmptyEvaluator() {
         let expression = Expression("5 + floor(1.5)") { _ in nil }
         XCTAssertEqual(expression.symbols, [.infix("+"), .function("floor", arity: 1)])
         XCTAssertEqual(expression.description, "5 + floor(1.5)")
+        XCTAssertEqual(try expression.evaluate(), 6)
+        XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(expression.description, "6")
     }
 
     func testOverriddenBuiltInFunctionNotInlinedWithEvaluator() {
@@ -510,18 +533,61 @@ class ExpressionTests: XCTestCase {
         }
         XCTAssertEqual(expression.symbols, [.infix("+"), .function("floor", arity: 1)])
         XCTAssertEqual(expression.description, "5 + floor(1.5)")
+        XCTAssertEqual(try expression.evaluate(), 7)
+        XCTAssertEqual(expression.symbols, [.infix("+"), .function("floor", arity: 1)])
+        XCTAssertEqual(expression.description, "5 + floor(1.5)")
     }
 
-    func testCustomFunctionNotInlined() {
-        let expression = Expression("5 + foo()", symbols: [.function("foo", arity: 0): { _ in 5 }])
-        XCTAssertEqual(expression.symbols, [.infix("+"), .function("foo", arity: 0)])
-        XCTAssertEqual(expression.description, "5 + foo()")
-    }
-
-    func testCustomFunctionInlinedWithPureSymbols() {
-        let expression = Expression("5 + foo()", options: .pureSymbols, symbols: [.function("foo", arity: 0): { _ in 5 }])
+    func testConditionallyOverriddenBuiltInFunctionInlinedWithEvaluatorAndConstantArg() {
+        let expression = Expression("5 + floor(1)") { symbol, args in
+            if case .function("floor", arity: 1) = symbol {
+                return args[0] == 1 ? nil : ceil(args[0])
+            }
+            return nil
+        }
+        XCTAssertEqual(expression.symbols, [.infix("+"), .function("floor", arity: 1)])
+        XCTAssertEqual(expression.description, "5 + floor(1)")
+        XCTAssertEqual(try expression.evaluate(), 6)
         XCTAssertEqual(expression.symbols, [])
-        XCTAssertEqual(expression.description, "10")
+        XCTAssertEqual(expression.description, "6")
+    }
+
+    func testConditionallyOverriddenBuiltInFunctionNotInlinedWithEvaluatorAndVariableArg() {
+        var x: Double = 1
+        let expression = Expression("5 + floor(x)", symbols: [.variable("x"): { _ in x }]) { symbol, args in
+            if case .function("floor", arity: 1) = symbol {
+                return args[0] == 1 ? nil : ceil(args[0])
+            }
+            return nil
+        }
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("x"), .function("floor", arity: 1)])
+        XCTAssertEqual(expression.description, "5 + floor(x)")
+        XCTAssertEqual(try expression.evaluate(), 6)
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("x"), .function("floor", arity: 1)])
+        XCTAssertEqual(expression.description, "5 + floor(x)")
+        x = 1.5
+        XCTAssertEqual(try expression.evaluate(), 7)
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("x"), .function("floor", arity: 1)])
+        XCTAssertEqual(expression.description, "5 + floor(x)")
+    }
+
+    func testConditionallyOverriddenBuiltInFunctionNotInlinedWithEvaluatorAndVariableArg2() {
+        var x: Double = 1.5
+        let expression = Expression("5 + floor(x)", symbols: [.variable("x"): { _ in x }]) { symbol, args in
+            if case .function("floor", arity: 1) = symbol {
+                return args[0] == 1 ? nil : ceil(args[0])
+            }
+            return nil
+        }
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("x"), .function("floor", arity: 1)])
+        XCTAssertEqual(expression.description, "5 + floor(x)")
+        XCTAssertEqual(try expression.evaluate(), 7)
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("x"), .function("floor", arity: 1)])
+        XCTAssertEqual(expression.description, "5 + floor(x)")
+        x = 1
+        XCTAssertEqual(try expression.evaluate(), 6)
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("x"), .function("floor", arity: 1)])
+        XCTAssertEqual(expression.description, "5 + floor(x)")
     }
 
     // MARK: Ternary operator

@@ -37,7 +37,7 @@ import Foundation
 /// Reusing the same Expression instance for multiple evaluations is more efficient
 /// than creating a new one each time you wish to evaluate an expression string.
 public class Expression: CustomStringConvertible {
-    private let root: Subexpression
+    private var root: Subexpression
 
     /// Function prototype for evaluating an expression
     /// Return nil for an unrecognized symbol, or throw an error if the symbol is recognized
@@ -180,7 +180,8 @@ public class Expression: CustomStringConvertible {
     /// Options for configuring an expression
     public struct Options: OptionSet {
 
-        /// Disable caching of parsed expressions
+        /// This option is deprecated, as it has no effect when using a pre-parsed
+        /// expression. To bypass the cache, use `parse(_, usingCache:)` instead
         @available(*, deprecated)
         public static let noCache = Options(rawValue: 1 << 0)
 
@@ -231,8 +232,12 @@ public class Expression: CustomStringConvertible {
                 symbols: [Symbol: Symbol.Evaluator] = [:],
                 evaluator: Evaluator? = nil) {
 
-        // Evaluators
+        root = expression.root
         let boolSymbols = options.contains(.boolSymbols) ? Expression.boolSymbols : [:]
+        var impureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
+        var pureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
+
+        // Evaluators
         func symbolEvaluator(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator? {
             if let fn = symbols[symbol] {
                 return fn
@@ -242,11 +247,25 @@ public class Expression: CustomStringConvertible {
             }
             return nil
         }
-        func customEvaluator(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator? {
+        func customEvaluator(for symbol: Expression.Symbol, optimizing: Bool) -> Expression.Symbol.Evaluator? {
             guard let evaluator = evaluator else {
                 return nil
             }
-            let fallback = defaultEvaluator(for: symbol)
+            let fallback: Expression.Symbol.Evaluator = {
+                guard let fn = defaultEvaluator(for: symbol) else {
+                    return errorHandler(for: symbol)
+                }
+                guard optimizing else {
+                    return fn
+                }
+                return { [unowned self] args in
+                    // Rewrite expression to skip custom evaluator
+                    pureSymbols[symbol] = customEvaluator(for: symbol, optimizing: false)
+                    impureSymbols.removeValue(forKey: symbol)
+                    self.root = self.root.optimized(withSymbols: impureSymbols, pureSymbols: pureSymbols)
+                    return try fn(args)
+                }
+            }()
             return { args in
                 // Try custom evaluator
                 if let value = try evaluator(symbol, args) {
@@ -262,11 +281,11 @@ public class Expression: CustomStringConvertible {
                 return try fallback(args)
             }
         }
-        func defaultEvaluator(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator {
+        func defaultEvaluator(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator? {
             // Check default symbols
-            if let fn = Expression.mathSymbols[symbol] ?? boolSymbols[symbol] {
-                return fn
-            }
+            return Expression.mathSymbols[symbol] ?? boolSymbols[symbol]
+        }
+        func errorHandler(for symbol: Expression.Symbol) -> Expression.Symbol.Evaluator {
             // Check for arity mismatch
             if case let .function(called, arity) = symbol {
                 let keys = Set(Expression.mathSymbols.keys).union(boolSymbols.keys).union(symbols.keys)
@@ -280,19 +299,19 @@ public class Expression: CustomStringConvertible {
         }
 
         // Resolve symbols and optimize expression
-        var impureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
-        var pureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
         if options.contains(.noOptimize) {
-            for symbol in expression.root.symbols {
+            for symbol in root.symbols {
                 if case let .variable(name) = symbol, let value = constants[name] {
                     impureSymbols[symbol] = { _ in value }
                 } else {
                     impureSymbols[symbol] = symbolEvaluator(for: symbol) ??
-                        customEvaluator(for: symbol) ?? defaultEvaluator(for: symbol)
+                        customEvaluator(for: symbol, optimizing: false) ??
+                        defaultEvaluator(for: symbol) ??
+                        errorHandler(for: symbol)
                 }
             }
         } else {
-            for symbol in expression.root.symbols {
+            for symbol in root.symbols {
                 if case let .variable(name) = symbol, let value = constants[name] {
                     pureSymbols[symbol] = { _ in value }
                 } else if let fn = symbolEvaluator(for: symbol) {
@@ -303,14 +322,14 @@ public class Expression: CustomStringConvertible {
                     } else {
                         impureSymbols[symbol] = fn
                     }
-                } else if let fn = customEvaluator(for: symbol) {
+                } else if let fn = customEvaluator(for: symbol, optimizing: true) {
                     impureSymbols[symbol] = fn
                 } else {
-                    pureSymbols[symbol] = defaultEvaluator(for: symbol)
+                    pureSymbols[symbol] = defaultEvaluator(for: symbol) ?? errorHandler(for: symbol)
                 }
             }
         }
-        root = expression.root.optimized(withSymbols: impureSymbols, pureSymbols: pureSymbols)
+        root = root.optimized(withSymbols: impureSymbols, pureSymbols: pureSymbols)
     }
 
     private static var cache = [String: Subexpression]()
