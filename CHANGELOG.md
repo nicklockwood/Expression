@@ -1,5 +1,16 @@
 # Change Log
 
+## [0.7.0](https://github.com/nicklockwood/Expression/releases/tag/0.7.0) (2017-06-03)
+
+- Significantly improved evaluation performance of by storing functions inline inside the parsed expression
+- Expressions can now contain quoted string literals, which are treated as identifiers (variable names)
+- Added `pureSymbols` optimization option, allowing custom functions and operators to be inlined where possible
+- Added deferred optimization, allowing functions that use a custom evaluator take advantage of optimization
+- Added `parse(_, usingCache:)` method for fine-grained control of caching and pre-parsing
+- The `clearCache()` method now optionally accepts a specific expression to be cleared
+- Deprecated the `noCache` option. Use the new `parse(_, usingCache:)` method instead
+- Added optimization guide to the README file
+
 ## [0.6.1](https://github.com/nicklockwood/Expression/releases/tag/0.6.1) (2017-05-28)
 
 - Fixed bug where optimizer stopped as soon as it encountered a custom symbol in the expression

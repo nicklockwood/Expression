@@ -1,20 +1,41 @@
 [![Travis](https://img.shields.io/travis/nicklockwood/Expression.svg)](https://travis-ci.org/nicklockwood/Expression)
 [![License](https://img.shields.io/badge/license-zlib-lightgrey.svg)](https://opensource.org/licenses/Zlib)
 [![CocoaPods](https://img.shields.io/cocoapods/p/Expression.svg)](https://cocoapods.org/pods/Expression)
-[![CocoaPods](https://img.shields.io/cocoapods/metrics/doc-percent/Expression.svg)](http://cocoadocs.org/docsets/Expression/)
 [![Twitter](https://img.shields.io/badge/twitter-@nicklockwood-blue.svg)](http://twitter.com/nicklockwood)
 
+- [Introduction](#introduction)
+	- [What?](#what)
+	- [Why?](#why)
+	- [How?](#how)
+- [Usage](#usage)
+    - [Installation](#installation)
+    - [Integration](#integration)
+- [Symbols](#symbols)
+	- [Variables](#variables)
+	- [Operators](#operators)
+	- [Functions](#functions)
+- [Performance](#performance)
+	- [Caching](#caching)
+	- [Optimization](#optimization)
+- [Standard Library](#standard-library)
+	- [Math Symbols](#math-symbols)
+    - [Boolean Symbols](#boolean-symbols)
+- [Example Projects](#example-projects)
+	- [Calculator](#calculator)
+	- [Colors](#colors)
+    - [Layout](#layout)
 
-What is this?
-----------------
+
+# Introduction
+
+## What?
 
 Expression is a library for Mac and iOS for evaluating numeric expressions at runtime.
 
 It is similar to Foundation's built-in Expression class, but with better support for custom operators, a more Swift-friendly API, and a focus on performance.
 
 
-Why would I want that?
-----------------------
+## Why?
 
 There are many situations where it is useful to be able to evaluate a simple expression at runtime. Some such cases are demonstrated in the example apps included with the library:
 
@@ -35,14 +56,23 @@ Normally these kind of calculations would involve embedding a heavyweight interp
 Expression is fast, lightweight, well-tested, and written entirely in Swift.
 
 
-How do I install it?
----------------------
+## How?
 
-It's just a single class, so you can simply drag the `Expression.swift` file into your project to use it. There's also a framework for Mac and iOS, or you can use CocoaPods or Carthage.
+Expression works by parsing an expression string into a tree of symbols, which can then be evaluated at runtime. Each symbol maps to a Swift closure (function) which is executed during evaluation. There are built-in functions representing common math operations, or you can provide your own custom ones. 
 
 
-How do I use it?
-----------------
+# Usage
+
+## Installation
+
+The entire Expression API is encapsulated in a single file, and everything public is prefixed or namespaced, so you can simply drag the `Expression.swift` file into your project to use it. If you prefer, there's a framework for Mac and iOS that you can import, or you can use CocoaPods, Carthage, or Swift Package Manager on Linux.
+
+To install Layout using CocoaPods, add the following to your Podfile:
+
+	pod 'Expression', '~> 0.7.0'
+
+
+## Integration
 
 You create an `Expression` instance by passing a string containing your expression, and (optionally) any or all of the following:
 
@@ -136,19 +166,19 @@ default:
 }
 ```
 
-Note that you can check the arity of the function either using pattern matching (as we did above), or just by checking args.count. These will always match.
+Note that you can check the arity of the function either using pattern matching (as we did above), or just by checking `args.count`. These will always match.
 
 For dynamic symbols, a more performant (but more complex) alternative to using a custom `Evaluator` function is to pre-parse the expression to discover the specific symbols that it's actually using, then calculate the values in advance. Here is how that would work for the hex colors example:
 
-```
+```swift
 // Expert usage:
 // Pre-parsing to get the symbols, then initializing Expression with
 // precalculated hex color constants to improve evaluation performance
 
 let hexColor = "#FF0000FF" // rrggbbaa
-let temp = Expression.parse(hexColor)
+let parsedExpression = Expression.parse(hexColor)
 var constants = [String: Double]()
-for symbol in temp.symbols {
+for symbol in parsedExpression.symbols {
     if case .variable(let name), name.hasPrefix("#") { {
         let hex = String(name.characters.dropFirst())
         if let value = Double("0x" + hex) {
@@ -156,7 +186,7 @@ for symbol in temp.symbols {
         }
     }
 }
-let expression = Expression(hexColor, constants: constants)
+let expression = Expression(parsedExpression, constants: constants)
 let color: UIColor = {
     let rgba = UInt32(try! expression.evaluate())
     let red = CGFloat((rgba & 0xFF000000) >> 24) / 255
@@ -167,13 +197,14 @@ let color: UIColor = {
 }()
 ``` 
 
-    
-Symbols
---------
+
+# Symbols
 
 Expressions are formed from a mixture of numeric literals and *symbols*, which are instances of the `Expression.Symbol` enum type. The built-in math and boolean libraries define a number of standard symbols, but you are free to define your own.
 
 The `Expression.Symbol` enum supports the following symbol types:
+
+## Variables
 
 ```swift
 .variable(String)
@@ -184,6 +215,8 @@ This is an alphanumeric identifier representing a constant or variable in an exp
 Like Swift, Expression allows unicode characters in identifiers, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for name-spacing (as demonstrated in the Layout example app).
 
 The parser also accepts quoted strings as identifiers. Single quotes (') , double quotes (") , or backticks (`) may be used. It's up to your application to interpret these as meaningful. Unlike regular identifiers, quoted identifiers can contain any unicode character, including spaces. Newlines, quotes and other special characters can be escaped using a backslash (\). Escape sequences are decoded for you, but the outer quotes are retained so you can distinguish strings from other identifiers.
+
+## Operators
 
 ```swift
 .infix(String)
@@ -199,6 +232,8 @@ Operator precedence follows standard BODMAS order, with multiplication/division 
 
 Standard boolean operators are supported, and follow the normal precidence rules, with the caveat that short-circuiting (where the right-hand argument(s) may not be evaluated, depending on the left-hand-side) is not supported. The parser will also recognize the ternary `?:` operator, treating `a ? b : c` as a single infix operator with three arguments.
 
+## Functions
+
 ```swift
 .function(String, arity: Int)
 ```
@@ -206,8 +241,9 @@ Standard boolean operators are supported, and follow the normal precidence rules
 Functions can be defined using any valid identifier followed by a comma-delimited sequence of arguments in parentheses. Functions can be overloaded to support different argument counts, but it is up to you to handle argument validation in your evaluator function.
 
 
-Caching
---------
+# Performance
+
+## Caching
 
 By default, Expression caches parsed expressions. The expression cache is unlimited in size. In most applications this is very unlikely to ever be a problem - expressions are tiny, and even the most complex expression you can imagine is probably well under 1KB, so it would take a lot of them to cause memory pressure - But if for some reason you do ever need to reclaim the memory used by cached expressions, you can do so by calling the `flushCache()` method:
 
@@ -231,19 +267,17 @@ let expression = Expression(parsedExpression, constants: ["foo": 4, "bar": 5])
 
 By setting the `usingCache` argument to `false` in the code above, we avoid adding the expression to the global cache. You are also free to implement your own caching by storing the parsed expression and re-using it, which may be more efficient than the built-in cache in some cases (e.g. by avoiding thread management if your code is single-threaded).
 
-
-Optimization
----------------
+## Optimization
 
 By default, expressions are optimized where possible to make evaluation more efficient. Common optimizations include replacing constants with their literal values, and replacing pure functions or operators with their result when all arguments are constant.
 
 The optimizer reduces evaluation time at the cost of increased initialization time, and for an expression that will only be evaluated once or twice, this tradeoff may not be worth it, in which case you can disable optimization using the `options` argument, as follows:
 
 ```swift
-let expression = Expression("foo + bar", options: [.noOptimize], ...)
+let expression = Expression("foo + bar", options: .noOptimize, ...)
 ```
 
-On the other hand, if your expressions are being evaluated hundreds or thousands of times, you will want to take full advantage of the optimizer to improve your application's performance. To ensure you are getting the best out of the Expression library, follow these guidelines:
+On the other hand, if your expressions are being evaluated hundreds or thousands of times, you will want to take full advantage of the optimizer to improve your application's performance. To ensure you are getting the best out of Expression's optimizer, follow these guidelines:
 
 * Always pass constant values via the `constants` argument instead of as a variable in the `symbols` dictionary or `evaluator` function. Constant values can be inlined, whereas variables must be re-computed each time the function is evaluated in case they have changed.
 
@@ -251,15 +285,18 @@ On the other hand, if your expressions are being evaluated hundreds or thousands
 
 * Wherever possible, use the `symbols` dictionary to specify custom variables, operators or functions, instead of an `evaluator` function. Just having an `evaluator` function (even one that returns nil for everything) introduces an overhead to both initialization and the first evaluation, so if you don't need it, don't include it. The exception to this is if you have a mix of pure and impure symbols, in which case it's better to put the pure symbols in the `symbols` dictionary (and set the `pureSymbols` option), then put the impure ones in the `evaluator` function.
 
-* If your expressions may contain values which are constant, but where not all possible values can be computed in advance - e.g. encoded values such as in the hex colors example, or arbitrary keypaths that must be looked up in a deep object graph - you can use the `parse()` function to get access to the list of symbols that are actually used in the expression. This allows you to decode or look up just the specific values that are needed, and then pass them as constants to the Expression at initialization time, without needing to use an `evaluator` function (see the "Expert usage" example in the [How do I use it](#how-do-i-use-it) section above).
+* If your expressions may contain values which are constant, but where not all possible values can be computed in advance - e.g. encoded values such as in the hex colors example, or arbitrary keypaths that must be looked up in a deep object graph - you can use the `parse()` function to get access to the list of symbols that are actually used in the expression. This allows you to decode or look up just the specific values that are needed, and then pass them as constants to the Expression at initialization time, without needing to use an `evaluator` function (see the "Expert usage" example in the [Integration](#integration) section above).
 
 
-Standard math symbols
-----------------------
+# Standard Library
 
-Expression implements a sort of "standard library" in the form of a default symbol dictionary. This contains basic math functions and constants that are generally useful, independent of a particular application.
+## Math Symbols
 
-If you use a custom symbol dictionary, you can override any default symbol, or overload default functions with a different number of arguments (arity). Any symbols from the standard library that you do not explicitly override will still be available. To explicitly disable individual symbols from the standard library, you can override them and throw an exception:
+By default, Expression supports a number of basic math functions, operators, and constants that are generally useful independent of a particular application.
+
+If you use a custom symbol dictionary, you can override any default symbol, or overload default functions with a different number of arguments (arity). Any symbols from the standard library that you do not explicitly override will still be available.
+
+To explicitly disable individual symbols from the standard library, you can override them and throw an exception:
 
 ```swift
 let expression = Expression("pow(2,3)", symbols: [
@@ -324,14 +361,12 @@ atan2(x,y)
 mod(x,y)
 ```
 
-
-Standard boolean symbols
--------------------------
+## Boolean Symbols
 
 In addition to math, Expression also supports boolean logic, following the C convention that zero is false and any nonzero value is true. The standard boolean symbols are not enabled by default, but you can enable them using the `.boolSymbols` option:
 
 ```swift
-let expression = Expression("foo ? bar : baz", options: [.boolSymbols], ...)
+let expression = Expression("foo ? bar : baz", options: .boolSymbols, ...)
 ```
 
 As with the math symbols, all standard boolean operators can be individually overriden or disabled for a given expression using the `symbols` or `evaluator` constructor arguments.
@@ -371,22 +406,21 @@ false
 ```
 
 
-Calculator Example
---------------------
+# Example Projects
+
+## Calculator
 
 Not much to say about this. It's a calculator. You can type expressions into it, and it will evaluate them and produce a result (or an error, if what you typed was invalid).
 
 
-Colors Example
-----------------
+## Colors
 
 The Colors example demonstrates how to use Expression to create a (mostly) CSS-compliant color parser. It takes a string containing a named color, hex color or `rgb()` function call, and returns a UIColor object.
 
-Using Expression to parse colors is a bit of a hack, as it only works because it's possible to encode a color as a 32-bit Integer, which itself can be stored inside the Double returned by the Expression Evaluator. Still, it's a neat trick.
+Using Expression to parse colors is a bit of a hack, as it only works because it's possible to encode a color as a UInt32, which itself can be stored inside the Double returned by the Expression evaluator. Still, it's a neat trick.
 
 
-Layout Example
-----------------
+## Layout
 
 This is where things get interesting: The Layout example demonstrates a crude-but-usable layout system, which supports arbitrary expressions for the coordinates of the views.
 

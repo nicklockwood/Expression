@@ -128,7 +128,9 @@ fileprivate class LayoutData: NSObject {
                     return self.view.superview.map { Double($0.frame.height) / 100 * args[0] }
                 case .variable("auto"):
                     if let superview = self.view.superview {
-                        return Double(self.view.systemLayoutSizeFitting(superview.frame.size).height)
+                        var size = superview.frame.size
+                        size.width = CGFloat(try self.computedValue(forKey: "width"))
+                        return Double(self.view.systemLayoutSizeFitting(size).height)
                     }
                     return 0
                 default:
