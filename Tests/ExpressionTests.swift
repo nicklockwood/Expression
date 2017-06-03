@@ -133,6 +133,28 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 0x2A)
     }
 
+    // MARK: Escaped identifiers
+
+    func testDoubleQuotedIdentifier() {
+        let expression = Expression.parse("\"foo\" + \"bar\"")
+        XCTAssertEqual(expression.symbols, [.variable("\"foo\""), .infix("+"), .variable("\"bar\"")])
+    }
+
+    func testSingleQuotedIdentifier() {
+        let expression = Expression.parse("'foo' + 'bar'")
+        XCTAssertEqual(expression.symbols, [.variable("'foo'"), .infix("+"), .variable("'bar'")])
+    }
+
+    func testBacktickEscapedIdentifier() {
+        let expression = Expression.parse("`foo` + `bar`")
+        XCTAssertEqual(expression.symbols, [.variable("`foo`"), .infix("+"), .variable("`bar`")])
+    }
+
+    func testBacktickEscapedIdentifierWithEscapedChars() {
+        let expression = Expression.parse("`foo\\`bar\\n`")
+        XCTAssertEqual(expression.symbols, [.variable("`foo`bar\n`")])
+    }
+
     // MARK: Syntax errors
 
     func testMissingCloseParen() {

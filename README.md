@@ -179,9 +179,11 @@ The `Expression.Symbol` enum supports the following symbol types:
 .variable(String)
 ```
 
-This is an alphanumeric identifier representing a constant or variable in an expression. Identifiers can be any valid sequence of letters and numbers, beginning with a letter, underscore (_), dollar symbol ($), at sign (@) or hash/pound sign (#).
+This is an alphanumeric identifier representing a constant or variable in an expression. Identifiers can be any sequence of letters and numbers, beginning with a letter, underscore (_), dollar symbol ($), at sign (@) or hash/pound sign (#).
 
 Like Swift, Expression allows unicode characters in identifiers, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for name-spacing (as demonstrated in the Layout example app).
+
+The parser also accepts quoted strings as identifiers. Single quotes (') , double quotes (") , or backticks (`) may be used. It's up to your application to interpret these as meaningful. Unlike regular identifiers, quoted identifiers can contain any unicode character, including spaces. Newlines, quotes and other special characters can be escaped using a backslash (\). Escape sequences are decoded for you, but the outer quotes are retained so you can distinguish strings from other identifiers.
 
 ```swift
 .infix(String)

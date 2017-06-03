@@ -816,10 +816,54 @@ private extension String.UnicodeScalarView {
             return nil
         }
 
-        if let identifier = scanIdentifier() {
-            return .operand(.variable(identifier), [], placeholder)
+        guard let identifier = scanIdentifier() else {
+            return nil
         }
-        return nil
+        return .operand(.variable(identifier), [], placeholder)
+    }
+
+    mutating func parseEscapedIdentifier() throws -> Subexpression? {
+        guard var string = scanCharacter({ "`'\"".unicodeScalars.contains($0) }) else {
+            return nil
+        }
+        let delimiter = string.unicodeScalars.first!
+        while let part = scanCharacters({ $0 != delimiter && $0 != "\\" }) {
+            string += part
+            if scanCharacter("\\"), let c = popFirst() {
+                switch c {
+                case "\0":
+                    string += "\0"
+                case "t":
+                    string += "\t"
+                case "n":
+                    string += "\n"
+                case "r":
+                    string += "\r"
+                case "u":
+                    guard scanCharacter("{"),
+                        let hex = scanCharacters({
+                            switch $0 {
+                            case "0" ... "9", "A" ... "F", "a" ... "f":
+                                return true
+                            default:
+                                return false
+                            }
+                        }),
+                        scanCharacter("}"),
+                        let codepoint = Int(hex, radix: 16),
+                        let c = UnicodeScalar(codepoint) else {
+                        throw Expression.Error.unexpectedToken(string)
+                    }
+                    string.append(Character(c))
+                default:
+                    string.append(Character(c))
+                }
+            }
+        }
+        guard scanCharacter(delimiter) else {
+            throw Expression.Error.unexpectedToken(string)
+        }
+        return .operand(.variable(string + String(delimiter)), [], placeholder)
     }
 
     mutating func parseSubexpression() throws -> Subexpression {
@@ -930,7 +974,8 @@ private extension String.UnicodeScalarView {
         while let expression =
             try parseNumericLiteral() ??
             parseOperator() ??
-            parseIdentifier() {
+            parseIdentifier() ??
+            parseEscapedIdentifier() {
 
             // prepare for next iteration
             let followedByWhitespace = skipWhitespace() || count == 0
