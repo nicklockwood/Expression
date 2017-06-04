@@ -515,7 +515,7 @@ class ExpressionTests: XCTestCase {
     // MARK: Deferred optimization
 
     func testBuiltInConstantInlinedAfterEvaluationWithEmptyEvaluator() {
-        let expression = Expression("5 + pi") { _ in nil }
+        let expression = Expression("5 + pi") { _, _ in nil }
         XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
         XCTAssertEqual(expression.description, "5 + pi")
         XCTAssertEqual(try expression.evaluate(), 5 + .pi)
@@ -538,7 +538,7 @@ class ExpressionTests: XCTestCase {
     }
 
     func testBuiltInFunctionInlinedAfterEvaluationWithEmptyEvaluator() {
-        let expression = Expression("5 + floor(1.5)") { _ in nil }
+        let expression = Expression("5 + floor(1.5)") { _, _ in nil }
         XCTAssertEqual(expression.symbols, [.infix("+"), .function("floor", arity: 1)])
         XCTAssertEqual(expression.description, "5 + floor(1.5)")
         XCTAssertEqual(try expression.evaluate(), 6)
