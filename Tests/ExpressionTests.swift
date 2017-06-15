@@ -639,6 +639,13 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 6)
     }
 
+    func testTernaryWith2Arguments() {
+        let expression1 = Expression("5 ?: 4", options: .boolSymbols)
+        XCTAssertEqual(try expression1.evaluate(), 5)
+        let expression2 = Expression("0 ?: 4", options: .boolSymbols)
+        XCTAssertEqual(try expression2.evaluate(), 4)
+    }
+
     // MARK: Modulo operator
 
     func testPostiveIntegerModulo() {

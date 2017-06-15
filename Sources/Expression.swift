@@ -701,7 +701,7 @@ private extension String.UnicodeScalarView {
             return .infix(op)
         }
         if let op = scanCharacters({
-            if "/=­-+!*%<>&|^~?".unicodeScalars.contains($0) {
+            if "/=­-+!*%<>&|^~?:".unicodeScalars.contains($0) {
                 return true
             }
             switch $0.value {
