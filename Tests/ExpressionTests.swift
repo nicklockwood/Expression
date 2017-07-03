@@ -365,6 +365,46 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 0.3)
     }
 
+    func testWronglySpacedPostfixOperator() {
+        let expression = Expression("50 % + 10%") { symbol, args in
+            switch symbol {
+            case .postfix("%"):
+                return args[0] / 100
+            default:
+                return nil
+            }
+        }
+        XCTAssertEqual(try expression.evaluate(), 0.6)
+    }
+
+    // MARK: Alphanumeric operators
+
+    func testPostfixAlphanumericOperator() {
+        let expression = Expression("10ms + 5s") { symbol, args in
+            switch symbol {
+            case .postfix("ms"):
+                return args[0]/1000
+            case .postfix("s"):
+                return args[0]
+            default:
+                return nil
+            }
+        }
+        XCTAssertEqual(try expression.evaluate(), 5.01)
+    }
+
+    func testInfixAlphanumericOperator() {
+        let expression = Expression("true or false", options: .boolSymbols) { symbol, args in
+            switch symbol {
+            case .infix("or"):
+                return args[0] != 0 || args[1] != 0 ? 1 : 0
+            default:
+                return nil
+            }
+        }
+        XCTAssertEqual(try expression.evaluate(), 1)
+    }
+
     // MARK: Math errors
 
     func testDivideByZero() {

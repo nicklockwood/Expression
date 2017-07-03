@@ -931,9 +931,9 @@ private extension String.UnicodeScalarView {
                         // TODO: the symbol may not be the first part of the operand
                         throw Expression.Error.unexpectedToken(symbol.name)
                     }
-                    // treat as a postfix operator
-                    stack[i ... i + 1] = [.operand(.postfix(name), [lhs], placeholder)]
-                    try collapseStack(from: 0)
+                    // treat as operator
+                    stack[i + 1] = .infix(name)
+                    try collapseStack(from: i)
                 case let .postfix(op1):
                     stack[i ... i + 1] = [.operand(.postfix(op1), [lhs], placeholder)]
                     try collapseStack(from: 0)
@@ -945,8 +945,11 @@ private extension String.UnicodeScalarView {
                     }
                     let rhs = stack[i + 2]
                     switch rhs {
-                    case .prefix, .infix, .postfix: // treat as prefix
+                    case .prefix:
                         try collapseStack(from: i + 2)
+                    case .infix, .postfix: // assume we're actually postfix
+                        stack[i + 1] = .postfix(op1)
+                        try collapseStack(from: i)
                     case .literal where stack.count > i + 3, .operand where stack.count > i + 3:
                         if case let .infix(op2) = stack[i + 3], precedence(op1) >= precedence(op2) {
                             fallthrough
