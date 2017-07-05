@@ -378,7 +378,7 @@ public class Expression: CustomStringConvertible {
 
     /// Returns the optmized, pretty-printed expression if it was valid
     /// Otherwise, returns the original (invalid) expression string
-    public var description: String { return root.description(parenthesized: false) }
+    public var description: String { return root.description }
 
     /// All symbols used in the expression
     public var symbols: Set<Symbol> { return root.symbols }
@@ -472,7 +472,7 @@ public struct ParsedExpression: CustomStringConvertible {
 
     /// Returns the pretty-printed expression if it was valid
     /// Otherwise, returns the original (invalid) expression string
-    public var description: String { return root.description(parenthesized: false) }
+    public var description: String { return root.description }
 
     /// All symbols used in the expression
     public var symbols: Set<Expression.Symbol> { return root.symbols }
@@ -509,7 +509,7 @@ private enum Subexpression: CustomStringConvertible {
         }
     }
 
-    func description(parenthesized: Bool) -> String {
+    var description: String {
         switch self {
         case let .literal(value):
             if let int = Int64(exactly: value) {
@@ -524,15 +524,39 @@ private enum Subexpression: CustomStringConvertible {
         case let .operand(symbol, args, _):
             switch symbol {
             case let .prefix(name):
-                return "\(name)\(args[0])"
+                let arg = args[0]
+                let description = "\(arg)"
+                switch arg {
+                case .operand(.infix, _, _), .operand(.postfix, _, _), .error,
+                     .operand where isOperator(name.unicodeScalars.last!)
+                        == isOperator(description.unicodeScalars.first!):
+                    return "\(name)(\(description))" // Parens required
+                case .operand, .literal, .infix, .prefix, .postfix:
+                    return "\(name)\(description)" // No parens needed
+                }
             case let .postfix(name):
-                return "\(args[0])\(name)"
+                let arg = args[0]
+                let description = "\(arg)"
+                switch arg {
+                case .operand(.infix, _, _), .error,
+                     .operand where isOperator(name.unicodeScalars.first!)
+                        == isOperator(description.unicodeScalars.last!):
+                    return "(\(description))\(name)" // Parens required
+                case .operand, .literal, .infix, .prefix, .postfix:
+                    return "\(description)\(name)" // No parens needed
+                }
             case .infix("?:") where args.count == 3:
-                let description = "\(args[0]) ? \(args[1]) : \(args[2])"
-                return parenthesized ? "(\(description))" : description
+                return "\(args[0]) ? \(args[1]) : \(args[2])"
             case let .infix(name):
-                let description = "\(args[0]) \(name) \(args[1])"
-                return parenthesized ? "(\(description))" : description
+                let rhs = args[1]
+                let rhsDescription: String
+                switch rhs {
+                case .operand(.infix, _, _):
+                    rhsDescription = "(\(rhs))"
+                default:
+                    rhsDescription = "\(rhs)"
+                }
+                return "\(args[0]) \(name) \(rhsDescription)"
             case let .variable(name):
                 return name
             case let .function(name, _):
@@ -541,10 +565,6 @@ private enum Subexpression: CustomStringConvertible {
         case let .error(_, expression):
             return expression
         }
-    }
-
-    var description: String {
-        return description(parenthesized: true)
     }
 
     var symbols: Set<Expression.Symbol> {
@@ -592,7 +612,35 @@ private enum Subexpression: CustomStringConvertible {
     }
 }
 
-private let placeholder: Expression.Symbol.Evaluator = { _ in preconditionFailure() }
+private let placeholder: Expression.Symbol.Evaluator = { _ in
+    preconditionFailure()
+}
+
+private func isOperator(_ char: UnicodeScalar) -> Bool {
+    if "/=­-+!*%<>&|^~?:".unicodeScalars.contains(char) {
+        return true
+    }
+    switch char.value {
+    case 0x00A1 ... 0x00A7,
+         0x00A9, 0x00AB, 0x00AC, 0x00AE,
+         0x00B0 ... 0x00B1,
+         0x00B6, 0x00BB, 0x00BF, 0x00D7, 0x00F7,
+         0x2016 ... 0x2017,
+         0x2020 ... 0x2027,
+         0x2030 ... 0x203E,
+         0x2041 ... 0x2053,
+         0x2055 ... 0x205E,
+         0x2190 ... 0x23FF,
+         0x2500 ... 0x2775,
+         0x2794 ... 0x2BFF,
+         0x2E00 ... 0x2E7F,
+         0x3001 ... 0x3003,
+         0x3008 ... 0x3030:
+        return true
+    default:
+        return false
+    }
+}
 
 // Expression parsing logic
 private extension String.UnicodeScalarView {
@@ -700,31 +748,7 @@ private extension String.UnicodeScalarView {
         if let op = scanCharacter({ "(),:".unicodeScalars.contains($0) }) {
             return .infix(op)
         }
-        if let op = scanCharacters({
-            if "/=­-+!*%<>&|^~?:".unicodeScalars.contains($0) {
-                return true
-            }
-            switch $0.value {
-            case 0x00A1 ... 0x00A7,
-                 0x00A9, 0x00AB, 0x00AC, 0x00AE,
-                 0x00B0 ... 0x00B1,
-                 0x00B6, 0x00BB, 0x00BF, 0x00D7, 0x00F7,
-                 0x2016 ... 0x2017,
-                 0x2020 ... 0x2027,
-                 0x2030 ... 0x203E,
-                 0x2041 ... 0x2053,
-                 0x2055 ... 0x205E,
-                 0x2190 ... 0x23FF,
-                 0x2500 ... 0x2775,
-                 0x2794 ... 0x2BFF,
-                 0x2E00 ... 0x2E7F,
-                 0x3001 ... 0x3003,
-                 0x3008 ... 0x3030:
-                return true
-            default:
-                return false
-            }
-        }) {
+        if let op = scanCharacters(isOperator) {
             return .infix(op) // assume infix, will determine later
         }
         return nil

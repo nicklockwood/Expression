@@ -42,13 +42,18 @@ class ExpressionTests: XCTestCase {
     }
 
     func testDescriptionParensAdded() {
-        let expression = Expression("a+b+c")
-        XCTAssertEqual(expression.description, "(a + b) + c")
+        let expression = Expression("a+b*c")
+        XCTAssertEqual(expression.description, "a + (b * c)")
     }
 
     func testDescriptionParensPreserved() {
         let expression = Expression("a+(b+c)")
         XCTAssertEqual(expression.description, "a + (b + c)")
+    }
+
+    func testDescriptionRedundantParensDiscarded() {
+        let expression = Expression("(a+b)+c")
+        XCTAssertEqual(expression.description, "a + b + c")
     }
 
     func testIntExpressionDescription() {
@@ -59,6 +64,76 @@ class ExpressionTests: XCTestCase {
     func testFloatExpressionDescription() {
         let expression = Expression("2.4 + 7.65")
         XCTAssertEqual(expression.description, "10.05")
+    }
+
+    func testPrefixOperatorDescription() {
+        let expression = Expression("-foo")
+        XCTAssertEqual(expression.description, "-foo")
+    }
+
+    func testPrefixOperatorInsidePostfixExpressionDescription() {
+        let expression = Expression("(-foo)%")
+        XCTAssertEqual(expression.description, "-foo%")
+    }
+
+    func testInfixOperatorInsidePrefixExpressionDescription() {
+        let expression = Expression("-(a+b)")
+        XCTAssertEqual(expression.description, "-(a + b)")
+    }
+
+    func testNestedPrefixOperatorDescription() {
+        let expression = Expression("- -foo")
+        XCTAssertEqual(expression.description, "-(-foo)")
+    }
+
+    func testPostfixOperatorDescription() {
+        let expression = Expression("foo%")
+        XCTAssertEqual(expression.description, "foo%")
+    }
+
+    func testNestedPostfixOperatorDescription() {
+        let expression = Expression("foo% !")
+        XCTAssertEqual(expression.description, "(foo%)!")
+    }
+
+    func testPostfixOperatorInsidePrefixExpressionDescription() {
+        let expression = Expression("-(foo%)")
+        XCTAssertEqual(expression.description, "-(foo%)")
+    }
+
+    func testInfixOperatorInsidePostfixExpressionDescription() {
+        let expression = Expression("(a+b)%")
+        XCTAssertEqual(expression.description, "(a + b)%")
+    }
+
+    func testPostfixOperatorInsideInfixExpressionDescription() {
+        let expression = Expression("foo% + 5")
+        XCTAssertEqual(expression.description, "foo% + 5")
+    }
+
+    func testPostfixAlphanumericOperatorDescription() {
+        let expression = Expression("5ms")
+        XCTAssertEqual(expression.description, "5ms")
+    }
+
+    func testPostfixAlphanumericOperatorDescription2() {
+        let expression = Expression("foo ms")
+        XCTAssertEqual(expression.description, "(foo)ms")
+    }
+
+    func testPostfixAlphanumericOperatorInsidePrefixExpressionDescription() {
+        let expression = Expression("-foo ms")
+        XCTAssertEqual(expression.description, "(-foo)ms")
+    }
+
+    func testInfixAlphanumericOperatorDescription() {
+        let expression = Expression("foo or bar")
+        XCTAssertEqual(expression.description, "foo or bar")
+    }
+
+    func testNestedPostfixAlphanumericOperatorsDescription() {
+        let expression = Expression("(foo bar) baz")
+        XCTAssertEqual(expression.description, "((foo)bar)baz")
     }
 
     // MARK: Numbers
