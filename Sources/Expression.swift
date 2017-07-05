@@ -548,6 +548,15 @@ private enum Subexpression: CustomStringConvertible {
             case .infix("?:") where args.count == 3:
                 return "\(args[0]) ? \(args[1]) : \(args[2])"
             case let .infix(name):
+                let lhs = args[0]
+                let lhsDescription: String
+                switch lhs {
+                case let .operand(.infix(opName), _, _) where
+                    isRightAssociative(opName) && isRightAssociative(name):
+                    lhsDescription = "(\(lhs))"
+                default:
+                    lhsDescription = "\(lhs)"
+                }
                 let rhs = args[1]
                 let rhsDescription: String
                 switch rhs {
@@ -556,7 +565,7 @@ private enum Subexpression: CustomStringConvertible {
                 default:
                     rhsDescription = "\(rhs)"
                 }
-                return "\(args[0]) \(name) \(rhsDescription)"
+                return "\(lhsDescription) \(name) \(rhsDescription)"
             case let .variable(name):
                 return name
             case let .function(name, _):
@@ -616,7 +625,23 @@ private let placeholder: Expression.Symbol.Evaluator = { _ in
     preconditionFailure()
 }
 
+private let assignmentOperators = Set([
+    "=", "*=", "/=", "%=", "+=", "-=",
+    "<<=", ">>=", "&=", "^=", "|=", ":=",
+])
+
+private let comparisonOperators = Set([
+    "<", "<=", ">=", ">",
+    "==", "!=", "<>", "===", "!==",
+    "lt", "le", "lte", "gt", "ge", "gte", "eq", "ne",
+])
+
+private func isRightAssociative(_ op: String) -> Bool {
+    return comparisonOperators.contains(op) || assignmentOperators.contains(op)
+}
+
 private func isOperator(_ char: UnicodeScalar) -> Bool {
+    // Strangely, this is faster than switching on value
     if "/=­-+!*%<>&|^~?:".unicodeScalars.contains(char) {
         return true
     }
@@ -745,10 +770,10 @@ private extension String.UnicodeScalarView {
     }
 
     mutating func parseOperator() -> Subexpression? {
-        if let op = scanCharacter({ "(),:".unicodeScalars.contains($0) }) {
+        if let op = scanCharacter({ "(),".unicodeScalars.contains($0) }) {
             return .infix(op)
         }
-        if let op = scanCharacters(isOperator) {
+        if let op = scanCharacters({ isOperator($0) || $0 == "." }) {
             return .infix(op) // assume infix, will determine later
         }
         return nil
@@ -758,9 +783,9 @@ private extension String.UnicodeScalarView {
 
         func isHead(_ c: UnicodeScalar) -> Bool {
             switch c.value {
-            case 0x41 ... 0x5A, // A-Z
+            case 0x5F, 0x23, 0x24, 0x40, // _ # $ @
+                 0x41 ... 0x5A, // A-Z
                  0x61 ... 0x7A, // a-z
-                 0x5F, 0x24, // _ and $
                  0x00A8, 0x00AA, 0x00AD, 0x00AF,
                  0x00B2 ... 0x00B5,
                  0x00B7 ... 0x00BA,
@@ -827,15 +852,23 @@ private extension String.UnicodeScalarView {
         }
 
         func scanIdentifier() -> String? {
-            if let head = scanCharacter({ isHead($0) || $0 == "@" || $0 == "#" }) {
-                if let tail = scanCharacters({ isTail($0) || $0 == "." }) {
-                    if tail.characters.last == "." {
-                        self.insert(".", at: startIndex)
-                        return head + String(tail.characters.dropLast())
+            if var identifier = scanCharacter({ isHead($0) || $0 == "." }) {
+                while let tail = scanCharacters(isTail) {
+                    identifier += tail
+                    guard scanCharacter(".") else {
+                        break
                     }
-                    return head + tail
+                    identifier.append(".")
                 }
-                return head
+                let chars = identifier.unicodeScalars
+                if chars.last == "." {
+                    insert(".", at: startIndex)
+                    if chars.count == 1 {
+                        return nil
+                    }
+                    return String(chars.dropLast())
+                }
+                return identifier
             }
             return nil
         }
@@ -847,10 +880,10 @@ private extension String.UnicodeScalarView {
     }
 
     mutating func parseEscapedIdentifier() throws -> Subexpression? {
-        guard var string = scanCharacter({ "`'\"".unicodeScalars.contains($0) }) else {
+        guard let delimiter = first,
+            var string = scanCharacter({ "`'\"".unicodeScalars.contains($0) }) else {
             return nil
         }
-        let delimiter = string.unicodeScalars.first!
         while let part = scanCharacters({ $0 != delimiter && $0 != "\\" }) {
             string += part
             if scanCharacter("\\"), let c = popFirst() {
@@ -894,25 +927,43 @@ private extension String.UnicodeScalarView {
         var stack: [Subexpression] = []
         var scopes: [[Subexpression]] = []
 
-        func precedence(_ op: String) -> Int {
+        // https://github.com/apple/swift-evolution/blob/master/proposals/0077-operator-precedence.md
+        func precedence(of op: String) -> Int {
             switch op {
-            case "*", "/", "%":
+            case "<<", ">>", ">>>": // bitshift
+                return 2
+            case "*", "/", "%", "&": // multiplication
                 return 1
-            case "<<", ">>":
+            case "..", "...", "..<": // range formation
                 return -1
-            case "<", "<=", ">=", ">":
+            case "is", "as", "isa": // casting
                 return -2
-            case "==", "!=", "<>":
+            case "??", "?:": // null-coalescing
                 return -3
-            case "&", "|", "^":
+            case _ where comparisonOperators.contains(op): // comparison
                 return -4
-            case "&&", "||":
+            case "&&", "and": // and
                 return -5
-            case ",", "?", ":":
+            case "||", "or": // or
+                return -6
+            case "?", ":": // ternary
+                return -7
+            case _ where assignmentOperators.contains(op): // assignment
+                return -8
+            case ",":
                 return -100
-            default: // +, -, etc
+            default: // +, -, |, ^, etc
                 return 0
             }
+        }
+
+        func op(_ op1: String, takesPrecedenceOver op2: String) -> Bool {
+            let p1 = precedence(of: op1)
+            let p2 = precedence(of: op2)
+            if p1 == p2 {
+                return !isRightAssociative(op1)
+            }
+            return p1 > p2
         }
 
         func collapseStack(from i: Int) throws {
@@ -975,7 +1026,7 @@ private extension String.UnicodeScalarView {
                         stack[i + 1] = .postfix(op1)
                         try collapseStack(from: i)
                     case .literal where stack.count > i + 3, .operand where stack.count > i + 3:
-                        if case let .infix(op2) = stack[i + 3], precedence(op1) >= precedence(op2) {
+                        if case let .infix(op2) = stack[i + 3], op(op1, takesPrecedenceOver: op2) {
                             fallthrough
                         }
                         try collapseStack(from: i + 2)
@@ -1000,9 +1051,9 @@ private extension String.UnicodeScalarView {
         var precededByWhitespace = true
         while let expression =
             try parseNumericLiteral() ??
-            parseOperator() ??
-            parseIdentifier() ??
-            parseEscapedIdentifier() {
+                parseIdentifier() ??
+                parseOperator() ??
+                parseEscapedIdentifier() {
 
             // prepare for next iteration
             let followedByWhitespace = skipWhitespace() || count == 0

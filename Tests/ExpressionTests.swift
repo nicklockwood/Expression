@@ -47,8 +47,8 @@ class ExpressionTests: XCTestCase {
     }
 
     func testDescriptionParensPreserved() {
-        let expression = Expression("a+(b+c)")
-        XCTAssertEqual(expression.description, "a + (b + c)")
+        let expression = Expression("a*(b+c)")
+        XCTAssertEqual(expression.description, "a * (b + c)")
     }
 
     func testDescriptionRedundantParensDiscarded() {
@@ -134,6 +134,26 @@ class ExpressionTests: XCTestCase {
     func testNestedPostfixAlphanumericOperatorsDescription() {
         let expression = Expression("(foo bar) baz")
         XCTAssertEqual(expression.description, "((foo)bar)baz")
+    }
+
+    func testRightAssociativeOperatorsDescription() {
+        let expression = Expression("(a = b) = c")
+        XCTAssertEqual(expression.description, "(a = b) = c")
+    }
+
+    func testRightAssociativeOperatorsDescription2() {
+        let expression = Expression("a == b > c")
+        XCTAssertEqual(expression.description, "a == (b > c)")
+    }
+
+    func testInfixDotOperatorDescription() {
+        let expression = Expression("(foo).(bar)")
+        XCTAssertEqual(expression.description, "foo . bar")
+    }
+
+    func testPrefixDotOperatorDescription() {
+        let expression = Expression(".(foo)")
+        XCTAssertEqual(expression.description, ".(foo)")
     }
 
     // MARK: Numbers
@@ -253,10 +273,17 @@ class ExpressionTests: XCTestCase {
         }
     }
 
-    func testInvalidToken() {
-        let expression = Expression("foo.")
+    func testTrailingDot() {
+        let expression = Expression("foo.", constants: ["foo": 5])
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("."))
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.postfix(".")))
+        }
+    }
+
+    func testTrailingDecimalPoint() {
+        let expression = Expression("5.")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.postfix(".")))
         }
     }
 
@@ -727,6 +754,28 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "5 + floor(x)")
     }
 
+    // MARK: Dot operators
+
+    func testDotInsideIdentifier() {
+        let expression = Expression("foo.bar", options: .boolSymbols)
+        XCTAssertEqual(expression.symbols, [.variable("foo.bar")])
+    }
+
+    func testDotBetweenParens() {
+        let expression = Expression("(foo).(bar)", options: .boolSymbols)
+        XCTAssertEqual(expression.symbols, [.variable("foo"), .infix("."), .variable("bar")])
+    }
+
+    func testIdentifierWithLeadingDot() {
+        let expression = Expression(".foo", options: .boolSymbols)
+        XCTAssertEqual(expression.symbols, [.variable(".foo")])
+    }
+
+    func testRangeOperator() {
+        let expression = Expression("foo..bar", options: .boolSymbols)
+        XCTAssertEqual(expression.symbols, [.variable("foo"), .infix(".."), .variable("bar")])
+    }
+
     // MARK: Ternary operator
 
     func testTernaryTrue() {
@@ -791,5 +840,27 @@ class ExpressionTests: XCTestCase {
     func testNegativeFloatModulo() {
         let expression = Expression("5.5 % -2")
         XCTAssertEqual(try expression.evaluate(), 1.5)
+    }
+
+    // MARK: Assignment
+
+    func testAssignmentAssociativity() {
+        var variables: [Double] = [0, 0]
+        let expression = Expression("a = b = 5") { symbol, args in
+            switch symbol {
+            case .infix("="):
+                variables[Int(args[0])] = args[1]
+                return args[1]
+            case .variable("a"):
+                return 0
+            case .variable("b"):
+                return 1
+            default:
+                return nil
+            }
+        }
+        XCTAssertEqual(try expression.evaluate(), 5)
+        XCTAssertEqual(variables[0], 5)
+        XCTAssertEqual(variables[1], 5)
     }
 }
