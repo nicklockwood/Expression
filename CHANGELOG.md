@@ -1,5 +1,15 @@
 # Change Log
 
+## [0.7.1](https://github.com/nicklockwood/Expression/releases/tag/0.7.1) (2017-07-05)
+
+- Made `clearCache()` method public (was previously left internal by accident)
+- Added additional hard-coded precendence for common operator types and names
+- Now supports right-associativity for assignment and comparison operators
+- Improved description logic, now correctly handles nested prefix/postfix operators
+- Added support for infix alphanumeric operators, in addition to postfix
+- Fixed bug when parsing a binary `?:` operator
+- Swift 4 compatibility fixes
+
 ## [0.7.0](https://github.com/nicklockwood/Expression/releases/tag/0.7.0) (2017-06-03)
 
 - Significantly improved evaluation performance of by storing functions inline inside the parsed expression
