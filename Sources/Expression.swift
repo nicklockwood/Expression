@@ -366,7 +366,7 @@ public class Expression: CustomStringConvertible {
     }
 
     /// Clear the expression cache (useful for testing, or in low memory situations)
-    static func clearCache(for expression: String? = nil) {
+    public static func clearCache(for expression: String? = nil) {
         queue.async {
             if let expression = expression {
                 cache.removeValue(forKey: expression)
