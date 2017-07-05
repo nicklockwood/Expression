@@ -50,7 +50,7 @@ let shortExpressions = [
     "hello",
     "67",
     "3.5",
-    "pi"
+    "pi",
 ]
 
 let mediumExpressions = [
@@ -60,7 +60,7 @@ let mediumExpressions = [
     "hello + world",
     "67 * 2",
     "3.5 / 6",
-    "pi + 15"
+    "pi + 15",
 ]
 
 let longExpressions = [
@@ -70,7 +70,7 @@ let longExpressions = [
     "hello + world",
     "(67 * 2) + (68 * 3)",
     "3.5 / 6 + 1234 * 54",
-    "pi * -56.4 + (5 + 4)"
+    "pi * -56.4 + (5 + 4)",
 ]
 
 let reallyLongExpression: String = {
@@ -90,7 +90,7 @@ class PerformanceTests: XCTestCase {
 
     func testParsingShortExpressions() {
         let expressions = shortExpressions
-        self.measure {
+        measure {
             for _ in 0 ..< parseRepetitions {
                 for exp in expressions {
                     _ = Expression.parse(exp, usingCache: false)
@@ -101,7 +101,7 @@ class PerformanceTests: XCTestCase {
 
     func testParsingMediumExpressions() {
         let expressions = mediumExpressions
-        self.measure {
+        measure {
             for _ in 0 ..< parseRepetitions {
                 for exp in expressions {
                     _ = Expression.parse(exp, usingCache: false)
@@ -112,7 +112,7 @@ class PerformanceTests: XCTestCase {
 
     func testParsingLongExpressions() {
         let expressions = longExpressions
-        self.measure {
+        measure {
             for _ in 0 ..< parseRepetitions {
                 for exp in expressions {
                     _ = Expression.parse(exp, usingCache: false)
@@ -123,7 +123,7 @@ class PerformanceTests: XCTestCase {
 
     func testParsingReallyLongExpressions() {
         let exp = reallyLongExpression
-        self.measure {
+        measure {
             for _ in 0 ..< parseRepetitions {
                 _ = Expression.parse(exp, usingCache: false)
             }
@@ -134,7 +134,7 @@ class PerformanceTests: XCTestCase {
 
     func testOptimizingShortExpressions() {
         let expressions = shortExpressions.map { Expression.parse($0, usingCache: false) }
-        self.measure {
+        measure {
             for _ in 0 ..< parseRepetitions {
                 for exp in expressions {
                     _ = Expression(exp, options: .pureSymbols, symbols: symbols)
@@ -145,7 +145,7 @@ class PerformanceTests: XCTestCase {
 
     func testOptimizingMediumExpressions() {
         let expressions = mediumExpressions.map { Expression.parse($0, usingCache: false) }
-        self.measure {
+        measure {
             for _ in 0 ..< parseRepetitions {
                 for exp in expressions {
                     _ = Expression(exp, options: .pureSymbols, symbols: symbols)
@@ -156,7 +156,7 @@ class PerformanceTests: XCTestCase {
 
     func testOptimizingLongExpressions() {
         let expressions = longExpressions.map { Expression.parse($0, usingCache: false) }
-        self.measure {
+        measure {
             for _ in 0 ..< parseRepetitions {
                 for exp in expressions {
                     _ = Expression(exp, options: .pureSymbols, symbols: symbols)
@@ -167,7 +167,7 @@ class PerformanceTests: XCTestCase {
 
     func testOptimizingReallyLongExpressions() {
         let exp = Expression.parse(reallyLongExpression, usingCache: false)
-        self.measure {
+        measure {
             for _ in 0 ..< parseRepetitions {
                 _ = Expression(exp, options: .pureSymbols, symbols: symbols)
             }
@@ -178,7 +178,7 @@ class PerformanceTests: XCTestCase {
 
     func testEvaluatingShortExpressions() {
         let expressions = shortExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) }
-        self.measure {
+        measure {
             for _ in 0 ..< evalRepetitions {
                 for exp in expressions {
                     _ = try! exp.evaluate()
@@ -189,7 +189,7 @@ class PerformanceTests: XCTestCase {
 
     func testEvaluatingMediumExpressions() {
         let expressions = mediumExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) }
-        self.measure {
+        measure {
             for _ in 0 ..< evalRepetitions {
                 for exp in expressions {
                     _ = try! exp.evaluate()
@@ -200,7 +200,7 @@ class PerformanceTests: XCTestCase {
 
     func testEvaluatingLongExpressions() {
         let expressions = mediumExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) }
-        self.measure {
+        measure {
             for _ in 0 ..< evalRepetitions {
                 for exp in expressions {
                     _ = try! exp.evaluate()
@@ -211,7 +211,7 @@ class PerformanceTests: XCTestCase {
 
     func testEvaluatingReallyLongExpression() {
         let exp = Expression(reallyLongExpression, options: .pureSymbols, symbols: symbols)
-        self.measure {
+        measure {
             for _ in 0 ..< evalRepetitions {
                 _ = try! exp.evaluate()
             }
@@ -222,7 +222,7 @@ class PerformanceTests: XCTestCase {
 
     func testEvaluatingShortExpressionsWithEmptyEvaluator() {
         let expressions = shortExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) { _ in nil } }
-        self.measure {
+        measure {
             for _ in 0 ..< evalRepetitions {
                 for exp in expressions {
                     _ = try! exp.evaluate()
@@ -233,7 +233,7 @@ class PerformanceTests: XCTestCase {
 
     func testEvaluatingMediumExpressionsWithEmptyEvaluator() {
         let expressions = mediumExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) { _ in nil } }
-        self.measure {
+        measure {
             for _ in 0 ..< evalRepetitions {
                 for exp in expressions {
                     _ = try! exp.evaluate()
@@ -244,7 +244,7 @@ class PerformanceTests: XCTestCase {
 
     func testEvaluatingLongExpressionsWithEmptyEvaluator() {
         let expressions = mediumExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) { _ in nil } }
-        self.measure {
+        measure {
             for _ in 0 ..< evalRepetitions {
                 for exp in expressions {
                     _ = try! exp.evaluate()
@@ -255,7 +255,7 @@ class PerformanceTests: XCTestCase {
 
     func testEvaluatingReallyLongExpressionWithEmptyEvaluator() {
         let exp = Expression(reallyLongExpression, options: .pureSymbols, symbols: symbols) { _ in nil }
-        self.measure {
+        measure {
             for _ in 0 ..< evalRepetitions {
                 _ = try! exp.evaluate()
             }

@@ -158,7 +158,7 @@ public class Expression: CustomStringConvertible {
         }
 
         /// Equatable implementation
-        static public func ==(lhs: Error, rhs: Error) -> Bool {
+        public static func ==(lhs: Error, rhs: Error) -> Bool {
             switch (lhs, rhs) {
             case let (.message(lhs), .message(rhs)),
                  let (.unexpectedToken(lhs), .unexpectedToken(rhs)),
@@ -211,10 +211,10 @@ public class Expression: CustomStringConvertible {
     /// - A dictionary of symbols, for implementing custom functions and operators
     /// - A custom evaluator function for more complex symbol processing
     public convenience init(_ expression: String,
-                options: Options = [],
-                constants: [String: Double] = [:],
-                symbols: [Symbol: Symbol.Evaluator] = [:],
-                evaluator: Evaluator? = nil) {
+                            options: Options = [],
+                            constants: [String: Double] = [:],
+                            symbols: [Symbol: Symbol.Evaluator] = [:],
+                            evaluator: Evaluator? = nil) {
 
         self.init(
             Expression.parse(expression, usingCache: !options.contains(.noCache)),
@@ -291,7 +291,7 @@ public class Expression: CustomStringConvertible {
                 let keys = Set(Expression.mathSymbols.keys).union(boolSymbols.keys).union(symbols.keys)
                 for case let .function(name, requiredArity) in keys
                     where name == called && arity != requiredArity {
-                        return { _ in throw Error.arityMismatch(.function(called, arity: requiredArity)) }
+                    return { _ in throw Error.arityMismatch(.function(called, arity: requiredArity)) }
                 }
             }
             // Not found
@@ -529,7 +529,7 @@ private enum Subexpression: CustomStringConvertible {
                 switch arg {
                 case .operand(.infix, _, _), .operand(.postfix, _, _), .error,
                      .operand where isOperator(name.unicodeScalars.last!)
-                        == isOperator(description.unicodeScalars.first!):
+                         == isOperator(description.unicodeScalars.first!):
                     return "\(name)(\(description))" // Parens required
                 case .operand, .literal, .infix, .prefix, .postfix:
                     return "\(name)\(description)" // No parens needed
@@ -540,7 +540,7 @@ private enum Subexpression: CustomStringConvertible {
                 switch arg {
                 case .operand(.infix, _, _), .error,
                      .operand where isOperator(name.unicodeScalars.first!)
-                        == isOperator(description.unicodeScalars.last!):
+                         == isOperator(description.unicodeScalars.last!):
                     return "(\(description))\(name)" // Parens required
                 case .operand, .literal, .infix, .prefix, .postfix:
                     return "\(description)\(name)" // No parens needed
@@ -596,8 +596,7 @@ private enum Subexpression: CustomStringConvertible {
     }
 
     func optimized(withSymbols impureSymbols: [Expression.Symbol: Expression.Symbol.Evaluator],
-                   pureSymbols: [Expression.Symbol: Expression.Symbol.Evaluator]) -> Subexpression
-    {
+                   pureSymbols: [Expression.Symbol: Expression.Symbol.Evaluator]) -> Subexpression {
         guard case .operand(let symbol, var args, _) = self else {
             return self
         }
@@ -1051,9 +1050,9 @@ private extension String.UnicodeScalarView {
         var precededByWhitespace = true
         while let expression =
             try parseNumericLiteral() ??
-                parseIdentifier() ??
-                parseOperator() ??
-                parseEscapedIdentifier() {
+            parseIdentifier() ??
+            parseOperator() ??
+            parseEscapedIdentifier() {
 
             // prepare for next iteration
             let followedByWhitespace = skipWhitespace() || count == 0

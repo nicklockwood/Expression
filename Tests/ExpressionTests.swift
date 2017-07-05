@@ -210,7 +210,7 @@ class ExpressionTests: XCTestCase {
 
     func testCapitalExponential() {
         let expression = Expression("0.123E-4")
-        XCTAssertEqual(try expression.evaluate(), 0.123E-4)
+        XCTAssertEqual(try expression.evaluate(), 0.123e-4)
     }
 
     func testInvalidExponential() {
@@ -485,7 +485,7 @@ class ExpressionTests: XCTestCase {
         let expression = Expression("10ms + 5s") { symbol, args in
             switch symbol {
             case .postfix("ms"):
-                return args[0]/1000
+                return args[0] / 1000
             case .postfix("s"):
                 return args[0]
             default:
@@ -524,7 +524,7 @@ class ExpressionTests: XCTestCase {
     func testModExpressionSymbols() {
         let expression = Expression("mod(foo, bar)", symbols: [
             .variable("foo"): { _ in 5 },
-            .variable("bar"): { _ in 2.5 }
+            .variable("bar"): { _ in 2.5 },
         ])
         let expected: Set<Expression.Symbol> = [.function("mod", arity: 2), .variable("foo"), .variable("bar")]
         XCTAssertEqual(expression.symbols, expected)
@@ -616,7 +616,7 @@ class ExpressionTests: XCTestCase {
     }
 
     func testOverriddenBuiltInConstantNotInlinedWithPureEvaluator() {
-        let expression = Expression("5 + pi", options: .pureSymbols) { symbol, args in
+        let expression = Expression("5 + pi", options: .pureSymbols) { symbol, _ in
             if case .variable("pi") = symbol {
                 return 4
             }
@@ -628,7 +628,7 @@ class ExpressionTests: XCTestCase {
 
     func testOverriddenBuiltInFunctionNotInlined() {
         let expression = Expression("5 + floor(1.5)", symbols: [
-            .function("floor", arity: 1): { args in ceil(args[0]) }
+            .function("floor", arity: 1): { args in ceil(args[0]) },
         ])
         XCTAssertEqual(expression.symbols, [.infix("+"), .function("floor", arity: 1)])
         XCTAssertEqual(expression.description, "5 + floor(1.5)")
@@ -636,7 +636,7 @@ class ExpressionTests: XCTestCase {
 
     func testOverriddenBuiltInFunctionInlinedWithPureSymbols() {
         let expression = Expression("5 + floor(1.5)", options: .pureSymbols, symbols: [
-            .function("floor", arity: 1): { args in ceil(args[0]) }
+            .function("floor", arity: 1): { args in ceil(args[0]) },
         ])
         XCTAssertEqual(expression.symbols, [])
         XCTAssertEqual(expression.description, "7")
@@ -666,7 +666,7 @@ class ExpressionTests: XCTestCase {
     }
 
     func testOverriddenBuiltInConstantNotInlinedWithEvaluator() {
-        let expression = Expression("5 + pi") { symbol, args in
+        let expression = Expression("5 + pi") { symbol, _ in
             if case .variable("pi") = symbol {
                 return 4
             }
