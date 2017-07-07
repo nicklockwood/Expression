@@ -350,10 +350,21 @@ public class Expression: CustomStringConvertible {
         }
 
         // Parse
-        let subexpression: Subexpression
+        var subexpression: Subexpression
         do {
             var characters = expression.unicodeScalars
             subexpression = try characters.parseSubexpression()
+            // Check for trailing junk
+            if let junk = characters.scanCharacters({
+                switch $0 {
+                case " ", "\t", "\n", "\r":
+                    return false
+                default:
+                    return true
+                }
+            }) {
+                subexpression = .error(.unexpectedToken(junk), expression)
+            }
         } catch {
             subexpression = .error(error as! Error, expression)
         }
@@ -362,6 +373,16 @@ public class Expression: CustomStringConvertible {
         if usingCache {
             queue.async { cache[expression] = subexpression }
         }
+        return ParsedExpression(root: subexpression)
+    }
+
+    /// Parse an expression directly from the provided UnicodeScalarView
+    /// Unlike `parse(_: String)`, this method will not raise an error if it
+    /// encounters an unexpected token after the expression, but will simply
+    /// return. This is convenient if you wish to parse expressions that are
+    /// nested inside another string, e.g. for implementing string interpolation
+    public static func parse(_ input: inout String.UnicodeScalarView) throws -> ParsedExpression {
+        let subexpression = try input.parseSubexpression()
         return ParsedExpression(root: subexpression)
     }
 
@@ -1105,17 +1126,6 @@ private extension String.UnicodeScalarView {
 
             // next iteration
             precededByWhitespace = followedByWhitespace
-        }
-        if let junk = scanCharacters({
-            switch $0 {
-            case " ", "\t", "\n", "\r":
-                return false
-            default:
-                return true
-            }
-        }) {
-            // Unexpected token
-            throw Expression.Error.unexpectedToken(junk)
         }
         if stack.count < 1 {
             // Empty expression
