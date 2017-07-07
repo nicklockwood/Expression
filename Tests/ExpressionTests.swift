@@ -51,6 +51,11 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "a * (b + c)")
     }
 
+    func testDescriptionParensPreserved2() {
+        let expression = Expression("(a+b)*c")
+        XCTAssertEqual(expression.description, "(a + b) * c")
+    }
+
     func testDescriptionRedundantParensDiscarded() {
         let expression = Expression("(a+b)+c")
         XCTAssertEqual(expression.description, "a + b + c")

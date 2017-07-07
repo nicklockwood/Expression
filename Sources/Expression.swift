@@ -551,8 +551,7 @@ private enum Subexpression: CustomStringConvertible {
                 let lhs = args[0]
                 let lhsDescription: String
                 switch lhs {
-                case let .operand(.infix(opName), _, _) where
-                    isRightAssociative(opName) && isRightAssociative(name):
+                case let .operand(.infix(opName), _, _) where !op(opName, takesPrecedenceOver: name):
                     lhsDescription = "(\(lhs))"
                 default:
                     lhsDescription = "\(lhs)"
@@ -635,9 +634,50 @@ private let comparisonOperators = Set([
     "lt", "le", "lte", "gt", "ge", "gte", "eq", "ne",
 ])
 
-private func isRightAssociative(_ op: String) -> Bool {
-    return comparisonOperators.contains(op) || assignmentOperators.contains(op)
+private func op(_ lhs: String, takesPrecedenceOver rhs: String) -> Bool {
+
+    // https://github.com/apple/swift-evolution/blob/master/proposals/0077-operator-precedence.md
+    func precedence(of op: String) -> Int {
+        switch op {
+        case "<<", ">>", ">>>": // bitshift
+            return 2
+        case "*", "/", "%", "&": // multiplication
+            return 1
+        case "..", "...", "..<": // range formation
+            return -1
+        case "is", "as", "isa": // casting
+            return -2
+        case "??", "?:": // null-coalescing
+            return -3
+        case _ where comparisonOperators.contains(op): // comparison
+            return -4
+        case "&&", "and": // and
+            return -5
+        case "||", "or": // or
+            return -6
+        case "?", ":": // ternary
+            return -7
+        case _ where assignmentOperators.contains(op): // assignment
+            return -8
+        case ",":
+            return -100
+        default: // +, -, |, ^, etc
+            return 0
+        }
+    }
+
+    func isRightAssociative(_ op: String) -> Bool {
+        return comparisonOperators.contains(op) || assignmentOperators.contains(op)
+    }
+
+    let p1 = precedence(of: lhs)
+    let p2 = precedence(of: rhs)
+    if p1 == p2 {
+        return !isRightAssociative(lhs)
+    }
+    return p1 > p2
 }
+
 
 private func isOperator(_ char: UnicodeScalar) -> Bool {
     // Strangely, this is faster than switching on value
@@ -925,45 +965,6 @@ private extension String.UnicodeScalarView {
     mutating func parseSubexpression() throws -> Subexpression {
         var stack: [Subexpression] = []
         var scopes: [[Subexpression]] = []
-
-        // https://github.com/apple/swift-evolution/blob/master/proposals/0077-operator-precedence.md
-        func precedence(of op: String) -> Int {
-            switch op {
-            case "<<", ">>", ">>>": // bitshift
-                return 2
-            case "*", "/", "%", "&": // multiplication
-                return 1
-            case "..", "...", "..<": // range formation
-                return -1
-            case "is", "as", "isa": // casting
-                return -2
-            case "??", "?:": // null-coalescing
-                return -3
-            case _ where comparisonOperators.contains(op): // comparison
-                return -4
-            case "&&", "and": // and
-                return -5
-            case "||", "or": // or
-                return -6
-            case "?", ":": // ternary
-                return -7
-            case _ where assignmentOperators.contains(op): // assignment
-                return -8
-            case ",":
-                return -100
-            default: // +, -, |, ^, etc
-                return 0
-            }
-        }
-
-        func op(_ op1: String, takesPrecedenceOver op2: String) -> Bool {
-            let p1 = precedence(of: op1)
-            let p2 = precedence(of: op2)
-            if p1 == p2 {
-                return !isRightAssociative(op1)
-            }
-            return p1 > p2
-        }
 
         func collapseStack(from i: Int) throws {
             guard stack.count > 1 else {
