@@ -180,11 +180,6 @@ public class Expression: CustomStringConvertible {
     /// Options for configuring an expression
     public struct Options: OptionSet {
 
-        /// This option is deprecated, as it has no effect when using a pre-parsed
-        /// expression. To bypass the cache, use `parse(_, usingCache:)` instead
-        @available(*, deprecated)
-        public static let noCache = Options(rawValue: 1 << 0)
-
         /// Disable optimizations such as constant substitution
         public static let noOptimize = Options(rawValue: 1 << 1)
 
@@ -215,9 +210,8 @@ public class Expression: CustomStringConvertible {
                             constants: [String: Double] = [:],
                             symbols: [Symbol: Symbol.Evaluator] = [:],
                             evaluator: Evaluator? = nil) {
-
         self.init(
-            Expression.parse(expression, usingCache: !options.contains(.noCache)),
+            Expression.parse(expression),
             options: options,
             constants: constants,
             symbols: symbols,
