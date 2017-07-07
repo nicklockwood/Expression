@@ -559,7 +559,7 @@ private enum Subexpression: CustomStringConvertible {
                 let arg = args[0]
                 let description = "\(arg)"
                 switch arg {
-                case .operand(.infix, _, _), .error,
+                case .operand(.infix, _, _), .operand(.postfix, _, _), .error,
                      .operand where isOperator(name.unicodeScalars.first!)
                          == isOperator(description.unicodeScalars.last!):
                     return "(\(description))\(name)" // Parens required
@@ -1018,17 +1018,14 @@ private extension String.UnicodeScalarView {
             case .literal, .operand:
                 let rhs = stack[i + 1]
                 switch rhs {
-                case .literal:
-                    // cannot follow an operand
-                    throw Expression.Error.unexpectedToken("\(rhs)")
-                case let .operand(symbol, _, _):
-                    guard case let .variable(name) = symbol else {
-                        // operand cannot follow another operand
-                        // TODO: the symbol may not be the first part of the operand
-                        throw Expression.Error.unexpectedToken(symbol.name)
+                case .literal, .operand:
+                    guard case let .operand(.postfix(op), args, _) = lhs, let arg = args.first else {
+                        // cannot follow an operand
+                        throw Expression.Error.unexpectedToken("\(rhs)")
                     }
-                    // treat as operator
-                    stack[i + 1] = .infix(name)
+                    // assume prefix operator was actually an infix operator
+                    stack[i] = arg
+                    stack.insert(.infix(op), at: i + 1)
                     try collapseStack(from: i)
                 case let .postfix(op1):
                     stack[i ... i + 1] = [.operand(.postfix(op1), [lhs], placeholder)]
@@ -1069,6 +1066,7 @@ private extension String.UnicodeScalarView {
             }
         }
 
+        var operandPosition = true
         var precededByWhitespace = true
         while let expression =
             try parseNumericLiteral() ??
@@ -1077,15 +1075,22 @@ private extension String.UnicodeScalarView {
             parseEscapedIdentifier() {
 
             // prepare for next iteration
-            let followedByWhitespace = skipWhitespace() || count == 0
+            let followedByWhitespace = skipWhitespace() || isEmpty
 
             switch expression {
             case .infix("("):
+                operandPosition = true
                 scopes.append(stack)
                 stack = []
             case .infix(")"):
-                if let previous = stack.last, case let .infix(op) = previous {
-                    stack[stack.count - 1] = .postfix(op)
+                operandPosition = false
+                if let previous = stack.last {
+                    switch previous {
+                    case let .infix(op), let .prefix(op):
+                        stack[stack.count - 1] = .postfix(op)
+                    default:
+                        break
+                    }
                 }
                 try collapseStack(from: 0)
                 guard var oldStack = scopes.last else {
@@ -1107,11 +1112,13 @@ private extension String.UnicodeScalarView {
                 }
                 stack = oldStack + stack
             case .infix(","):
+                operandPosition = true
                 if let previous = stack.last, case let .infix(op) = previous {
                     stack[stack.count - 1] = .postfix(op)
                 }
                 stack.append(expression)
             case let .infix(name):
+                operandPosition = true
                 switch (precededByWhitespace, followedByWhitespace) {
                 case (true, true), (false, false):
                     stack.append(expression)
@@ -1120,7 +1127,14 @@ private extension String.UnicodeScalarView {
                 case (false, true):
                     stack.append(.postfix(name))
                 }
+            case let .operand(.variable(name), _, _):
+                if operandPosition {
+                    fallthrough
+                }
+                operandPosition = true
+                stack.append(.infix(name))
             default:
+                operandPosition = false
                 stack.append(expression)
             }
 

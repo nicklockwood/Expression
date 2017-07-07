@@ -255,6 +255,44 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.symbols, [.variable("`foo`bar\n`")])
     }
 
+    // MARK: Ambiguous whitespace
+
+    func testPostfixOperatorAsInfix() {
+        let expression = Expression.parse("a+ b", usingCache: false)
+        XCTAssertEqual(expression.description, "a + b")
+    }
+
+    func testPostfixOperatorAsInfix2() {
+        let expression = Expression.parse("1+ 2", usingCache: false)
+        XCTAssertEqual(expression.description, "1 + 2")
+    }
+
+    func testParenthesizedPostfixOperator() {
+        let expression = Expression.parse("(a +) b", usingCache: false)
+        XCTAssertEqual(expression.description, "(a+)b")
+    }
+
+    func testParenthesizedPostfixOperator2() {
+        let expression = Expression.parse("(a +) +", usingCache: false)
+        XCTAssertEqual(expression.description, "(a+)+")
+    }
+
+    func testParenthesizedPrefixOperator() {
+        let expression = Expression.parse("+ (+ a)", usingCache: false)
+        XCTAssertEqual(expression.description, "+(+a)")
+    }
+
+
+    func testPrefixOperatorAsInfix() {
+        let expression = Expression.parse("a +b", usingCache: false)
+        XCTAssertEqual(expression.description, "a + b")
+    }
+
+    func testPrefixOperatorAsInfix2() {
+        let expression = Expression.parse("1 +2", usingCache: false)
+        XCTAssertEqual(expression.description, "1 + 2")
+    }
+
     // MARK: Syntax errors
 
     func testMissingCloseParen() {
