@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.7.1
+//  Version 0.8.0
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -611,6 +611,7 @@ private enum Subexpression: CustomStringConvertible {
 
     func optimized(withSymbols impureSymbols: [Expression.Symbol: Expression.Symbol.Evaluator],
                    pureSymbols: [Expression.Symbol: Expression.Symbol.Evaluator]) -> Subexpression {
+
         guard case .operand(let symbol, var args, _) = self else {
             return self
         }

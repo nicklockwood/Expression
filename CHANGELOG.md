@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.8.0](https://github.com/nicklockwood/Expression/releases/tag/0.8.0) (2017-07-07)
+
+- Added `parse(_: String.UnicodeScalarView)` method for parsing expressions embedded in an interpolated string
+- Improved parsing of expressions containing ambiguous whitespace around operators
+- Fixed some more bugs in the expression description logic
+- Removed the deprecated `noCache` option
+
 ## [0.7.1](https://github.com/nicklockwood/Expression/releases/tag/0.7.1) (2017-07-05)
 
 - Made `clearCache()` method public (was previously left internal by accident)

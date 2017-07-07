@@ -69,7 +69,7 @@ The entire Expression API is encapsulated in a single file, and everything publi
 
 To install Layout using CocoaPods, add the following to your Podfile:
 
-	pod 'Expression', '~> 0.7.0'
+	pod 'Expression', '~> 0.8.0'
 
 
 ## Integration
