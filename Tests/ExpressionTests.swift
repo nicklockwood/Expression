@@ -397,6 +397,21 @@ class ExpressionTests: XCTestCase {
         }
     }
 
+    // MARK: Function chaining
+
+    func testCallResultOfFunction() {
+        let expression = Expression("pow(1,2)(3)")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            switch error {
+            case Expression.Error.unexpectedToken("("):
+                break
+            default:
+                print("error: \(error)")
+                XCTFail()
+            }
+        }
+    }
+
     // MARK: Evaluation
 
     func testLiteral() {

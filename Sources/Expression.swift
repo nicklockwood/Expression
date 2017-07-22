@@ -1093,7 +1093,8 @@ private extension String.UnicodeScalarView {
                 }
                 scopes.removeLast()
                 if let previous = oldStack.last {
-                    if case let .operand(.variable(name), _, _) = previous {
+                    switch previous {
+                    case let .operand(.variable(name), _, _):
                         // function call
                         oldStack.removeLast()
                         if stack.count > 0 {
@@ -1103,6 +1104,10 @@ private extension String.UnicodeScalarView {
                             }
                         }
                         stack = [.operand(.function(name, arity: stack.count), stack, placeholder)]
+                    case .operand(.function, _, _):
+                        throw Expression.Error.unexpectedToken("(")
+                    default:
+                        break
                     }
                 }
                 stack = oldStack + stack
