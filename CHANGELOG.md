@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.8.1](https://github.com/nicklockwood/Expression/releases/tag/0.8.1) (2017-07-25)
+
+- Now marks the correct token as unexpected when attempting to chain function calls (e.g. `foo(5)(6)`)
+- Now produces a clearer error for empty expressions
+
 ## [0.8.0](https://github.com/nicklockwood/Expression/releases/tag/0.8.0) (2017-07-07)
 
 - Added `parse(_: String.UnicodeScalarView)` method for parsing expressions embedded in an interpolated string
