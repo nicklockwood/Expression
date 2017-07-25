@@ -337,6 +337,14 @@ class ExpressionTests: XCTestCase {
         }
     }
 
+    func testEmptyExpression() {
+        let expression = Expression("")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken(""))
+            XCTAssertTrue("\(error)".lowercased().contains("empty"))
+        }
+    }
+
     // MARK: Arity errors
 
     func testTooFewArguments() {

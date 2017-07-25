@@ -122,10 +122,10 @@ public class Expression: CustomStringConvertible {
         case missingDelimiter(String)
 
         /// The specified constant, operator or function was not recognized
-        case undefinedSymbol(Expression.Symbol)
+        case undefinedSymbol(Symbol)
 
         /// A function was called with the wrong number of arguments (arity)
-        case arityMismatch(Expression.Symbol)
+        case arityMismatch(Symbol)
 
         /// The human-readable description of the error
         public var description: String {
@@ -133,7 +133,7 @@ public class Expression: CustomStringConvertible {
             case let .message(message):
                 return message
             case let .unexpectedToken(string):
-                return "Unexpected token `\(string)`"
+                return string.isEmpty ? "Empty expression" : "Unexpected token `\(string)`"
             case let .missingDelimiter(string):
                 return "Missing `\(string)`"
             case let .undefinedSymbol(symbol):
