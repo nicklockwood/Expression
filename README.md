@@ -443,4 +443,4 @@ Here are some things to note:
 * Numeric values are measured in screen points. Percentage values are relative to the superview's `width` or `height` property.
 * Remember you can use functions like `min()` and `max()` to ensure that relative values don't go above or below a fixed threshold.
 
-This is just a toy example, but I think it has some interesting potential. Have fun with it, and maybe even try using `View+Layout.swift` in your own projects. I'll be exploring a more sophisticated implementation of this idea in the future.
+This is just a toy example, but if you like the concept, check out the [Layout framework](https://github.com/schibsted/layout) on Github.

@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.8.2](https://github.com/nicklockwood/Expression/releases/tag/0.8.2) (2017-08-08)
+
+- Xcode 9b5 compatibility fixes
+
 ## [0.8.1](https://github.com/nicklockwood/Expression/releases/tag/0.8.1) (2017-07-25)
 
 - Now marks the correct token as unexpected when attempting to chain function calls (e.g. `foo(5)(6)`)
