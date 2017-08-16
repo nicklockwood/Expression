@@ -1141,6 +1141,14 @@ private extension String.UnicodeScalarView.SubSequence {
         if scopes.count > 0 {
             throw Expression.Error.missingDelimiter(")")
         }
-        return stack[0]
+        let result = stack[0]
+        switch result {
+        case let .prefix(symbol), let .postfix(symbol), let .infix(symbol):
+            throw Expression.Error.unexpectedToken(symbol)
+        case let .error(error, _):
+            throw error
+        case .literal, .operand:
+            return result
+        }
     }
 }

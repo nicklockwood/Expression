@@ -345,6 +345,13 @@ class ExpressionTests: XCTestCase {
         }
     }
 
+    func testStandaloneOperator() {
+        let expression = Expression("+")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("+"))
+        }
+    }
+
     // MARK: Arity errors
 
     func testTooFewArguments() {
