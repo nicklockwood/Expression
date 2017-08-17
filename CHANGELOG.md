@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.8.3](https://github.com/nicklockwood/Expression/releases/tag/0.8.3) (2017-08-16)
+
+- Fixed crash when parsing a malformed expression that contains just a single operator
+- Internal `mathSymbols` and `boolSymbols` dictionaries are now public, so you can filter them from symbols array
+
 ## [0.8.2](https://github.com/nicklockwood/Expression/releases/tag/0.8.2) (2017-08-08)
 
 - Xcode 9b5 compatibility fixes
