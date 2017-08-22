@@ -1052,6 +1052,7 @@ private extension String.UnicodeScalarView.SubSequence {
             }
         }
 
+        _ = skipWhitespace()
         var operandPosition = true
         var precededByWhitespace = true
         while let expression =

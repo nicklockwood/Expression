@@ -293,6 +293,21 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "1 + 2")
     }
 
+    func testSpaceBeforePrefixOperator() {
+        let expression = Expression.parse(" -1", usingCache: false)
+        XCTAssertEqual(expression.description, "-1")
+    }
+
+    func testSpaceAroundPrefixOperator() {
+        let expression = Expression.parse(" - 1", usingCache: false)
+        XCTAssertEqual(expression.description, "-1")
+    }
+
+    func testSpaceBeforeInfixExpression() {
+        let expression = Expression.parse(" 1 + 2", usingCache: false)
+        XCTAssertEqual(expression.description, "1 + 2")
+    }
+
     // MARK: Syntax errors
 
     func testMissingCloseParen() {
