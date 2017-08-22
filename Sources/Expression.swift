@@ -758,7 +758,7 @@ private extension String.UnicodeScalarView.SubSequence {
         return false
     }
 
-    mutating func parseNumericLiteral() throws -> Subexpression? {
+    mutating func parseNumericLiteral() -> Subexpression? {
 
         func scanInteger() -> String? {
             return scanCharacters {
@@ -810,7 +810,7 @@ private extension String.UnicodeScalarView.SubSequence {
             }
         }
         guard let value = Double(number) else {
-            throw Expression.Error.unexpectedToken(number)
+            return .error(.unexpectedToken(number), number)
         }
         return .literal(value)
     }
@@ -925,7 +925,7 @@ private extension String.UnicodeScalarView.SubSequence {
         return .operand(.variable(identifier), [], placeholder)
     }
 
-    mutating func parseEscapedIdentifier() throws -> Subexpression? {
+    mutating func parseEscapedIdentifier() -> Subexpression? {
         guard let delimiter = first,
             var string = scanCharacter({ "`'\"".unicodeScalars.contains($0) }) else {
             return nil
@@ -955,7 +955,7 @@ private extension String.UnicodeScalarView.SubSequence {
                         scanCharacter("}"),
                         let codepoint = Int(hex, radix: 16),
                         let c = UnicodeScalar(codepoint) else {
-                        throw Expression.Error.unexpectedToken(string)
+                        return .error(.unexpectedToken(string), string)
                     }
                     string.append(Character(c))
                 default:
@@ -964,7 +964,7 @@ private extension String.UnicodeScalarView.SubSequence {
             }
         }
         guard scanCharacter(delimiter) else {
-            throw Expression.Error.unexpectedToken(string)
+            return .error(.unexpectedToken(string), string)
         }
         return .operand(.variable(string + String(delimiter)), [], placeholder)
     }
@@ -1056,7 +1056,7 @@ private extension String.UnicodeScalarView.SubSequence {
         var operandPosition = true
         var precededByWhitespace = true
         while let expression =
-            try parseNumericLiteral() ??
+            parseNumericLiteral() ??
             parseIdentifier() ??
             parseOperator() ??
             parseEscapedIdentifier() {
