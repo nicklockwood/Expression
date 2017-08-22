@@ -338,39 +338,32 @@ public class Expression: CustomStringConvertible {
         }
 
         // Parse
-        var subexpression: Subexpression
-        do {
-            var characters = String.UnicodeScalarView.SubSequence(expression.unicodeScalars)
-            subexpression = try characters.parseSubexpression()
-            // Check for trailing junk
-            if let junk = characters.scanCharacters({
-                switch $0 {
-                case " ", "\t", "\n", "\r":
-                    return false
-                default:
-                    return true
-                }
-            }) {
-                subexpression = .error(.unexpectedToken(junk), expression)
-            }
-        } catch {
-            subexpression = .error(error as! Error, expression)
-        }
+        var characters = String.UnicodeScalarView.SubSequence(expression.unicodeScalars)
+        let parsedExpression = parse(&characters)
 
         // Store
         if usingCache {
-            queue.async { cache[expression] = subexpression }
+            queue.async { cache[expression] = parsedExpression.root }
         }
-        return ParsedExpression(root: subexpression)
+        return parsedExpression
     }
 
-    /// Parse an expression directly from the provided UnicodeScalarView
-    /// Unlike `parse(_: String)`, this method will not raise an error if it
-    /// encounters an unexpected token after the expression, but will simply
-    /// return. This is convenient if you wish to parse expressions that are
-    /// nested inside another string, e.g. for implementing string interpolation
-    public static func parse(_ input: inout String.UnicodeScalarView.SubSequence) throws -> ParsedExpression {
-        let subexpression = try input.parseSubexpression()
+    /// Parse an expression directly from the provided UnicodeScalarView,
+    /// stopping when it reaches a token matching the `delimiter` string.
+    /// This is convenient if you wish to parse expressions that are nested
+    /// inside another string, e.g. for implementing string interpolation.
+    /// If no delimiter string is specified, the method will throw an error
+    /// if it encounters an unexpected token, but won't consume it
+    public static func parse(_ input: inout String.UnicodeScalarView.SubSequence,
+                             upTo delimiters: String...) -> ParsedExpression {
+        let start = input
+        var subexpression: Subexpression
+        do {
+            subexpression = try input.parseSubexpression(upTo: delimiters)
+        } catch {
+            let expression = String(start[start.startIndex ..< input.startIndex])
+            subexpression = .error(error as! Error, expression)
+        }
         return ParsedExpression(root: subexpression)
     }
 
@@ -758,6 +751,21 @@ private extension String.UnicodeScalarView.SubSequence {
         return false
     }
 
+    mutating func parseDelimiter(_ delimiters: [String]) -> Subexpression? {
+        outer: for delimiter in delimiters {
+            let start = self
+            for char in delimiter.unicodeScalars {
+                guard scanCharacter(char) else {
+                    self = start
+                    continue outer
+                }
+            }
+            self = start
+            return .error(.unexpectedToken(delimiter), delimiter)
+        }
+        return nil
+    }
+
     mutating func parseNumericLiteral() -> Subexpression? {
 
         func scanInteger() -> String? {
@@ -969,7 +977,7 @@ private extension String.UnicodeScalarView.SubSequence {
         return .operand(.variable(string + String(delimiter)), [], placeholder)
     }
 
-    mutating func parseSubexpression() throws -> Subexpression {
+    mutating func parseSubexpression(upTo delimiters: [String]) throws -> Subexpression {
         var stack: [Subexpression] = []
         var scopes: [[Subexpression]] = []
 
@@ -1055,7 +1063,8 @@ private extension String.UnicodeScalarView.SubSequence {
         _ = skipWhitespace()
         var operandPosition = true
         var precededByWhitespace = true
-        while let expression =
+        loop: while let expression =
+            parseDelimiter(delimiters) ??
             parseNumericLiteral() ??
             parseIdentifier() ??
             parseOperator() ??
@@ -1065,6 +1074,8 @@ private extension String.UnicodeScalarView.SubSequence {
             let followedByWhitespace = skipWhitespace() || isEmpty
 
             switch expression {
+            case let .error(.unexpectedToken(delimiter), _) where delimiters.contains(delimiter):
+                break loop
             case .infix("("):
                 operandPosition = true
                 scopes.append(stack)
@@ -1132,6 +1143,19 @@ private extension String.UnicodeScalarView.SubSequence {
 
             // next iteration
             precededByWhitespace = followedByWhitespace
+        }
+        // Check for trailing junk
+        let start = self
+        if parseDelimiter(delimiters) == nil, let junk = scanCharacters({
+            switch $0 {
+            case " ", "\t", "\n", "\r":
+                return false
+            default:
+                return true
+            }
+        }) {
+            self = start
+            throw Expression.Error.unexpectedToken(junk)
         }
         if stack.count < 1 {
             // Empty expression

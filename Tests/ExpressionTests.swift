@@ -308,6 +308,49 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "1 + 2")
     }
 
+    // MARK: Delimited expressions
+
+    func testBracedExpression() {
+        let input = "{ 1 + 2 }"
+        var characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        characters.removeFirst() // Remove opening {
+        var expression = Expression.parse(&characters)
+        guard expression.error == .unexpectedToken("}") else {
+            XCTFail()
+            return
+        }
+        characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        characters.removeFirst() // Remove opening {
+        expression = Expression.parse(&characters, upTo: "\"")
+        guard expression.error == .unexpectedToken("}") else {
+            XCTFail()
+            return
+        }
+    }
+
+    func testQuotedExpression() {
+        let input = "\" 1 + 2 \""
+        var characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        characters.removeFirst() // Remove opening quote
+        var expression = Expression.parse(&characters)
+        guard expression.error == .unexpectedToken("\"") else {
+            XCTFail()
+            return
+        }
+        characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        characters.removeFirst() // Remove opening quote
+        expression = Expression.parse(&characters, upTo: "}")
+        guard expression.error == .unexpectedToken("\"") else {
+            XCTFail()
+            return
+        }
+        characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        characters.removeFirst() // Remove opening quote
+        expression = Expression.parse(&characters, upTo: "\"")
+        XCTAssertEqual(expression.description, "1 + 2")
+        XCTAssertNil(expression.error)
+    }
+
     // MARK: Syntax errors
 
     func testMissingCloseParen() {
