@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.8.4](https://github.com/nicklockwood/Expression/releases/tag/0.8.4) (2017-08-22)
+
+- Fixed spurious parsing errors when expressions have leading whitespace
+- The `parse(_: String.UnicodeScalarView)` method now accepts an optional list of terminating delimiters
+
 ## [0.8.3](https://github.com/nicklockwood/Expression/releases/tag/0.8.3) (2017-08-16)
 
 - Fixed crash when parsing a malformed expression that contains just a single operator

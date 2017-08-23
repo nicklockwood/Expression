@@ -267,6 +267,16 @@ let expression = Expression(parsedExpression, constants: ["foo": 4, "bar": 5])
 
 By setting the `usingCache` argument to `false` in the code above, we avoid adding the expression to the global cache. You are also free to implement your own caching by storing the parsed expression and re-using it, which may be more efficient than the built-in cache in some cases (e.g. by avoiding thread management if your code is single-threaded).
 
+A second variant of the `Expression.parse()` method accepts a `String.UnicodeScalarView.SubSequence` and optional list of terminating delimiter strings. This can be used to match an expression embedded inside a longer string, and leaves the `startIndex` of the character sequence in the right place to continue parsing once the delimiter is reached:
+
+```swift
+let expressionString = "lorem ipsum {foo + bar} dolor sit"
+var characters = String.UnicodeScalarView.SubSequence(expression.unicodeScalars)
+while characters.popFirst() != "{" {} // Read up to start of expression
+let parsedExpression = Expression.parse(&characters, upTo: "}")
+let expression = Expression(parsedExpression, constants: ["foo": 4, "bar": 5])
+```
+
 ## Optimization
 
 By default, expressions are optimized where possible to make evaluation more efficient. Common optimizations include replacing constants with their literal values, and replacing pure functions or operators with their result when all arguments are constant.
