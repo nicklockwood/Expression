@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.8.5](https://github.com/nicklockwood/Expression/releases/tag/0.8.5) (2017-09-04)
+
+- Improved expression parsing performance in Swift 3.2 and 4.0
+- Fixed some bugs in parsing of identifiers containing dots
+
 ## [0.8.4](https://github.com/nicklockwood/Expression/releases/tag/0.8.4) (2017-08-22)
 
 - Fixed spurious parsing errors when expressions have leading whitespace

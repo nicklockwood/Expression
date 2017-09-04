@@ -1,6 +1,6 @@
 {
   "name": "Expression",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "license": {
     "type": "zlib",
     "file": "LICENCE.md"
@@ -10,7 +10,7 @@
   "authors": "Nick Lockwood",
   "source": {
     "git": "https://github.com/nicklockwood/Expression.git",
-    "tag": "0.8.4"
+    "tag": "0.8.5"
   },
   "source_files": "Sources",
   "requires_arc": true,
