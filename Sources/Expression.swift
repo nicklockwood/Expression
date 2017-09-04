@@ -906,25 +906,34 @@ private extension String.UnicodeScalarView.SubSequence {
         }
 
         func scanIdentifier() -> String? {
-            if var identifier = scanCharacter({ isHead($0) || $0 == "." }) {
-                while let tail = scanCharacters(isTail) {
-                    identifier += tail
-                    guard scanCharacter(".") else {
-                        break
-                    }
+            var start = self
+            var identifier = ""
+            if scanCharacter(".") {
+                identifier = "."
+            } else if let head = scanCharacter(isHead) {
+                identifier = head
+                start = self
+                if scanCharacter(".") {
                     identifier.append(".")
                 }
-                let chars = identifier.unicodeScalars
-                if chars.last == "." {
-                    insert(".", at: startIndex)
-                    if chars.count == 1 {
-                        return nil
-                    }
-                    return String(chars.dropLast())
-                }
-                return identifier
+            } else {
+                return nil
             }
-            return nil
+            while let tail = scanCharacters(isTail) {
+                identifier += tail
+                start = self
+                if scanCharacter(".") {
+                    identifier.append(".")
+                }
+            }
+            if identifier.hasSuffix(".") {
+                self = start
+                if identifier == "." {
+                    return nil
+                }
+                identifier = String(identifier.unicodeScalars.dropLast())
+            }
+            return identifier
         }
 
         guard let identifier = scanIdentifier() else {

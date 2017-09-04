@@ -381,6 +381,13 @@ class ExpressionTests: XCTestCase {
         }
     }
 
+    func testTrailingDotFollowedBySpace() {
+        let expression = Expression("foo. ", constants: ["foo": 5])
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.postfix(".")))
+        }
+    }
+
     func testTrailingDecimalPoint() {
         let expression = Expression("5.")
         XCTAssertThrowsError(try expression.evaluate()) { error in
@@ -895,6 +902,11 @@ class ExpressionTests: XCTestCase {
     func testDotBetweenParens() {
         let expression = Expression("(foo).(bar)", options: .boolSymbols)
         XCTAssertEqual(expression.symbols, [.variable("foo"), .infix("."), .variable("bar")])
+    }
+
+    func testDotFollowedByNumber() {
+        let expression = Expression("foo.3", options: .boolSymbols)
+        XCTAssertEqual(expression.symbols, [.variable("foo.3")])
     }
 
     func testIdentifierWithLeadingDot() {
