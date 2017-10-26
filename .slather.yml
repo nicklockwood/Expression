@@ -1,0 +1,6 @@
+coverage_service: coveralls
+xcodeproj: Expression.xcodeproj
+scheme: "Expression (Mac)"
+source_directory: Sources/*
+ignore:
+  - Tests/*
