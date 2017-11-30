@@ -55,27 +55,27 @@ public extension UIColor {
         for symbol in parsedExpression.symbols {
             if case let .variable(name) = symbol {
                 if name.hasPrefix("#") {
-                    var chars = name.characters.dropFirst()
-                    switch chars.count {
+                    var string = String(name.dropFirst())
+                    switch string.count {
                     case 3:
-                        chars.append("f")
+                        string += "f"
                         fallthrough
                     case 4:
-                        let red = chars[chars.index(chars.startIndex, offsetBy: 0)]
-                        let green = chars[chars.index(chars.startIndex, offsetBy: 1)]
-                        let blue = chars[chars.index(chars.startIndex, offsetBy: 2)]
-                        let alpha = chars[chars.index(chars.startIndex, offsetBy: 3)]
-                        chars = String.CharacterView([red, red, green, green, blue, blue, alpha, alpha])
+                        let chars = Array(string)
+                        let red = chars[0]
+                        let green = chars[1]
+                        let blue = chars[2]
+                        let alpha = chars[3]
+                        string = "\(red)\(red)\(green)\(green)\(blue)\(blue)\(alpha)\(alpha)"
                     case 6:
-                        chars.append("f")
-                        chars.append("f")
+                        string += "ff"
                     case 8:
                         break
                     default:
                         // unsupported format
                         continue
                     }
-                    constants[name] = Double("0x" + String(chars))
+                    constants[name] = Double("0x" + string)
                 } else if let value = colors[name.lowercased()] {
                     constants[name] = value
                 }

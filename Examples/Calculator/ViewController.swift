@@ -41,8 +41,8 @@ class ViewController: UIViewController, UITextFieldDelegate {
 
     private func addOutput(_ string: String, color: UIColor) {
         let text = NSAttributedString(string: string + "\n\n", attributes: [
-            NSForegroundColorAttributeName: color,
-            NSFontAttributeName: outputView.font!,
+            NSAttributedStringKey.foregroundColor: color,
+            NSAttributedStringKey.font: outputView.font!,
         ])
 
         output.replaceCharacters(in: NSMakeRange(0, 0), with: text)
