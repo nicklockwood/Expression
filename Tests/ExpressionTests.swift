@@ -245,6 +245,11 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.symbols, [.variable("'foo'"), .infix("+"), .variable("'bar'")])
     }
 
+    func testTrailingSingleQuotes() {
+        let expression = Expression.parse("foo' + bar'")
+        XCTAssertEqual(expression.symbols, [.variable("foo'"), .infix("+"), .variable("bar'")])
+    }
+
     func testBacktickEscapedIdentifier() {
         let expression = Expression.parse("`foo` + `bar`")
         XCTAssertEqual(expression.symbols, [.variable("`foo`"), .infix("+"), .variable("`bar`")])

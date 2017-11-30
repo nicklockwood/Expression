@@ -1046,6 +1046,8 @@ private extension UnicodeScalarView {
                     return nil
                 }
                 identifier = String(identifier.unicodeScalars.dropLast())
+            } else if scanCharacter("'") {
+                identifier.append("'")
             }
             return identifier
         }
