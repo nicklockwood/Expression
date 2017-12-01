@@ -349,6 +349,32 @@ public class Expression: CustomStringConvertible {
         root = root.optimized(withSymbols: impureSymbols, pureSymbols: pureSymbols)
     }
 
+    /// Verify that the string is a valid identifier
+    public static func isValidIdentifier(_ string: String) -> Bool {
+        var characters = UnicodeScalarView(string)
+        return (characters.parseIdentifier() ?? characters.parseEscapedIdentifier()).map {
+            guard case .operand(.variable, _, _) = $0 else {
+                return false
+            }
+            return characters.isEmpty
+        } ?? false
+    }
+
+    /// Verify that the string is a valid operator
+    public static func isValidOperator(_ string: String) -> Bool {
+        var characters = UnicodeScalarView(string)
+        return characters.parseOperator().map {
+            switch $0 {
+            case .infix("("), .infix("["):
+                return false
+            case .infix:
+                return characters.isEmpty
+            default:
+                return false
+            }
+        } ?? false
+    }
+
     private static var cache = [String: Subexpression]()
     private static let queue = DispatchQueue(label: "com.Expression")
 

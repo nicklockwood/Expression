@@ -1086,4 +1086,112 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(variables[0], 5)
         XCTAssertEqual(variables[1], 5)
     }
+
+    // MARK: Identifier validation
+
+    func testValidateSimpleIdentifier() {
+        XCTAssertTrue(Expression.isValidIdentifier("foo"))
+    }
+
+    func testValidateIdentifierWithTrailingSpace() {
+        XCTAssertFalse(Expression.isValidIdentifier("foo "))
+    }
+
+    func testValidateIdentifierWithLeadingSpace() {
+        XCTAssertFalse(Expression.isValidIdentifier(" foo"))
+    }
+
+    func testValidateUnicodeIdentifier() {
+        XCTAssertTrue(Expression.isValidIdentifier("🤡"))
+    }
+
+    func testValidateDotDelimitedIdentifier() {
+        XCTAssertTrue(Expression.isValidIdentifier("foo.bar"))
+    }
+
+    func testValidateDotPrefixedIdentifier() {
+        XCTAssertTrue(Expression.isValidIdentifier(".foo"))
+    }
+
+    func testValidateDotSuffixedIdentifier() {
+        XCTAssertFalse(Expression.isValidIdentifier("foo."))
+    }
+
+    func testValidateIdentifierWithTrailingApostrophe() {
+        XCTAssertTrue(Expression.isValidIdentifier("x'"))
+    }
+
+    func testValidateIdentifierWithTrailingDotApostrophe() {
+        XCTAssertFalse(Expression.isValidIdentifier("x.'"))
+    }
+
+    func testValidateIdentifierWithLeadingApostrophe() {
+        XCTAssertFalse(Expression.isValidIdentifier("'x"))
+    }
+
+    func testValidateEscapedIdentifier() {
+        XCTAssertTrue(Expression.isValidIdentifier("`foo bar`"))
+    }
+
+    func testValidateQuotedIdentifier() {
+        XCTAssertTrue(Expression.isValidIdentifier("'foo\nbar'"))
+    }
+
+    func testValidateDoubleQuotedIdentifier() {
+        XCTAssertTrue(Expression.isValidIdentifier("\"foo 'bar'\""))
+    }
+
+    func testValidateOperatorAsIdentifier() {
+        XCTAssertFalse(Expression.isValidIdentifier("+"))
+    }
+
+    func testValidateEmptyIdentifier() {
+        XCTAssertFalse(Expression.isValidIdentifier(""))
+    }
+
+    // MARK: Operator validation
+
+    func testValidateSimpleOperator() {
+        XCTAssertTrue(Expression.isValidOperator("+"))
+    }
+
+    func testValidateTripleEqualsOperator() {
+        XCTAssertTrue(Expression.isValidOperator("==="))
+    }
+
+    func testValidateTernaryOperator() {
+        XCTAssertTrue(Expression.isValidOperator("?:"))
+    }
+
+    func testValidateUnicodeOperator() {
+        XCTAssertTrue(Expression.isValidOperator("•"))
+    }
+
+    func testValidateOpenParenAsOperator() {
+        XCTAssertFalse(Expression.isValidOperator("("))
+    }
+
+    func testValidateOpenBracketAsOperator() {
+        XCTAssertFalse(Expression.isValidOperator("["))
+    }
+
+    func testValidateCommaOperator() {
+        XCTAssertTrue(Expression.isValidOperator(","))
+    }
+
+    func testValidateCommaSequenceAsOperator() {
+        XCTAssertFalse(Expression.isValidOperator(",,"))
+    }
+
+    func testValidateColonOperator() {
+        XCTAssertTrue(Expression.isValidOperator(":"))
+    }
+
+    func testValidateColonSequenceAsOperator() {
+        XCTAssertTrue(Expression.isValidOperator("::"))
+    }
+
+    func testValidateEmptyOperator() {
+        XCTAssertFalse(Expression.isValidOperator(""))
+    }
 }

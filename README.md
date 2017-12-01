@@ -222,6 +222,8 @@ Like Swift, Expression allows unicode characters in identifiers, such as emoji a
 
 The parser also accepts quoted strings as identifiers. Single quotes (') , double quotes (") , or backticks (`) may be used. It's up to your application to interpret these as meaningful. Unlike regular identifiers, quoted identifiers can contain any unicode character, including spaces. Newlines, quotes and other special characters can be escaped using a backslash (\). Escape sequences are decoded for you, but the outer quotes are retained so you can distinguish strings from other identifiers.
 
+To verify that a given string is safe for use as an identifier, you can use the `Expression.isValidIdentifier()` method.
+
 ## Operators
 
 ```swift
@@ -230,7 +232,9 @@ The parser also accepts quoted strings as identifiers. Single quotes (') , doubl
 .postfix(String)
 ```
 
-These symbols represent *operators*. Operators can be one or more characters long, and can contain almost any symbol that wouldn't conflict with a valid identifier name. You can overload existing infix operators with a post/prefix variant, or vice-versa. Disambiguation depends on the white-space surrounding the operator (which is the same approach used by Swift).
+These symbols represent *operators*. Operators can be one or more characters long, and can contain almost any symbol that wouldn't conflict with a valid identifier name. To verify that a given character sequence is safe for use as an operator, you can use the `Expression.isValidOperator()` method.
+
+You can overload existing infix operators with a post/prefix variant, or vice-versa. Disambiguation depends on the white-space surrounding the operator (which is the same approach used by Swift).
 
 Any valid identifier may also be used as an infix operator, by placing it between two operands, or as a postfix operator, by placing it after an operand. For example, you could define `m` and `cm` as postfix operators when handling distance logic, or use `and` as a more readable alternative to the boolean `&&` operator.
 
