@@ -62,6 +62,9 @@ public class Expression: CustomStringConvertible {
         /// A function accepting a number of arguments specified by `arity`
         case function(String, arity: Int)
 
+        /// A array of values accessed by index
+        case array(String)
+
         /// Evaluator for individual symbols
         public typealias Evaluator = (_ args: [Double]) throws -> Double
 
@@ -72,7 +75,8 @@ public class Expression: CustomStringConvertible {
                  let .infix(name),
                  let .prefix(name),
                  let .postfix(name),
-                 let .function(name, _):
+                 let .function(name, _),
+                 let .array(name):
                 return name
             }
         }
@@ -90,6 +94,8 @@ public class Expression: CustomStringConvertible {
                 return "postfix operator \(name)"
             case let .function(name, _):
                 return "function \(name)()"
+            case let .array(name):
+                return "array \(name)()"
             }
         }
 
@@ -149,11 +155,12 @@ public class Expression: CustomStringConvertible {
                     arity = 1
                 case let .function(_, requiredArity):
                     arity = requiredArity
+                case .array:
+                    arity = 1
                 }
                 let description = symbol.description
                 return String(description.first!).uppercased() +
-                    String(description.dropFirst()) +
-                    " expects \(arity) argument\(arity == 1 ? "" : "s")"
+                    "\(description.dropFirst()) expects \(arity) argument\(arity == 1 ? "" : "s")"
             }
         }
 
@@ -574,6 +581,8 @@ private enum Subexpression: CustomStringConvertible {
                 return name
             case let .function(name, _):
                 return "\(name)(\(args.map({ $0.description }).joined(separator: ", ")))"
+            case let .array(name):
+                return "\(name)[\(args[0])]"
             }
         case let .error(_, expression):
             return expression
@@ -928,7 +937,7 @@ private extension UnicodeScalarView {
             number += exponent
         } else if number == "0" {
             if scanCharacter("x") {
-                number = "0x" + (scanHex() ?? "")
+                number = "0x\(scanHex() ?? "")"
             }
         }
         guard let value = Double(number) else {
@@ -938,7 +947,7 @@ private extension UnicodeScalarView {
     }
 
     mutating func parseOperator() -> Subexpression? {
-        if let op = scanCharacter({ "(,".unicodeScalars.contains($0) }) {
+        if let op = scanCharacter({ "([,".unicodeScalars.contains($0) }) {
             return .infix(op)
         }
         if let op = scanCharacters({ isOperator($0) || $0 == "." }) {
@@ -1228,6 +1237,16 @@ private extension UnicodeScalarView {
                     stack[stack.count - 1] = .postfix(op)
                 }
                 stack.append(expression)
+            case .infix("["):
+                guard case let .operand(.variable(name), _, _)? = stack.last else {
+                    throw Expression.Error.unexpectedToken("[")
+                }
+                operandPosition = true
+                let index = try parseSubexpression(upTo: ["]"])
+                guard scanCharacter("]") else {
+                    throw Expression.Error.missingDelimiter("]")
+                }
+                stack[stack.count - 1] = .operand(.array(name), [index], placeholder)
             case let .infix(name):
                 operandPosition = true
                 switch (precededByWhitespace, followedByWhitespace) {

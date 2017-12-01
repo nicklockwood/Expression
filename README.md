@@ -18,6 +18,7 @@
 	- [Variables](#variables)
 	- [Operators](#operators)
 	- [Functions](#functions)
+	- [Arrays](#arrays)
 - [Performance](#performance)
 	- [Caching](#caching)
 	- [Optimization](#optimization)
@@ -243,6 +244,14 @@ Standard boolean operators are supported, and follow the normal precidence rules
 ```
 
 Functions can be defined using any valid identifier followed by a comma-delimited sequence of arguments in parentheses. Functions can be overloaded to support different argument counts, but it is up to you to handle argument validation in your evaluator function.
+
+## Arrays
+
+```swift
+.array(String)
+```
+
+Array symbols can be defined using any valid identifier followed by a subscript/index expression in square brackets.
 
 
 # Performance

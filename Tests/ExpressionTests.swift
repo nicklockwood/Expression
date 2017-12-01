@@ -501,6 +501,41 @@ class ExpressionTests: XCTestCase {
         }
     }
 
+    // MARK: Array subscripting
+
+    func testSubscript() {
+        let expression = Expression("foo[2]", symbols: [.array("foo"): { args in
+            [1, 2, 3][Int(args[0])]
+        }])
+        XCTAssertEqual(try expression.evaluate(), 3)
+    }
+
+    func testSubscriptResultOfSubscript() {
+        let expression = Expression("foo[2][3]", symbols: [.array("foo"): { args in 0 }])
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            switch error {
+            case Expression.Error.unexpectedToken("["):
+                break
+            default:
+                print("error: \(error)")
+                XCTFail()
+            }
+        }
+    }
+
+    func testSubscriptResultOfFunction() {
+        let expression = Expression("pow()[2]")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            switch error {
+            case Expression.Error.unexpectedToken("["):
+                break
+            default:
+                print("error: \(error)")
+                XCTFail()
+            }
+        }
+    }
+
     // MARK: Evaluation
 
     func testLiteral() {
