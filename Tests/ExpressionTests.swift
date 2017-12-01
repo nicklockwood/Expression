@@ -503,7 +503,25 @@ class ExpressionTests: XCTestCase {
 
     // MARK: Array subscripting
 
-    func testSubscript() {
+    func testSubscriptConstantArray() {
+        let expression = Expression("foo[2]", arrays: ["foo": [1, 2, 3]])
+        XCTAssertEqual(try expression.evaluate(), 3)
+    }
+
+    func testArrayBoundsError() {
+        let expression = Expression("foo[3]", arrays: ["foo": [1, 2, 3]])
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            switch error {
+            case Expression.Error.arrayBounds(.array("foo"), 3):
+                break
+            default:
+                print("error: \(error)")
+                XCTFail()
+            }
+        }
+    }
+
+    func testSubscriptCustomArray() {
         let expression = Expression("foo[2]", symbols: [.array("foo"): { args in
             [1, 2, 3][Int(args[0])]
         }])
@@ -720,6 +738,12 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "foo(5, 2.5)")
     }
 
+    func testConstantSymbolsInlined2() {
+        let expression = Expression("foo[bar]", constants: ["bar": 0])
+        XCTAssertEqual(expression.symbols, [.array("foo")])
+        XCTAssertEqual(expression.description, "foo[0]")
+    }
+
     func testConstantExpressionEvaluatedCorrectly() {
         let expression = Expression("5 + foo", constants: ["foo": 5])
         XCTAssertEqual(try expression.evaluate(), 10)
@@ -737,10 +761,22 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "10")
     }
 
+    func testArrayInlined() {
+        let expression = Expression("5 + foo[0]", arrays: ["foo": [5]])
+        XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(expression.description, "10")
+    }
+
     func testPotentiallyImpureConstantNotInlined() {
         let expression = Expression("5 + foo", symbols: [.variable("foo"): { _ in 5 }])
         XCTAssertEqual(expression.symbols, [.variable("foo"), .infix("+")])
         XCTAssertEqual(expression.description, "5 + foo")
+    }
+
+    func testPotentiallyImpureArrayNotInlined() {
+        let expression = Expression("5 + foo[0]", symbols: [.array("foo"): { _ in 5 }])
+        XCTAssertEqual(expression.symbols, [.array("foo"), .infix("+")])
+        XCTAssertEqual(expression.description, "5 + foo[0]")
     }
 
     func testPureExpressionInlined() {

@@ -82,13 +82,14 @@ To install Layout using CocoaPods, add the following to your Podfile:
 You create an `Expression` instance by passing a string containing your expression, and (optionally) any or all of the following:
 
 * A set of configuration options - used to enabled or disable certain features
-* A dictionary of named constants - this is the simplest way to specify predefined constants
+* A dictionary of named constants - this is the simplest and most efficient way to specify predefined constants
+* A dictionary of named array constants - this is the simplest and most efficient way to specify predefined arrays of related values
 * A dictionary of symbols and callback functions - this is the most efficient way to provide custom functions or operators
 * A custom Evaluator function - this is the most flexible solution, and can support dynamic variable or function names
 
 You can then calculate the result by calling the `Expression.evaluate()` function.
 
-By default, Expression already implements most standard math functions and operators, so you only need to provide a custom symbol dictionary or evaluator function if your app needs to support additional functions or variables. You can mix and match implementations, so if you have some custom constants and some custom functions or operators, you can provide separate constants and symbols dictionaries.
+By default, Expression already implements most standard math functions and operators, so you only need to provide a custom symbol dictionary or evaluator function if your app needs to support additional functions or variables. You can mix and match implementations, so if you have some custom constants or arrays and some custom functions or operators, you can provide separate constants and symbols dictionaries.
 
 Here are some examples:
 
@@ -243,7 +244,7 @@ Standard boolean operators are supported, and follow the normal precidence rules
 .function(String, arity: Int)
 ```
 
-Functions can be defined using any valid identifier followed by a comma-delimited sequence of arguments in parentheses. Functions can be overloaded to support different argument counts, but it is up to you to handle argument validation in your evaluator function.
+A function symbol is defined with a name and an "arity", which is the number of arguments that it expects. Functions are called in an expression by using their name followed by a comma-delimited sequence of arguments in parentheses. Functions can be overloaded to support different argument counts, but it is up to you to handle argument validation in your evaluator function.
 
 ## Arrays
 
@@ -251,7 +252,7 @@ Functions can be defined using any valid identifier followed by a comma-delimite
 .array(String)
 ```
 
-Array symbols can be defined using any valid identifier followed by a subscript/index expression in square brackets.
+Array symbols represent a sequence of values that can be accessed by index. Array symbols are referenced in an expression by using their name followed by an index argument in square brackets.
 
 
 # Performance

@@ -133,6 +133,9 @@ public class Expression: CustomStringConvertible {
         /// A function was called with the wrong number of arguments (arity)
         case arityMismatch(Symbol)
 
+        /// An array was accessed with an index outside the valid range
+        case arrayBounds(Symbol, Int)
+
         /// The human-readable description of the error
         public var description: String {
             switch self {
@@ -149,6 +152,8 @@ public class Expression: CustomStringConvertible {
                 switch symbol {
                 case .variable:
                     arity = 0
+                case .infix("?:"):
+                    arity = 3
                 case .infix:
                     arity = 2
                 case .postfix, .prefix:
@@ -161,6 +166,8 @@ public class Expression: CustomStringConvertible {
                 let description = symbol.description
                 return String(description.first!).uppercased() +
                     "\(description.dropFirst()) expects \(arity) argument\(arity == 1 ? "" : "s")"
+            case let .arrayBounds(symbol, index):
+                return "Index \(index) out of bounds for \(symbol)"
             }
         }
 
@@ -174,11 +181,14 @@ public class Expression: CustomStringConvertible {
             case let (.undefinedSymbol(lhs), .undefinedSymbol(rhs)),
                  let (.arityMismatch(lhs), .arityMismatch(rhs)):
                 return lhs == rhs
+            case let (.arrayBounds(lsymbol, lindex), .arrayBounds(rsymbol, rindex)):
+                return lsymbol == rsymbol && lindex == rindex
             case (.message, _),
                  (.unexpectedToken, _),
                  (.missingDelimiter, _),
                  (.undefinedSymbol, _),
-                 (.arityMismatch, _):
+                 (.arityMismatch, _),
+                 (.arrayBounds, _):
                 return false
             }
         }
@@ -210,17 +220,20 @@ public class Expression: CustomStringConvertible {
     /// Creates an Expression object from a string
     /// Optionally accepts some or all of:
     /// - A dictionary of constants for simple static values
+    /// - A dictionary of arrays for static collections of related values
     /// - A dictionary of symbols, for implementing custom functions and operators
     /// - A custom evaluator function for more complex symbol processing
     public convenience init(_ expression: String,
                             options: Options = [],
                             constants: [String: Double] = [:],
+                            arrays: [String: [Double]] = [:],
                             symbols: [Symbol: Symbol.Evaluator] = [:],
                             evaluator: Evaluator? = nil) {
         self.init(
             Expression.parse(expression),
             options: options,
             constants: constants,
+            arrays: arrays,
             symbols: symbols,
             evaluator: evaluator
         )
@@ -230,6 +243,7 @@ public class Expression: CustomStringConvertible {
     public init(_ expression: ParsedExpression,
                 options: Options = [],
                 constants: [String: Double] = [:],
+                arrays: [String: [Double]] = [:],
                 symbols: [Symbol: Symbol.Evaluator] = [:],
                 evaluator: Evaluator? = nil) {
 
@@ -304,6 +318,14 @@ public class Expression: CustomStringConvertible {
         for symbol in root.symbols {
             if case let .variable(name) = symbol, let value = constants[name] {
                 pureSymbols[symbol] = { _ in value }
+            } else if case let .array(name) = symbol, let array = arrays[name] {
+                pureSymbols[symbol] = { args in
+                    let index = Int(args[0])
+                    guard array.indices.contains(index) else {
+                        throw Error.arrayBounds(symbol, index)
+                    }
+                    return array[index]
+                }
             } else if let fn = symbolEvaluator(for: symbol) {
                 if case .variable = symbol {
                     impureSymbols[symbol] = fn
