@@ -1,5 +1,14 @@
 # Change Log
 
+## [0.9.0](https://github.com/nicklockwood/Expression/releases/tag/0.9.0) (2017-12-01)
+
+- Switched to a more conventional MIT license
+- Added support for array symbols, so expressions like `foo[5]` and `bar[x + 1]` are now possible
+- Enabled trailing apostrophe in symbol names, so you can use symbols like `x'`
+- Added `isValidIdentifier()` and `isValidOperator()` methods for validating symbol names
+- Fixed warnings in Xcode 9.1 and dropped support for Swift 3.1
+- Improved cache performance
+
 ## [0.8.5](https://github.com/nicklockwood/Expression/releases/tag/0.8.5) (2017-09-04)
 
 - Improved expression parsing performance in Swift 3.2 and 4.0

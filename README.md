@@ -1,10 +1,9 @@
 [![Travis](https://img.shields.io/travis/nicklockwood/Expression.svg)](https://travis-ci.org/nicklockwood/Expression)
 [![Coveralls](https://coveralls.io/repos/github/nicklockwood/Expression/badge.svg)](https://coveralls.io/github/nicklockwood/Expression)
 [![Platform](https://img.shields.io/cocoapods/p/Expression.svg?style=flat)](http://cocoadocs.org/docsets/Expression)
-[![Swift 3.1](https://img.shields.io/badge/swift-3.1-yellow.svg?style=flat)](https://developer.apple.com/swift)
 [![Swift 3.2](https://img.shields.io/badge/swift-3.2-orange.svg?style=flat)](https://developer.apple.com/swift)
 [![Swift 4.0](https://img.shields.io/badge/swift-4.0-red.svg?style=flat)](https://developer.apple.com/swift)
-[![License](https://img.shields.io/badge/license-zlib-lightgrey.svg)](https://opensource.org/licenses/Zlib)
+[![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 [![Twitter](https://img.shields.io/badge/twitter-@nicklockwood-blue.svg)](http://twitter.com/nicklockwood)
 
 - [Introduction](#introduction)
@@ -42,19 +41,19 @@ It is similar to Foundation's built-in Expression class, but with better support
 
 ## Why?
 
-There are many situations where it is useful to be able to evaluate a simple expression at runtime. Some such cases are demonstrated in the example apps included with the library:
+There are many situations where it is useful to be able to evaluate a simple expression at runtime. Some are demonstrated in the example apps included with the library:
 
 * A scientific calculator
 * A CSS color string parser
 * A basic layout engine, similar to AutoLayout
 
-but there are other possible applications, e.g.
+But there are other possible applications, e.g.
 
 * A spreadsheet app
 * Configuration (e.g. using expressions in a config file to avoid data duplication)
 * The basis for simple scripting language
 
-(If you find any other uses, let me know and I'll add them)
+(If you find any other use cases, let me know and I'll add them)
 
 Normally these kind of calculations would involve embedding a heavyweight interpreted language such as JavaScript or Lua into your app. Expression avoids that overhead, and is also more secure, as it reduces the risk of arbitrary code injection or crashes due to infinite loops, buffer overflows, etc.
 
@@ -72,9 +71,9 @@ Expression works by parsing an expression string into a tree of symbols, which c
 
 The entire Expression API is encapsulated in a single file, and everything public is prefixed or namespaced, so you can simply drag the `Expression.swift` file into your project to use it. If you prefer, there's a framework for Mac and iOS that you can import, or you can use CocoaPods, Carthage, or Swift Package Manager on Linux.
 
-To install Layout using CocoaPods, add the following to your Podfile:
+To install Expression using CocoaPods, add the following to your Podfile:
 
-	pod 'Expression', '~> 0.8.4'
+	pod 'Expression', '~> 0.9.0'
 
 
 ## Integration
@@ -145,11 +144,11 @@ do {
 }
 ```
 
-When using the `constants` and/or `symbols` dictionaries, error message generation is handled automatically by the Expression library. If you need to support dynamic symbol decoding (such as in the hex color example earlier), you can use a custom `Evaluator` function, which is a little bit more complex.
+When using the `constants`, `arrays` and `symbols` dictionaries, error message generation is handled automatically by the Expression library. If you need to support dynamic symbol decoding (as in the hex color example earlier), you can use a custom `Evaluator` function, which is a little bit more complex.
 
 Your custom `Evaluator` function can return either a `Double` or `nil` or it can throw an error. If you do not recognize a symbol, you should return nil so that it can be handled by the default evaluator.
 
-In some cases you may be *certain* that a symbol is incorrect, and this is an opportunity to provide a more useful error message. The following example matches a function `bar` with an arity of 1 (meaning that it takes one argument). This will only match calls to `bar` that take a single argument, and ignore calls with zero or multiple arguments.
+In some cases you may be *certain* that a symbol is incorrect, and this is an opportunity to provide a more useful error message. The following example matches a function `bar` with an arity of 1 (meaning that it takes one argument). This will only match calls to `bar` that take a single argument, and will ignore calls with zero or multiple arguments.
 
 ```swift
 switch symbol {
@@ -160,7 +159,7 @@ default:
 }
 ```
 
-Since `bar` is a custom function, we know that it should only take one argument, so it is probably more helpful to throw an error if it is called with the wrong number of arguments. That would look something like this:
+Since `bar` is a custom function, we know that it should only take one argument, so it's more helpful to throw an error if it is called with the wrong number of arguments, rather than returning nil to indicate that the function doesn't exist. That would look something like this:
 
 ```swift
 switch symbol {
@@ -220,7 +219,9 @@ This is an alphanumeric identifier representing a constant or variable in an exp
 
 Like Swift, Expression allows unicode characters in identifiers, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for name-spacing (as demonstrated in the Layout example app).
 
-The parser also accepts quoted strings as identifiers. Single quotes (') , double quotes (") , or backticks (`) may be used. It's up to your application to interpret these as meaningful. Unlike regular identifiers, quoted identifiers can contain any unicode character, including spaces. Newlines, quotes and other special characters can be escaped using a backslash (\). Escape sequences are decoded for you, but the outer quotes are retained so you can distinguish strings from other identifiers.
+The parser also accepts quoted strings as identifiers. Single quotes (') , double quotes (") , or backticks (`) may be used. Since Expression only deals with numeric values, it's up to your application to map these string indentifiers to numbers. Unlike regular identifiers, quoted identifiers can contain any unicode character, including spaces. Newlines, quotes and other special characters can be escaped using a backslash (\). Escape sequences are decoded for you, but the outer quotes are retained so you can distinguish strings from other identifiers.
+
+Finally, unquoted identifiers are permitted to end with a single quote ('), as this is a common notation used in mathematics to indicate modified values. A quote at any other point in the identifier will be treated as the end of the name.
 
 To verify that a given string is safe for use as an identifier, you can use the `Expression.isValidIdentifier()` method.
 

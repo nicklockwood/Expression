@@ -2,33 +2,33 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.8.5
+//  Version 0.9.0
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
 //
-//  Distributed under the permissive zlib license
+//  Distributed under the permissive MIT license
 //  Get the latest version from here:
 //
 //  https://github.com/nicklockwood/Expression
 //
-//  This software is provided 'as-is', without any express or implied
-//  warranty.  In no event will the authors be held liable for any damages
-//  arising from the use of this software.
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
 //
-//  Permission is granted to anyone to use this software for any purpose,
-//  including commercial applications, and to alter it and redistribute it
-//  freely, subject to the following restrictions:
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
 //
-//  1. The origin of this software must not be misrepresented; you must not
-//  claim that you wrote the original software. If you use this software
-//  in a product, an acknowledgment in the product documentation would be
-//  appreciated but is not required.
-//
-//  2. Altered source versions must be plainly marked as such, and must not be
-//  misrepresented as being the original software.
-//
-//  3. This notice may not be removed or altered from any source distribution.
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 //
 
 import Foundation
@@ -95,7 +95,7 @@ public class Expression: CustomStringConvertible {
             case let .function(name, _):
                 return "function \(name)()"
             case let .array(name):
-                return "array \(name)()"
+                return "array \(name)[]"
             }
         }
 
@@ -105,7 +105,7 @@ public class Expression: CustomStringConvertible {
         }
 
         /// Required by the equatable protocol
-        public static func ==(lhs: Symbol, rhs: Symbol) -> Bool {
+        public static func == (lhs: Symbol, rhs: Symbol) -> Bool {
             if case let .function(_, lhsarity) = lhs,
                 case let .function(_, rhsarity) = rhs,
                 lhsarity != rhsarity {
@@ -134,7 +134,7 @@ public class Expression: CustomStringConvertible {
         case arityMismatch(Symbol)
 
         /// An array was accessed with an index outside the valid range
-        case arrayBounds(Symbol, Int)
+        case arrayBounds(Symbol, Double)
 
         /// The human-readable description of the error
         public var description: String {
@@ -167,12 +167,12 @@ public class Expression: CustomStringConvertible {
                 return String(description.first!).uppercased() +
                     "\(description.dropFirst()) expects \(arity) argument\(arity == 1 ? "" : "s")"
             case let .arrayBounds(symbol, index):
-                return "Index \(index) out of bounds for \(symbol)"
+                return "Index \(stringify(index)) out of bounds for \(symbol)"
             }
         }
 
         /// Equatable implementation
-        public static func ==(lhs: Error, rhs: Error) -> Bool {
+        public static func == (lhs: Error, rhs: Error) -> Bool {
             switch (lhs, rhs) {
             case let (.message(lhs), .message(rhs)),
                  let (.unexpectedToken(lhs), .unexpectedToken(rhs)),
@@ -320,9 +320,8 @@ public class Expression: CustomStringConvertible {
                 pureSymbols[symbol] = { _ in value }
             } else if case let .array(name) = symbol, let array = arrays[name] {
                 pureSymbols[symbol] = { args in
-                    let index = Int(args[0])
-                    guard array.indices.contains(index) else {
-                        throw Error.arrayBounds(symbol, index)
+                    guard let index = Int(exactly: floor(args[0])), array.indices.contains(index) else {
+                        throw Error.arrayBounds(symbol, args[0])
                     }
                     return array[index]
                 }
@@ -398,7 +397,7 @@ public class Expression: CustomStringConvertible {
 
         // Store
         if usingCache {
-            queue.async { cache[expression] = parsedExpression.root }
+            queue.sync { cache[expression] = parsedExpression.root }
         }
         return parsedExpression
     }
@@ -572,11 +571,7 @@ private enum Subexpression: CustomStringConvertible {
     var description: String {
         switch self {
         case let .literal(value):
-            if let int = Int64(exactly: value) {
-                return "\(int)"
-            } else {
-                return "\(value)"
-            }
+            return stringify(value)
         case let .infix(string),
              let .prefix(string),
              let .postfix(string):
@@ -677,6 +672,16 @@ private enum Subexpression: CustomStringConvertible {
             return .operand(symbol, args, fn)
         }
         return .literal(result)
+    }
+}
+
+private func stringify(_ number: Double) -> String {
+    if let int = Int64(exactly: number) {
+        return "\(int)"
+    } else if let uint = UInt64(exactly: number) {
+        return "\(uint)"
+    } else {
+        return "\(number)"
     }
 }
 
@@ -1281,7 +1286,7 @@ private extension UnicodeScalarView {
                 followedByWhitespace = skipWhitespace()
             case .infix(","):
                 operandPosition = true
-                if let previous = stack.last, case let .infix(op) = previous {
+                if case let .infix(op)? = stack.last {
                     stack[stack.count - 1] = .postfix(op)
                 }
                 stack.append(expression)
@@ -1332,7 +1337,7 @@ private extension UnicodeScalarView {
             self = start
             throw Expression.Error.unexpectedToken(junk)
         }
-        if stack.count < 1 {
+        if stack.isEmpty {
             // Empty expression
             throw Expression.Error.unexpectedToken("")
         }

@@ -6,8 +6,8 @@
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
 //
 
-import UIKit
 import Expression
+import UIKit
 
 private let colors: [String: Double] = [
     "red": 0xFF0000FF,
