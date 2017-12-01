@@ -938,7 +938,7 @@ private extension UnicodeScalarView {
     }
 
     mutating func parseOperator() -> Subexpression? {
-        if let op = scanCharacter({ "(),".unicodeScalars.contains($0) }) {
+        if let op = scanCharacter({ "(,".unicodeScalars.contains($0) }) {
             return .infix(op)
         }
         if let op = scanCharacters({ isOperator($0) || $0 == "." }) {
@@ -1104,7 +1104,6 @@ private extension UnicodeScalarView {
 
     mutating func parseSubexpression(upTo delimiters: [String]) throws -> Subexpression {
         var stack: [Subexpression] = []
-        var scopes: [[Subexpression]] = []
 
         func collapseStack(from i: Int) throws {
             guard stack.count > 1 else {
@@ -1142,7 +1141,7 @@ private extension UnicodeScalarView {
                         // cannot follow an operand
                         throw Expression.Error.unexpectedToken("\(rhs)")
                     }
-                    // assume prefix operator was actually an infix operator
+                    // assume postfix operator was actually an infix operator
                     stack[i] = arg
                     stack.insert(.infix(op), at: i + 1)
                     try collapseStack(from: i)
@@ -1196,49 +1195,33 @@ private extension UnicodeScalarView {
             parseEscapedIdentifier() {
 
             // prepare for next iteration
-            let followedByWhitespace = skipWhitespace() || isEmpty
+            var followedByWhitespace = skipWhitespace() || isEmpty
 
             switch expression {
             case let .error(.unexpectedToken(delimiter), _) where delimiters.contains(delimiter):
                 break loop
             case .infix("("):
-                operandPosition = true
-                scopes.append(stack)
-                stack = []
-            case .infix(")"):
+                switch stack.last {
+                case let .operand(.variable(name), _, _)?:
+                    var args = [Subexpression]()
+                    if first != ")" {
+                        repeat {
+                            try args.append(parseSubexpression(upTo: [",", ")"]))
+                        } while scanCharacter(",")
+                    }
+                    stack[stack.count - 1] = .operand(
+                        .function(name, arity: args.count), args, placeholder
+                    )
+                case .operand?:
+                    throw Expression.Error.unexpectedToken("(")
+                default:
+                    try stack.append(parseSubexpression(upTo: [")"]))
+                }
+                guard scanCharacter(")") else {
+                    throw Expression.Error.missingDelimiter(")")
+                }
                 operandPosition = false
-                if let previous = stack.last {
-                    switch previous {
-                    case let .infix(op), let .prefix(op):
-                        stack[stack.count - 1] = .postfix(op)
-                    default:
-                        break
-                    }
-                }
-                try collapseStack(from: 0)
-                guard var oldStack = scopes.last else {
-                    throw Expression.Error.unexpectedToken(")")
-                }
-                scopes.removeLast()
-                if let previous = oldStack.last {
-                    switch previous {
-                    case let .operand(.variable(name), _, _):
-                        // function call
-                        oldStack.removeLast()
-                        if stack.count > 0 {
-                            // unwrap comma-delimited expression
-                            while case let .operand(.infix(","), args, _) = stack.first! {
-                                stack = args + stack.dropFirst()
-                            }
-                        }
-                        stack = [.operand(.function(name, arity: stack.count), stack, placeholder)]
-                    case .operand(.function, _, _):
-                        throw Expression.Error.unexpectedToken("(")
-                    default:
-                        break
-                    }
-                }
-                stack = oldStack + stack
+                followedByWhitespace = skipWhitespace()
             case .infix(","):
                 operandPosition = true
                 if let previous = stack.last, case let .infix(op) = previous {
@@ -1287,9 +1270,6 @@ private extension UnicodeScalarView {
             throw Expression.Error.unexpectedToken("")
         }
         try collapseStack(from: 0)
-        if scopes.count > 0 {
-            throw Expression.Error.missingDelimiter(")")
-        }
         let result = stack[0]
         switch result {
         case let .prefix(symbol), let .postfix(symbol), let .infix(symbol):

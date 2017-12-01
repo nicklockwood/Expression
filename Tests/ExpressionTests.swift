@@ -272,6 +272,11 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "1 + 2")
     }
 
+    func testPostfixOperatorAsInfix3() {
+        let expression = Expression.parse("a+ (b)", usingCache: false)
+        XCTAssertEqual(expression.description, "a + b")
+    }
+
     func testParenthesizedPostfixOperator() {
         let expression = Expression.parse("(a +) b", usingCache: false)
         XCTAssertEqual(expression.description, "(a+)b")
@@ -286,7 +291,6 @@ class ExpressionTests: XCTestCase {
         let expression = Expression.parse("+ (+ a)", usingCache: false)
         XCTAssertEqual(expression.description, "+(+a)")
     }
-
 
     func testPrefixOperatorAsInfix() {
         let expression = Expression.parse("a +b", usingCache: false)
