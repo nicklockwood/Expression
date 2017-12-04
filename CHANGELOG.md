@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.9.1](https://github.com/nicklockwood/Expression/releases/tag/0.9.1) (2017-12-04)
+
+- Expression description now correctly escapes unprintable characters in quoted symbols
+- Expression description no longer adds unnecessary parens around sub-expressions
+- More helpful error messages are now generated for various syntax mistakes
+- Improved test coverage and fixed many other minor bugs
+
 ## [0.9.0](https://github.com/nicklockwood/Expression/releases/tag/0.9.0) (2017-12-01)
 
 - Switched to a more conventional MIT license

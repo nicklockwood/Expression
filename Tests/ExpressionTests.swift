@@ -1611,14 +1611,14 @@ class ExpressionTests: XCTestCase {
     func testRangeTakesPrecedenceOverIs() {
         let expression = Expression("3 is 1 ... 2", symbols: [
             .infix("..."): { $0[0] + $0[1] },
-            .infix("is"): { $0[0] == $0[1] ? 1 : 0 }
+            .infix("is"): { $0[0] == $0[1] ? 1 : 0 },
         ])
         XCTAssertEqual(try expression.evaluate(), 1)
     }
 
     func testIsTakesPrecedenceOverTernary() {
         let expression = Expression("0 ? 1 is 2 : 2 is 2", options: .boolSymbols, symbols: [
-            .infix("is"): { $0[0] == $0[1] ? 1 : 0 }
+            .infix("is"): { $0[0] == $0[1] ? 1 : 0 },
         ])
         XCTAssertEqual(try expression.evaluate(), 1)
     }
@@ -1649,7 +1649,7 @@ class ExpressionTests: XCTestCase {
         let expression = "foo + 5"
         Expression.clearCache()
         XCTAssertFalse(Expression.isCached(expression))
-        let _ = Expression(expression)
+        _ = Expression(expression)
         XCTAssertTrue(Expression.isCached(expression))
         Expression.clearCache(for: expression)
         XCTAssertFalse(Expression.isCached(expression))

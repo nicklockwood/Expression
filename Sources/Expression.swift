@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.9.0
+//  Version 0.9.1
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -705,7 +705,7 @@ private func demangle(_ symbolName: String) -> String {
              _ where isOperator(char) || isIdentifier(char):
             result.append(Character(char))
         default:
-            result += "\\u{\(String(format:"%X", char.value))}"
+            result += "\\u{\(String(format: "%X", char.value))}"
         }
     }
     result.append(delimiter)
@@ -1166,8 +1166,8 @@ private extension UnicodeScalarView {
                     }
                     guard let codepoint = Int(hex, radix: 16),
                         let c = UnicodeScalar(codepoint) else {
-                            // TODO: better error for invalid codepoint?
-                            return .error(.unexpectedToken(hex), string)
+                        // TODO: better error for invalid codepoint?
+                        return .error(.unexpectedToken(hex), string)
                     }
                     string.append(Character(c))
                 default:
