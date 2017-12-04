@@ -43,7 +43,7 @@ class ExpressionTests: XCTestCase {
 
     func testDescriptionParensAdded() {
         let expression = Expression("a+b*c")
-        XCTAssertEqual(expression.description, "a + (b * c)")
+        XCTAssertEqual(expression.description, "a + b * c")
     }
 
     func testDescriptionParensPreserved() {
@@ -148,7 +148,7 @@ class ExpressionTests: XCTestCase {
 
     func testRightAssociativeOperatorsDescription2() {
         let expression = Expression("a == b > c")
-        XCTAssertEqual(expression.description, "a == (b > c)")
+        XCTAssertEqual(expression.description, "a == b > c")
     }
 
     func testInfixDotOperatorDescription() {
@@ -159,6 +159,150 @@ class ExpressionTests: XCTestCase {
     func testPrefixDotOperatorDescription() {
         let expression = Expression(".(foo)")
         XCTAssertEqual(expression.description, ".(foo)")
+    }
+
+    func testCommaSpacingDescription() {
+        let expression = Expression("a,b")
+        XCTAssertEqual(expression.description, "a, b")
+    }
+
+    func testCommaSpacingAfterOperatorDescription() {
+        let expression = Expression("a % , b")
+        XCTAssertEqual(expression.description, "a%, b")
+    }
+
+    func testErrorDescription() {
+        let expression = Expression("0x")
+        XCTAssertEqual(expression.description, "0x")
+    }
+
+    // MARK: Error description
+
+    func testCustomErrorDescription() {
+        let error = Expression.Error.message("foo")
+        XCTAssertEqual(error.description, "foo")
+    }
+
+    func testEmptyExpressionErrorDescription() {
+        let error = Expression.Error.unexpectedToken("")
+        XCTAssertEqual(error.description, "Empty expression")
+    }
+
+    func testUnexpectedTokenErrorDescription() {
+        let error = Expression.Error.unexpectedToken(")")
+        XCTAssertEqual(error.description, "Unexpected token `)`")
+    }
+
+    func testMissingDelimiterErrorDescription() {
+        let error = Expression.Error.missingDelimiter("]")
+        XCTAssertEqual(error.description, "Missing `]`")
+    }
+
+    func testMissingUndefinedSymbolErrorDescription() {
+        let error = Expression.Error.undefinedSymbol(.postfix("foo"))
+        XCTAssertEqual(error.description, "Undefined postfix operator foo")
+    }
+
+    func testArrayArityMismatchErrorDescription() {
+        let error = Expression.Error.arityMismatch(.array("foo"))
+        XCTAssertEqual(error.description, "Array foo[] expects 1 argument")
+    }
+
+    func testZeroFunctionArityMismatchErrorDescription() {
+        let error = Expression.Error.arityMismatch(.function("foo", arity: 0))
+        XCTAssertEqual(error.description, "Function foo() expects 0 arguments")
+    }
+
+    func testUnaryFunctionArityMismatchErrorDescription() {
+        let error = Expression.Error.arityMismatch(.function("foo", arity: 1))
+        XCTAssertEqual(error.description, "Function foo() expects 1 argument")
+    }
+
+    func testBinaryFunctionArityMismatchErrorDescription() {
+        let error = Expression.Error.arityMismatch(.function("foo", arity: 2))
+        XCTAssertEqual(error.description, "Function foo() expects 2 arguments")
+    }
+
+    func testInfixOperatorArityMismatchErrorDescription() {
+        let error = Expression.Error.arityMismatch(.infix("foo"))
+        XCTAssertEqual(error.description, "Infix operator foo expects 2 arguments")
+    }
+
+    func testTernaryOperatorArityMismatchErrorDescription() {
+        let error = Expression.Error.arityMismatch(.infix("?:"))
+        XCTAssertEqual(error.description, "Infix operator ?: expects 3 arguments")
+    }
+
+    func testPostfixOperatorArityMismatchErrorDescription() {
+        let error = Expression.Error.arityMismatch(.postfix("foo"))
+        XCTAssertEqual(error.description, "Postfix operator foo expects 1 argument")
+    }
+
+    func testPrefixOperatorArityMismatchErrorDescription() {
+        let error = Expression.Error.arityMismatch(.prefix("foo"))
+        XCTAssertEqual(error.description, "Prefix operator foo expects 1 argument")
+    }
+
+    func testVariableArityMismatchErrorDescription() {
+        let error = Expression.Error.arityMismatch(.variable("foo"))
+        XCTAssertEqual(error.description, "Variable foo expects 0 arguments")
+    }
+
+    func testEmptySymbolArityErrorDescription() {
+        let error = Expression.Error.arityMismatch(.variable(""))
+        XCTAssertEqual(error.description, "Variable  expects 0 arguments")
+    }
+
+    func testArrayBoundsErrorDescription() {
+        let error = Expression.Error.arrayBounds(.array("foo"), 5)
+        XCTAssertEqual(error.description, "Index 5 out of bounds for array foo[]")
+    }
+
+    // MARK: Error equatability
+
+    func testMessageErrorEquality() {
+        let error = Expression.Error.message("foo")
+        XCTAssertEqual(error, error)
+        XCTAssertNotEqual(error, .message("bar"))
+        XCTAssertNotEqual(error, .unexpectedToken("foo"))
+    }
+
+    func testUnexpectedTokenErrorEquality() {
+        let error = Expression.Error.unexpectedToken(")")
+        XCTAssertEqual(error, error)
+        XCTAssertNotEqual(error, .unexpectedToken("]"))
+        XCTAssertNotEqual(error, .missingDelimiter(")"))
+    }
+
+    func testMissingDelimiterErrorEquality() {
+        let error = Expression.Error.missingDelimiter("]")
+        XCTAssertEqual(error, error)
+        XCTAssertNotEqual(error, .missingDelimiter(")"))
+        XCTAssertNotEqual(error, .unexpectedToken("]"))
+    }
+
+    func testUndefinedSymbolErrorEquality() {
+        let error = Expression.Error.undefinedSymbol(.array("foo"))
+        XCTAssertEqual(error, error)
+        XCTAssertNotEqual(error, .undefinedSymbol(.array("bar")))
+        XCTAssertNotEqual(error, .undefinedSymbol(.variable("foo")))
+        XCTAssertNotEqual(error, .arityMismatch(.array("foo")))
+    }
+
+    func testArityMismatchErrorEquality() {
+        let error = Expression.Error.arityMismatch(.function("foo", arity: 1))
+        XCTAssertEqual(error, error)
+        XCTAssertNotEqual(error, .arityMismatch(.function("foo", arity: 2)))
+        XCTAssertNotEqual(error, .arityMismatch(.function("bar", arity: 1)))
+        XCTAssertNotEqual(error, .arityMismatch(.array("foo")))
+        XCTAssertNotEqual(error, .undefinedSymbol(.array("bar")))
+    }
+
+    func testArrayBoundsErrorEquality() {
+        let error = Expression.Error.arrayBounds(.array("foo"), 2)
+        XCTAssertNotEqual(error, .arrayBounds(.array("foo"), 3))
+        XCTAssertNotEqual(error, .arrayBounds(.array("bar"), 2))
+        XCTAssertNotEqual(error, .arityMismatch(.array("foo")))
     }
 
     // MARK: Numbers
@@ -229,11 +373,11 @@ class ExpressionTests: XCTestCase {
     }
 
     func testHex() {
-        let expression = Expression("0x2A")
+        let expression = Expression("0x2A ")
         XCTAssertEqual(try expression.evaluate(), 0x2A)
     }
 
-    // MARK: Escaped identifiers
+    // MARK: Quoted identifiers (strings)
 
     func testDoubleQuotedIdentifier() {
         let expression = Expression.parse("\"foo\" + \"bar\"")
@@ -258,6 +402,48 @@ class ExpressionTests: XCTestCase {
     func testBacktickEscapedIdentifierWithEscapedChars() {
         let expression = Expression.parse("`foo\\`bar\\n`")
         XCTAssertEqual(expression.symbols, [.variable("`foo`bar\n`")])
+    }
+
+    func testValidateQuotedIdentifierContainingNull() {
+        let expression = Expression.parse("'foo\\0bar'")
+        XCTAssertEqual(expression.symbols, [.variable("'foo\0bar'")])
+        XCTAssertEqual(expression.description, "'foo\\0bar'")
+    }
+
+    func testValidateQuotedIdentifierContainingTab() {
+        let expression = Expression.parse("'foo\\tbar'")
+        XCTAssertEqual(expression.symbols, [.variable("'foo\tbar'")])
+        XCTAssertEqual(expression.description, "'foo\\tbar'")
+    }
+
+    func testValidateQuotedIdentifierContainingNewline() {
+        let expression = Expression.parse("'foo\\nbar'")
+        XCTAssertEqual(expression.symbols, [.variable("'foo\nbar'")])
+        XCTAssertEqual(expression.description, "'foo\\nbar'")
+    }
+
+    func testValidateQuotedIdentifierContainingCarriageReturn() {
+        let expression = Expression.parse("'foo\\rbar'")
+        XCTAssertEqual(expression.symbols, [.variable("'foo\rbar'")])
+        XCTAssertEqual(expression.description, "'foo\\rbar'")
+    }
+
+    func testValidateQuotedIdentifierContainingDelete() {
+        let expression = Expression.parse("'foo\\u{7F}bar'")
+        XCTAssertEqual(expression.symbols, [.variable("'foo\u{7F}bar'")])
+        XCTAssertEqual(expression.description, "'foo\\u{7F}bar'")
+    }
+
+    func testValidateQuotedIdentifierContainingUnitSeparator() {
+        let expression = Expression.parse("'foo\\u{1F}bar'")
+        XCTAssertEqual(expression.symbols, [.variable("'foo\u{1F}bar'")])
+        XCTAssertEqual(expression.description, "'foo\\u{1F}bar'")
+    }
+
+    func testValidateQuotedIdentifierContainingEmoji() {
+        let expression = Expression.parse("'foo🤡bar'")
+        XCTAssertEqual(expression.symbols, [.variable("'foo🤡bar'")])
+        XCTAssertEqual(expression.description, "'foo🤡bar'")
     }
 
     // MARK: Ambiguous whitespace
@@ -324,6 +510,7 @@ class ExpressionTests: XCTestCase {
         var characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
         characters.removeFirst() // Remove opening {
         var expression = Expression.parse(&characters)
+        XCTAssertEqual(characters.first, "}")
         guard expression.error == .unexpectedToken("}") else {
             XCTFail()
             return
@@ -331,10 +518,17 @@ class ExpressionTests: XCTestCase {
         characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
         characters.removeFirst() // Remove opening {
         expression = Expression.parse(&characters, upTo: "\"")
+        XCTAssertEqual(characters.first, "}")
         guard expression.error == .unexpectedToken("}") else {
             XCTFail()
             return
         }
+        characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        characters.removeFirst() // Remove opening {
+        expression = Expression.parse(&characters, upTo: "}")
+        XCTAssertEqual(characters.first, "}")
+        XCTAssertEqual(expression.description, "1 + 2")
+        XCTAssertNil(expression.error)
     }
 
     func testQuotedExpression() {
@@ -342,6 +536,7 @@ class ExpressionTests: XCTestCase {
         var characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
         characters.removeFirst() // Remove opening quote
         var expression = Expression.parse(&characters)
+        XCTAssertNil(characters.first)
         guard expression.error == .unexpectedToken("\"") else {
             XCTFail()
             return
@@ -349,6 +544,7 @@ class ExpressionTests: XCTestCase {
         characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
         characters.removeFirst() // Remove opening quote
         expression = Expression.parse(&characters, upTo: "}")
+        XCTAssertNil(characters.first)
         guard expression.error == .unexpectedToken("\"") else {
             XCTFail()
             return
@@ -356,8 +552,33 @@ class ExpressionTests: XCTestCase {
         characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
         characters.removeFirst() // Remove opening quote
         expression = Expression.parse(&characters, upTo: "\"")
+        XCTAssertEqual(characters.first, "\"")
         XCTAssertEqual(expression.description, "1 + 2")
         XCTAssertNil(expression.error)
+    }
+
+    func testEmptyBracedExpression() {
+        let input = "{}"
+        var characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        characters.removeFirst() // Remove opening {
+        let expression = Expression.parse(&characters, upTo: "}")
+        XCTAssertEqual(characters.first, "}")
+        guard expression.error == .unexpectedToken("") else {
+            XCTFail()
+            return
+        }
+    }
+
+    func testAllWhitespaceBracedExpression() {
+        let input = "{ \n }"
+        var characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        characters.removeFirst() // Remove opening {
+        let expression = Expression.parse(&characters, upTo: "}")
+        XCTAssertEqual(characters.first, "}")
+        guard expression.error == .unexpectedToken("") else {
+            XCTFail()
+            return
+        }
     }
 
     // MARK: Syntax errors
@@ -423,6 +644,137 @@ class ExpressionTests: XCTestCase {
         let expression = Expression("+")
         XCTAssertThrowsError(try expression.evaluate()) { error in
             XCTAssertEqual(error as? Expression.Error, .unexpectedToken("+"))
+        }
+    }
+
+    func testUnterminatedString() {
+        let expression = Expression("'foo")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .missingDelimiter("'"))
+        }
+    }
+
+    func testUnterminatedStringEscapeSequence() {
+        let expression = Expression("'foo\\")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .missingDelimiter("'"))
+        }
+    }
+
+    func testUnterminatedStringAfterEscapeSequence() {
+        let expression = Expression("'foo\\'")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .missingDelimiter("'"))
+        }
+    }
+
+    func testUnicodeLiteralMissingNumber() {
+        let expression = Expression("'foo\\u{}")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("}"))
+        }
+    }
+
+    func testUnicodeLiteralMissingNumberAndBrace() {
+        let expression = Expression("'foo\\u{")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .missingDelimiter("}"))
+        }
+    }
+
+    func testUnicodeLiteralContainsJunk() {
+        let expression = Expression("'foo\\u{bar}'")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("r}'"))
+        }
+    }
+
+    func testUnicodeLiteralMissingClosingBrace() {
+        let expression = Expression("'foo\\u{5")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .missingDelimiter("}"))
+        }
+    }
+
+    func testInvalidUnicodeCodepoint() {
+        let expression = Expression("'foo\\u{DDDD}'")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("DDDD"))
+        }
+    }
+
+    func testMissingClosingBracket() {
+        let expression = Expression("foo[0", arrays: ["foo": [1]])
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .missingDelimiter("]"))
+        }
+    }
+
+    func testMissingIndexExpression() {
+        let expression = Expression("foo[", arrays: ["foo": [1]])
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .missingDelimiter("]"))
+        }
+    }
+
+    func testEmptyBrackets() {
+        let expression = Expression("foo[]", arrays: ["foo": []])
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("]"))
+        }
+    }
+
+    func testTrailingParen() {
+        let expression = Expression("5)")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken(")"))
+        }
+    }
+
+    func testTrailingParenThenSpace() {
+        let expression = Expression("5) ")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken(")"))
+        }
+    }
+
+    func testTrailingWhitespace() {
+        let expression = Expression("5\n")
+        XCTAssertNoThrow(try expression.evaluate())
+    }
+
+    func testTrailingE() {
+        let expression = Expression("5e")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.postfix("e")))
+        }
+    }
+
+    func testTrailingEPlus() {
+        let expression = Expression("5e+", symbols: [.postfix("e"): { _ in 1 }])
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.postfix("+")))
+        }
+    }
+
+    func testTrailingHexPrefix() {
+        let expression = Expression("0x")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("0x"))
+        }
+    }
+
+    func testTrailingHexPrefixAfterPrefixOperator() {
+        let expression = Expression("-0x")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("0x"))
+        }
+    }
+
+    func testTrailingHexPrefixAfterInfxOperator() {
+        let expression = Expression("5 + 0x")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("0x"))
         }
     }
 
@@ -726,7 +1078,21 @@ class ExpressionTests: XCTestCase {
             .variable("foo"): { _ in 5 },
             .variable("bar"): { _ in 2.5 },
         ])
-        let expected: Set<Expression.Symbol> = [.function("mod", arity: 2), .variable("foo"), .variable("bar")]
+        XCTAssertEqual(expression.symbols, [.function("mod", arity: 2), .variable("foo"), .variable("bar")])
+    }
+
+    func testPrefixSymbol() {
+        let expression = Expression("-foo", symbols: [.variable("foo"): { _ in 5 }])
+        let expected: Set<Expression.Symbol> = [.prefix("-"), .variable("foo")]
+        XCTAssertEqual(expression.symbols, expected)
+    }
+
+    func testPostfixSymbol() {
+        let expression = Expression("foo++", symbols: [
+            .variable("foo"): { _ in 5 },
+            .postfix("++"): { args in args[0] + 1 },
+        ])
+        let expected: Set<Expression.Symbol> = [.postfix("++"), .variable("foo")]
         XCTAssertEqual(expression.symbols, expected)
     }
 
@@ -817,6 +1183,12 @@ class ExpressionTests: XCTestCase {
         )
         XCTAssertEqual(expression.symbols, [.variable("foo"), .infix("?:")])
         XCTAssertEqual(expression.description, "foo ? 5 : 6")
+    }
+
+    func testOptimizerDisabled() {
+        let expression = Expression("3 * 5", options: .noOptimize)
+        XCTAssertEqual(expression.symbols, [.infix("*")])
+        XCTAssertEqual(expression.description, "3 * 5")
     }
 
     // MARK: Pure symbols
@@ -1026,6 +1398,21 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 6)
     }
 
+    func testUndefinedTernaryOperatorWithCustomEvaluator() {
+        let expression = Expression("1 - 1 ? 3 * 5 : 2 * 3") { symbol, args in
+            switch symbol {
+            case .infix("?"):
+                return args[0] != 0 ? args[1] : 0
+            case .infix(":"):
+                return args[0] != 0 ? args[0] : args[1]
+            default:
+                return nil
+            }
+        }
+        XCTAssertEqual(expression.description, "1 - 1 ? 3 * 5 : 2 * 3")
+        XCTAssertEqual(try expression.evaluate(), 6)
+    }
+
     func testTernaryWith2Arguments() {
         let expression1 = Expression("5 ?: 4", options: .boolSymbols)
         XCTAssertEqual(try expression1.evaluate(), 5)
@@ -1134,7 +1521,7 @@ class ExpressionTests: XCTestCase {
     }
 
     func testValidateQuotedIdentifier() {
-        XCTAssertTrue(Expression.isValidIdentifier("'foo\nbar'"))
+        XCTAssertTrue(Expression.isValidIdentifier("'foo bar'"))
     }
 
     func testValidateDoubleQuotedIdentifier() {
@@ -1191,7 +1578,80 @@ class ExpressionTests: XCTestCase {
         XCTAssertTrue(Expression.isValidOperator("::"))
     }
 
+    func testValidateIdentifierAsOperator() {
+        XCTAssertFalse(Expression.isValidOperator("foo"))
+    }
+
     func testValidateEmptyOperator() {
         XCTAssertFalse(Expression.isValidOperator(""))
+    }
+
+    // MARK: Operator precedence
+
+    func testEqualityIsRightAssociative() {
+        let expression = Expression("a == b == c", options: .boolSymbols, constants: ["a": 1, "b": 2, "c": 2])
+        XCTAssertEqual(try expression.evaluate(), 1)
+    }
+
+    func testBitshiftTakesPrecedenceOverAddition() {
+        let expression = Expression("1 + 2 << 3", symbols: [.infix("<<"): { Double(Int($0[0]) << Int($0[1])) }])
+        XCTAssertEqual(try expression.evaluate(), 17)
+    }
+
+    func testMultiplicationTakesPrecedenceOverAddition() {
+        let expression = Expression("2 + 3 * 2")
+        XCTAssertEqual(try expression.evaluate(), 8)
+    }
+
+    func testAdditionTakesPrecedenceOverRange() {
+        let expression = Expression("1 ... 3 * 4", symbols: [.infix("..."): { $0[0] + $0[1] }])
+        XCTAssertEqual(try expression.evaluate(), 13)
+    }
+
+    func testRangeTakesPrecedenceOverIs() {
+        let expression = Expression("3 is 1 ... 2", symbols: [
+            .infix("..."): { $0[0] + $0[1] },
+            .infix("is"): { $0[0] == $0[1] ? 1 : 0 }
+        ])
+        XCTAssertEqual(try expression.evaluate(), 1)
+    }
+
+    func testIsTakesPrecedenceOverTernary() {
+        let expression = Expression("0 ? 1 is 2 : 2 is 2", options: .boolSymbols, symbols: [
+            .infix("is"): { $0[0] == $0[1] ? 1 : 0 }
+        ])
+        XCTAssertEqual(try expression.evaluate(), 1)
+    }
+
+    func testSubtractionTakesPrecedenceOverNullCoalescing() {
+        let expression = Expression("1 - 1 ?? 2 + 1", symbols: [.infix("??"): { $0[0] != 0 ? $0[0] : $0[1] }])
+        XCTAssertEqual(try expression.evaluate(), 3)
+    }
+
+    func testEqualityTakesPrecedenceOverAssignment() {
+        let expression = Expression("2 = 3 == 1", options: .boolSymbols, symbols: [.infix("="): { $0[1] }])
+        XCTAssertEqual(try expression.evaluate(), 0)
+    }
+
+    func testEqualityTakesPrecedenceOverAnd() {
+        let expression = Expression("1 == 1 && 2 == 2", options: .boolSymbols)
+        XCTAssertEqual(try expression.evaluate(), 1)
+    }
+
+    func testEverythingTakesPrecedenceOverComma() {
+        let expression = Expression("3 * 2, 2 * 3", symbols: [.infix(","): { $0[0] + $0[1] }])
+        XCTAssertEqual(try expression.evaluate(), 12)
+    }
+
+    // MARK: Cache
+
+    func testCache() {
+        let expression = "foo + 5"
+        Expression.clearCache()
+        XCTAssertFalse(Expression.isCached(expression))
+        let _ = Expression(expression)
+        XCTAssertTrue(Expression.isCached(expression))
+        Expression.clearCache(for: expression)
+        XCTAssertFalse(Expression.isCached(expression))
     }
 }

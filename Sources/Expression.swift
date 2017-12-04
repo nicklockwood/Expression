@@ -85,17 +85,17 @@ public class Expression: CustomStringConvertible {
         public var description: String {
             switch self {
             case let .variable(name):
-                return "variable \(name)"
+                return "variable \(demangle(name))"
             case let .infix(name):
-                return "infix operator \(name)"
+                return "infix operator \(demangle(name))"
             case let .prefix(name):
-                return "prefix operator \(name)"
+                return "prefix operator \(demangle(name))"
             case let .postfix(name):
-                return "postfix operator \(name)"
+                return "postfix operator \(demangle(name))"
             case let .function(name, _):
-                return "function \(name)()"
+                return "function \(demangle(name))()"
             case let .array(name):
-                return "array \(name)[]"
+                return "array \(demangle(name))[]"
             }
         }
 
@@ -141,8 +141,10 @@ public class Expression: CustomStringConvertible {
             switch self {
             case let .message(message):
                 return message
+            case .unexpectedToken(""):
+                return "Empty expression"
             case let .unexpectedToken(string):
-                return string.isEmpty ? "Empty expression" : "Unexpected token `\(string)`"
+                return "Unexpected token `\(string)`"
             case let .missingDelimiter(string):
                 return "Missing `\(string)`"
             case let .undefinedSymbol(symbol):
@@ -351,31 +353,34 @@ public class Expression: CustomStringConvertible {
     /// Verify that the string is a valid identifier
     public static func isValidIdentifier(_ string: String) -> Bool {
         var characters = UnicodeScalarView(string)
-        return (characters.parseIdentifier() ?? characters.parseEscapedIdentifier()).map {
-            guard case .operand(.variable, _, _) = $0 else {
-                return false
-            }
+        switch characters.parseIdentifier() ?? characters.parseEscapedIdentifier() {
+        case .operand(.variable, _, _)?:
             return characters.isEmpty
-        } ?? false
+        default:
+            return false
+        }
     }
 
     /// Verify that the string is a valid operator
     public static func isValidOperator(_ string: String) -> Bool {
         var characters = UnicodeScalarView(string)
-        return characters.parseOperator().map {
-            switch $0 {
-            case .infix("("), .infix("["):
-                return false
-            case .infix:
-                return characters.isEmpty
-            default:
-                return false
-            }
-        } ?? false
+        switch characters.parseOperator() {
+        case .infix("(")?, .infix("[")?:
+            return false
+        case .infix?:
+            return characters.isEmpty
+        default:
+            return false
+        }
     }
 
     private static var cache = [String: Subexpression]()
     private static let queue = DispatchQueue(label: "com.Expression")
+
+    // For testing
+    static func isCached(_ expression: String) -> Bool {
+        return queue.sync { cache[expression] != nil }
+    }
 
     /// Parse an expression and optionally cache it for future use.
     /// Returns an opaque struct that cannot be evaluated but can be queried
@@ -426,7 +431,7 @@ public class Expression: CustomStringConvertible {
 
     /// Clear the expression cache (useful for testing, or in low memory situations)
     public static func clearCache(for expression: String? = nil) {
-        queue.async {
+        queue.sync {
             if let expression = expression {
                 cache.removeValue(forKey: expression)
             } else {
@@ -572,10 +577,6 @@ private enum Subexpression: CustomStringConvertible {
         switch self {
         case let .literal(value):
             return stringify(value)
-        case let .infix(string),
-             let .prefix(string),
-             let .postfix(string):
-            return string
         case let .operand(symbol, args, _):
             switch symbol {
             case let .prefix(name):
@@ -587,7 +588,7 @@ private enum Subexpression: CustomStringConvertible {
                          == isOperator(description.unicodeScalars.first!):
                     return "\(name)(\(description))" // Parens required
                 case .operand, .literal, .infix, .prefix, .postfix:
-                    return "\(name)\(description)" // No parens needed
+                    return "\(demangle(name))\(description)" // No parens needed
                 }
             case let .postfix(name):
                 let arg = args[0]
@@ -598,8 +599,10 @@ private enum Subexpression: CustomStringConvertible {
                          == isOperator(description.unicodeScalars.last!):
                     return "(\(description))\(name)" // Parens required
                 case .operand, .literal, .infix, .prefix, .postfix:
-                    return "\(description)\(name)" // No parens needed
+                    return "\(description)\(demangle(name))" // No parens needed
                 }
+            case .infix(","):
+                return "\(args[0]), \(args[1])"
             case .infix("?:") where args.count == 3:
                 return "\(args[0]) ? \(args[1]) : \(args[2])"
             case let .infix(name):
@@ -614,21 +617,23 @@ private enum Subexpression: CustomStringConvertible {
                 let rhs = args[1]
                 let rhsDescription: String
                 switch rhs {
-                case .operand(.infix, _, _):
+                case let .operand(.infix(opName), _, _) where op(name, takesPrecedenceOver: opName):
                     rhsDescription = "(\(rhs))"
                 default:
                     rhsDescription = "\(rhs)"
                 }
-                return "\(lhsDescription) \(name) \(rhsDescription)"
+                return "\(lhsDescription) \(demangle(name)) \(rhsDescription)"
             case let .variable(name):
-                return name
+                return demangle(name)
             case let .function(name, _):
-                return "\(name)(\(args.map({ $0.description }).joined(separator: ", ")))"
+                return "\(demangle(name))(\(args.map({ $0.description }).joined(separator: ", ")))"
             case let .array(name):
-                return "\(name)[\(args[0])]"
+                return "\(demangle(name))[\(args[0])]"
             }
         case let .error(_, expression):
             return expression
+        case .infix, .prefix, .postfix:
+            preconditionFailure()
         }
     }
 
@@ -636,18 +641,14 @@ private enum Subexpression: CustomStringConvertible {
         switch self {
         case .literal, .error:
             return []
-        case let .prefix(name):
-            return [.prefix(name)]
-        case let .postfix(name):
-            return [.postfix(name)]
-        case let .infix(name):
-            return [.infix(name)]
         case let .operand(symbol, subexpressions, _):
             var symbols = Set([symbol])
             for subexpression in subexpressions {
                 symbols.formUnion(subexpression.symbols)
             }
             return symbols
+        case .infix, .prefix, .postfix:
+            preconditionFailure()
         }
     }
 
@@ -675,14 +676,40 @@ private enum Subexpression: CustomStringConvertible {
     }
 }
 
+// Produce a printable number, without redundant decimal places
 private func stringify(_ number: Double) -> String {
     if let int = Int64(exactly: number) {
         return "\(int)"
-    } else if let uint = UInt64(exactly: number) {
-        return "\(uint)"
-    } else {
-        return "\(number)"
     }
+    return "\(number)"
+}
+
+// Escape unprintable characters in a parsed symbol name
+private func demangle(_ symbolName: String) -> String {
+    guard let delimiter = symbolName.first, "`'\"".contains(delimiter),
+        symbolName.count > 1, symbolName.last == delimiter else {
+        return symbolName
+    }
+    var result = "\(delimiter)"
+    for char in symbolName.unicodeScalars.dropFirst().dropLast() {
+        switch char.value {
+        case 0:
+            result += "\\0"
+        case 9:
+            result += "\\t"
+        case 10:
+            result += "\\n"
+        case 13:
+            result += "\\r"
+        case 0x20 ..< 0x7F,
+             _ where isOperator(char) || isIdentifier(char):
+            result.append(Character(char))
+        default:
+            result += "\\u{\(String(format:"%X", char.value))}"
+        }
+    }
+    result.append(delimiter)
+    return result
 }
 
 private let placeholder: Expression.Symbol.Evaluator = { _ in
@@ -771,9 +798,79 @@ private func isOperator(_ char: UnicodeScalar) -> Bool {
     }
 }
 
+private func isIdentifierHead(_ c: UnicodeScalar) -> Bool {
+    switch c.value {
+    case 0x5F, 0x23, 0x24, 0x40, // _ # $ @
+         0x41 ... 0x5A, // A-Z
+         0x61 ... 0x7A, // a-z
+         0x00A8, 0x00AA, 0x00AD, 0x00AF,
+         0x00B2 ... 0x00B5,
+         0x00B7 ... 0x00BA,
+         0x00BC ... 0x00BE,
+         0x00C0 ... 0x00D6,
+         0x00D8 ... 0x00F6,
+         0x00F8 ... 0x00FF,
+         0x0100 ... 0x02FF,
+         0x0370 ... 0x167F,
+         0x1681 ... 0x180D,
+         0x180F ... 0x1DBF,
+         0x1E00 ... 0x1FFF,
+         0x200B ... 0x200D,
+         0x202A ... 0x202E,
+         0x203F ... 0x2040,
+         0x2054,
+         0x2060 ... 0x206F,
+         0x2070 ... 0x20CF,
+         0x2100 ... 0x218F,
+         0x2460 ... 0x24FF,
+         0x2776 ... 0x2793,
+         0x2C00 ... 0x2DFF,
+         0x2E80 ... 0x2FFF,
+         0x3004 ... 0x3007,
+         0x3021 ... 0x302F,
+         0x3031 ... 0x303F,
+         0x3040 ... 0xD7FF,
+         0xF900 ... 0xFD3D,
+         0xFD40 ... 0xFDCF,
+         0xFDF0 ... 0xFE1F,
+         0xFE30 ... 0xFE44,
+         0xFE47 ... 0xFFFD,
+         0x10000 ... 0x1FFFD,
+         0x20000 ... 0x2FFFD,
+         0x30000 ... 0x3FFFD,
+         0x40000 ... 0x4FFFD,
+         0x50000 ... 0x5FFFD,
+         0x60000 ... 0x6FFFD,
+         0x70000 ... 0x7FFFD,
+         0x80000 ... 0x8FFFD,
+         0x90000 ... 0x9FFFD,
+         0xA0000 ... 0xAFFFD,
+         0xB0000 ... 0xBFFFD,
+         0xC0000 ... 0xCFFFD,
+         0xD0000 ... 0xDFFFD,
+         0xE0000 ... 0xEFFFD:
+        return true
+    default:
+        return false
+    }
+}
+
+private func isIdentifier(_ c: UnicodeScalar) -> Bool {
+    switch c.value {
+    case 0x30 ... 0x39, // 0-9
+         0x0300 ... 0x036F,
+         0x1DC0 ... 0x1DFF,
+         0x20D0 ... 0x20FF,
+         0xFE20 ... 0xFE2F:
+        return true
+    default:
+        return isIdentifierHead(c)
+    }
+}
+
 // Workaround for horribly slow String.UnicodeScalarView.Subsequence perf
 
-struct UnicodeScalarView {
+private struct UnicodeScalarView {
     public typealias Index = String.UnicodeScalarView.Index
 
     private let characters: String.UnicodeScalarView
@@ -796,10 +893,6 @@ struct UnicodeScalarView {
 
     public var first: UnicodeScalar? {
         return isEmpty ? nil : characters[startIndex]
-    }
-
-    public var count: Int {
-        return characters.distance(from: startIndex, to: endIndex)
     }
 
     public var isEmpty: Bool {
@@ -828,13 +921,6 @@ struct UnicodeScalarView {
         return view
     }
 
-    public func dropFirst() -> UnicodeScalarView {
-        var view = UnicodeScalarView(characters)
-        view.startIndex = characters.index(after: startIndex)
-        view.endIndex = endIndex
-        return view
-    }
-
     public mutating func popFirst() -> UnicodeScalar? {
         if isEmpty {
             return nil
@@ -844,39 +930,20 @@ struct UnicodeScalarView {
         return char
     }
 
-    /// Will crash if n > remaining char count
-    public mutating func removeFirst(_ n: Int) {
-        startIndex = characters.index(startIndex, offsetBy: n)
-    }
-
-    /// Will crash if collection is empty
-    @discardableResult
-    public mutating func removeFirst() -> UnicodeScalar {
-        let oldIndex = startIndex
-        startIndex = characters.index(after: startIndex)
-        return characters[oldIndex]
-    }
-
     /// Returns the remaining characters
     fileprivate var unicodeScalars: String.UnicodeScalarView.SubSequence {
         return characters[startIndex ..< endIndex]
     }
 }
 
-typealias _UnicodeScalarView = UnicodeScalarView
-extension String {
+private typealias _UnicodeScalarView = UnicodeScalarView
+private extension String {
     init(_ unicodeScalarView: _UnicodeScalarView) {
         self.init(unicodeScalarView.unicodeScalars)
     }
 }
 
-extension String.UnicodeScalarView {
-    init(_ unicodeScalarView: _UnicodeScalarView) {
-        self.init(unicodeScalarView.unicodeScalars)
-    }
-}
-
-extension String.UnicodeScalarView.SubSequence {
+private extension String.UnicodeScalarView.SubSequence {
     init(_ unicodeScalarView: _UnicodeScalarView) {
         self.init(unicodeScalarView.unicodeScalars)
     }
@@ -911,6 +978,17 @@ private extension UnicodeScalarView {
 
     mutating func scanCharacter(_ character: UnicodeScalar) -> Bool {
         return scanCharacter({ $0 == character }) != nil
+    }
+
+    mutating func scanToEndOfToken() -> String? {
+        return scanCharacters({
+            switch $0 {
+            case " ", "\t", "\n", "\r":
+                return false
+            default:
+                return true
+            }
+        })
     }
 
     mutating func skipWhitespace() -> Bool {
@@ -965,12 +1043,14 @@ private extension UnicodeScalarView {
         }
 
         func scanExponent() -> String? {
+            let start = self
             if let e = scanCharacter({ $0 == "e" || $0 == "E" }) {
                 let sign = scanCharacter({ $0 == "-" || $0 == "+" }) ?? ""
                 if let exponent = scanInteger() {
                     return e + sign + exponent
                 }
             }
+            self = start
             return nil
         }
 
@@ -1010,83 +1090,12 @@ private extension UnicodeScalarView {
     }
 
     mutating func parseIdentifier() -> Subexpression? {
-
-        func isHead(_ c: UnicodeScalar) -> Bool {
-            switch c.value {
-            case 0x5F, 0x23, 0x24, 0x40, // _ # $ @
-                 0x41 ... 0x5A, // A-Z
-                 0x61 ... 0x7A, // a-z
-                 0x00A8, 0x00AA, 0x00AD, 0x00AF,
-                 0x00B2 ... 0x00B5,
-                 0x00B7 ... 0x00BA,
-                 0x00BC ... 0x00BE,
-                 0x00C0 ... 0x00D6,
-                 0x00D8 ... 0x00F6,
-                 0x00F8 ... 0x00FF,
-                 0x0100 ... 0x02FF,
-                 0x0370 ... 0x167F,
-                 0x1681 ... 0x180D,
-                 0x180F ... 0x1DBF,
-                 0x1E00 ... 0x1FFF,
-                 0x200B ... 0x200D,
-                 0x202A ... 0x202E,
-                 0x203F ... 0x2040,
-                 0x2054,
-                 0x2060 ... 0x206F,
-                 0x2070 ... 0x20CF,
-                 0x2100 ... 0x218F,
-                 0x2460 ... 0x24FF,
-                 0x2776 ... 0x2793,
-                 0x2C00 ... 0x2DFF,
-                 0x2E80 ... 0x2FFF,
-                 0x3004 ... 0x3007,
-                 0x3021 ... 0x302F,
-                 0x3031 ... 0x303F,
-                 0x3040 ... 0xD7FF,
-                 0xF900 ... 0xFD3D,
-                 0xFD40 ... 0xFDCF,
-                 0xFDF0 ... 0xFE1F,
-                 0xFE30 ... 0xFE44,
-                 0xFE47 ... 0xFFFD,
-                 0x10000 ... 0x1FFFD,
-                 0x20000 ... 0x2FFFD,
-                 0x30000 ... 0x3FFFD,
-                 0x40000 ... 0x4FFFD,
-                 0x50000 ... 0x5FFFD,
-                 0x60000 ... 0x6FFFD,
-                 0x70000 ... 0x7FFFD,
-                 0x80000 ... 0x8FFFD,
-                 0x90000 ... 0x9FFFD,
-                 0xA0000 ... 0xAFFFD,
-                 0xB0000 ... 0xBFFFD,
-                 0xC0000 ... 0xCFFFD,
-                 0xD0000 ... 0xDFFFD,
-                 0xE0000 ... 0xEFFFD:
-                return true
-            default:
-                return false
-            }
-        }
-
-        func isTail(_ c: UnicodeScalar) -> Bool {
-            switch c.value {
-            case 0x30 ... 0x39, // 0-9
-                 0x0300 ... 0x036F,
-                 0x1DC0 ... 0x1DFF,
-                 0x20D0 ... 0x20FF,
-                 0xFE20 ... 0xFE2F:
-                return true
-            default:
-                return isHead(c)
-            }
-        }
-
         func scanIdentifier() -> String? {
             var start = self
             var identifier = ""
             if scanCharacter(".") {
                 identifier = "."
-            } else if let head = scanCharacter(isHead) {
+            } else if let head = scanCharacter(isIdentifierHead) {
                 identifier = head
                 start = self
                 if scanCharacter(".") {
@@ -1095,7 +1104,7 @@ private extension UnicodeScalarView {
             } else {
                 return nil
             }
-            while let tail = scanCharacters(isTail) {
+            while let tail = scanCharacters(isIdentifier) {
                 identifier += tail
                 start = self
                 if scanCharacter(".") {
@@ -1129,7 +1138,7 @@ private extension UnicodeScalarView {
             string += part
             if scanCharacter("\\"), let c = popFirst() {
                 switch c {
-                case "\0":
+                case "0":
                     string += "\0"
                 case "t":
                     string += "\t"
@@ -1137,20 +1146,28 @@ private extension UnicodeScalarView {
                     string += "\n"
                 case "r":
                     string += "\r"
-                case "u":
-                    guard scanCharacter("{"),
-                        let hex = scanCharacters({
-                            switch $0 {
-                            case "0" ... "9", "A" ... "F", "a" ... "f":
-                                return true
-                            default:
-                                return false
-                            }
-                        }),
-                        scanCharacter("}"),
-                        let codepoint = Int(hex, radix: 16),
+                case "u" where scanCharacter("{"):
+                    let hex = scanCharacters({
+                        switch $0 {
+                        case "0" ... "9", "A" ... "F", "a" ... "f":
+                            return true
+                        default:
+                            return false
+                        }
+                    }) ?? ""
+                    guard scanCharacter("}") else {
+                        guard let junk = scanToEndOfToken() else {
+                            return .error(.missingDelimiter("}"), string)
+                        }
+                        return .error(.unexpectedToken(junk), string)
+                    }
+                    guard !hex.isEmpty else {
+                        return .error(.unexpectedToken("}"), string)
+                    }
+                    guard let codepoint = Int(hex, radix: 16),
                         let c = UnicodeScalar(codepoint) else {
-                        return .error(.unexpectedToken(string), string)
+                            // TODO: better error for invalid codepoint?
+                            return .error(.unexpectedToken(hex), string)
                     }
                     string.append(Character(c))
                 default:
@@ -1159,16 +1176,18 @@ private extension UnicodeScalarView {
             }
         }
         guard scanCharacter(delimiter) else {
-            return .error(.unexpectedToken(string), string)
+            return .error(string == String(delimiter) ?
+                .unexpectedToken(string) : .missingDelimiter(String(delimiter)), string)
         }
-        return .operand(.variable(string + String(delimiter)), [], placeholder)
+        string.append(Character(delimiter))
+        return .operand(.variable(string), [], placeholder)
     }
 
     mutating func parseSubexpression(upTo delimiters: [String]) throws -> Subexpression {
         var stack: [Subexpression] = []
 
         func collapseStack(from i: Int) throws {
-            guard stack.count > 1 else {
+            guard stack.count > i + 1 else {
                 return
             }
             let lhs = stack[i]
@@ -1176,8 +1195,6 @@ private extension UnicodeScalarView {
             case let .infix(name), let .postfix(name): // treat as prefix
                 stack[i] = .prefix(name)
                 try collapseStack(from: i)
-            case let .prefix(name) where stack.count <= i + 1:
-                throw Expression.Error.unexpectedToken(name)
             case let .prefix(name):
                 let rhs = stack[i + 1]
                 switch rhs {
@@ -1191,10 +1208,6 @@ private extension UnicodeScalarView {
                 case let .error(error, _):
                     throw error
                 }
-            case .literal where stack.count <= i + 1:
-                throw Expression.Error.unexpectedToken("\(lhs)")
-            case let .operand(symbol, _, _) where stack.count <= i + 1:
-                throw Expression.Error.unexpectedToken(symbol.name)
             case .literal, .operand:
                 let rhs = stack[i + 1]
                 switch rhs {
@@ -1295,11 +1308,18 @@ private extension UnicodeScalarView {
                     throw Expression.Error.unexpectedToken("[")
                 }
                 operandPosition = true
-                let index = try parseSubexpression(upTo: ["]"])
-                guard scanCharacter("]") else {
-                    throw Expression.Error.missingDelimiter("]")
+                do {
+                    let index = try parseSubexpression(upTo: ["]"])
+                    guard scanCharacter("]") else {
+                        throw Expression.Error.missingDelimiter("]")
+                    }
+                    stack[stack.count - 1] = .operand(.array(name), [index], placeholder)
+                } catch Expression.Error.unexpectedToken("") {
+                    guard scanCharacter("]") else {
+                        throw Expression.Error.missingDelimiter("]")
+                    }
+                    throw Expression.Error.unexpectedToken("]")
                 }
-                stack[stack.count - 1] = .operand(.array(name), [index], placeholder)
             case let .infix(name):
                 operandPosition = true
                 switch (precededByWhitespace, followedByWhitespace) {
@@ -1326,14 +1346,7 @@ private extension UnicodeScalarView {
         }
         // Check for trailing junk
         let start = self
-        if parseDelimiter(delimiters) == nil, let junk = scanCharacters({
-            switch $0 {
-            case " ", "\t", "\n", "\r":
-                return false
-            default:
-                return true
-            }
-        }) {
+        if parseDelimiter(delimiters) == nil, let junk = scanToEndOfToken() {
             self = start
             throw Expression.Error.unexpectedToken(junk)
         }
