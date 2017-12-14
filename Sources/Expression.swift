@@ -626,7 +626,13 @@ private enum Subexpression: CustomStringConvertible {
             case let .variable(name):
                 return demangle(name)
             case let .function(name, _):
-                return "\(demangle(name))(\(args.map({ $0.description }).joined(separator: ", ")))"
+                let args: [String] = args.map {
+                    if case .operand(.infix(","), _, _) = $0 {
+                        return "(\($0))"
+                    }
+                    return $0.description
+                }
+                return "\(demangle(name))(\(args.joined(separator: ", ")))"
             case let .array(name):
                 return "\(demangle(name))[\(args[0])]"
             }

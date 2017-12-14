@@ -196,6 +196,21 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "(5foo)`bar\\tbaz`")
     }
 
+    func testSumOfTuplesDescription() {
+        let expression = Expression.parse("(3,4) + (5,6)")
+        XCTAssertEqual(expression.description, "(3, 4) + (5, 6)")
+    }
+
+    func testFunctionWithTupleArgumentDescription() {
+        let expression = Expression.parse("foo((5,6))")
+        XCTAssertEqual(expression.description, "foo((5, 6))")
+    }
+
+    func testFunctionWithMultipleTupleArgumentsDescription() {
+        let expression = Expression.parse("foo((3,4),(5,6))")
+        XCTAssertEqual(expression.description, "foo((3, 4), (5, 6))")
+    }
+
     // MARK: Error description
 
     func testCustomErrorDescription() {
@@ -1011,6 +1026,44 @@ class ExpressionTests: XCTestCase {
     func testPowFunction() {
         let expression = Expression("7 + pow(9, 1/2)")
         XCTAssertEqual(try expression.evaluate(), 10)
+    }
+
+    // MARK: Function parsing
+
+    func testParseEmptyFunction() {
+        let expression = Expression.parse("foo()")
+        XCTAssertEqual(expression.symbols, [.function("foo", arity: 0)])
+        XCTAssertEqual(expression.description, "foo()")
+    }
+
+    func testParseEmptyFunctionContainingSpace() {
+        let expression = Expression.parse("foo( )")
+        XCTAssertEqual(expression.symbols, [.function("foo", arity: 0)])
+        XCTAssertEqual(expression.description, "foo()")
+    }
+
+    func testParseFunctionWithOneArgumentAndSpaces() {
+        let expression = Expression.parse("foo( 5 )")
+        XCTAssertEqual(expression.symbols, [.function("foo", arity: 1)])
+        XCTAssertEqual(expression.description, "foo(5)")
+    }
+
+    func testParseFunctionWithTwoArgumentsAndSpaces() {
+        let expression = Expression.parse("foo( 5 , 6 )")
+        XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
+        XCTAssertEqual(expression.description, "foo(5, 6)")
+    }
+
+    func testParseFunctionWithNestedParensAndSpaces() {
+        let expression = Expression.parse("foo( (( (5)) ))")
+        XCTAssertEqual(expression.symbols, [.function("foo", arity: 1)])
+        XCTAssertEqual(expression.description, "foo(5)")
+    }
+
+    func testParseFunctionWithTupleArgument() {
+        let expression = Expression.parse("foo((5,6))")
+        XCTAssertEqual(expression.symbols, [.infix(","), .function("foo", arity: 1)])
+        XCTAssertEqual(expression.description, "foo((5, 6))")
     }
 
     // MARK: Postfix operator parsing
