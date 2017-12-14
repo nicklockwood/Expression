@@ -1060,24 +1060,40 @@ private extension UnicodeScalarView {
             return nil
         }
 
-        guard var number = scanInteger() else {
-            return nil
+        func scanNumber() -> String? {
+            var number: String
+            var endOfInt = self
+            if let integer = scanInteger() {
+                if integer == "0", scanCharacter("x") {
+                    return "0x\(scanHex() ?? "")"
+                }
+                endOfInt = self
+                if scanCharacter(".") {
+                    guard let fraction = scanInteger() else {
+                        self = endOfInt
+                        return integer
+                    }
+                    number = "\(integer).\(fraction)"
+                } else {
+                    number = integer
+                }
+            } else if scanCharacter(".") {
+                guard let fraction = scanInteger() else {
+                    self = endOfInt
+                    return nil
+                }
+                number = ".\(fraction)"
+            } else {
+                return nil
+            }
+            if let exponent = scanExponent() {
+                number += exponent
+            }
+            return number
         }
 
-        let endOfInt = self
-        if scanCharacter(".") {
-            if let fraction = scanInteger() {
-                number += "." + fraction + (scanExponent() ?? "")
-            } else {
-                self = endOfInt
-            }
-            number += scanExponent() ?? ""
-        } else if let exponent = scanExponent() {
-            number += exponent
-        } else if number == "0" {
-            if scanCharacter("x") {
-                number = "0x\(scanHex() ?? "")"
-            }
+        guard let number = scanNumber() else {
+            return nil
         }
         guard let value = Double(number) else {
             return .error(.unexpectedToken(number), number)

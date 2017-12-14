@@ -377,6 +377,11 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), -0.34)
     }
 
+    func testLeadingDecimalPoint() {
+        let expression = Expression(".5")
+        XCTAssertEqual(try expression.evaluate(), 0.5)
+    }
+
     func testExponential() {
         let expression = Expression("1234e5")
         XCTAssertEqual(try expression.evaluate(), 1234e5)
