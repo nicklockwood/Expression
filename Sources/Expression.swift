@@ -586,7 +586,7 @@ private enum Subexpression: CustomStringConvertible {
                 case .operand(.infix, _, _), .operand(.postfix, _, _), .error,
                      .operand where isOperator(name.unicodeScalars.last!)
                          == isOperator(description.unicodeScalars.first!):
-                    return "\(name)(\(description))" // Parens required
+                    return "\(demangle(name))(\(description))" // Parens required
                 case .operand, .literal, .infix, .prefix, .postfix:
                     return "\(demangle(name))\(description)" // No parens needed
                 }
@@ -597,7 +597,7 @@ private enum Subexpression: CustomStringConvertible {
                 case .operand(.infix, _, _), .operand(.postfix, _, _), .error,
                      .operand where isOperator(name.unicodeScalars.first!)
                          == isOperator(description.unicodeScalars.last!):
-                    return "(\(description))\(name)" // Parens required
+                    return "(\(description))\(demangle(name))" // Parens required
                 case .operand, .literal, .infix, .prefix, .postfix:
                     return "\(description)\(demangle(name))" // No parens needed
                 }

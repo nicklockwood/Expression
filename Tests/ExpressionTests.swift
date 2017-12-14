@@ -176,6 +176,26 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "0x")
     }
 
+    func testEscapedVariableDescription() {
+        let expression = Expression.parse("`hello\\tworld`")
+        XCTAssertEqual(expression.description, "`hello\\tworld`")
+    }
+
+    func testEscapedFunctionDescription() {
+        let expression = Expression.parse("`hello\\tworld`(x)")
+        XCTAssertEqual(expression.description, "`hello\\tworld`(x)")
+    }
+
+    func testEscapedPostfixOperatorDescription() {
+        let expression = Expression.parse("5`metric\\ttonnes`")
+        XCTAssertEqual(expression.description, "5`metric\\ttonnes`")
+    }
+
+    func testEscapedPostfixOperatorChainDescription() {
+        let expression = Expression.parse("(5foo)`bar\\tbaz`")
+        XCTAssertEqual(expression.description, "(5foo)`bar\\tbaz`")
+    }
+
     // MARK: Error description
 
     func testCustomErrorDescription() {
