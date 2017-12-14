@@ -211,6 +211,11 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "foo((3, 4), (5, 6))")
     }
 
+    func testArrayWithTupleArgumentDescription() {
+        let expression = Expression.parse("foo[(5,6)]")
+        XCTAssertEqual(expression.description, "foo[(5, 6)]")
+    }
+
     // MARK: Error description
 
     func testCustomErrorDescription() {
@@ -893,7 +898,7 @@ class ExpressionTests: XCTestCase {
         }
     }
 
-    // MARK: Array subscripting
+    // MARK: Arrays
 
     func testSubscriptConstantArray() {
         let expression = Expression("foo[2]", arrays: ["foo": [1, 2, 3]])
@@ -918,6 +923,36 @@ class ExpressionTests: XCTestCase {
             [1, 2, 3][Int(args[0])]
         }])
         XCTAssertEqual(try expression.evaluate(), 3)
+    }
+
+    func testMultiArgSubscript() {
+        let expression = Expression("foo[2,3]", symbols: [
+            .array("foo"): { _ in 0 },
+        ])
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            switch error {
+            case Expression.Error.arityMismatch(.array("foo")):
+                break
+            default:
+                print("error: \(error)")
+                XCTFail()
+            }
+        }
+    }
+
+    func testTupleSubscript() {
+        let expression = Expression("foo[(2,3)]", symbols: [
+            .array("foo"): { _ in 0 },
+        ])
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            switch error {
+            case Expression.Error.undefinedSymbol(.infix(",")):
+                break
+            default:
+                print("error: \(error)")
+                XCTFail()
+            }
+        }
     }
 
     func testSubscriptResultOfSubscript() {

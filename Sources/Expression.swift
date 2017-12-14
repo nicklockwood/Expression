@@ -582,6 +582,14 @@ private enum Subexpression: CustomStringConvertible {
     }
 
     var description: String {
+        func arguments(_ args: [Subexpression]) -> String {
+            return args.map {
+                if case .symbol(.infix(","), _, _) = $0 {
+                    return "(\($0))"
+                }
+                return $0.description
+            }.joined(separator: ", ")
+        }
         switch self {
         case let .literal(value):
             return stringify(value)
@@ -637,15 +645,9 @@ private enum Subexpression: CustomStringConvertible {
             case let .variable(name):
                 return demangle(name)
             case let .function(name, _):
-                let args: [String] = args.map {
-                    if case .symbol(.infix(","), _, _) = $0 {
-                        return "(\($0))"
-                    }
-                    return $0.description
-                }
-                return "\(demangle(name))(\(args.joined(separator: ", ")))"
+                return "\(demangle(name))(\(arguments(args)))"
             case let .array(name):
-                return "\(demangle(name))[\(args[0])]"
+                return "\(demangle(name))[\(arguments(args))]"
             }
         case let .error(_, expression):
             return expression
@@ -1331,8 +1333,11 @@ private extension UnicodeScalarView {
                     }
                     operandPosition = true
                     do {
-                        let index = try parseSubexpression(upTo: ["]"])
+                        let index = try parseSubexpression(upTo: [",", "]"])
                         guard scanCharacter("]") else {
+                            if scanCharacter(",") {
+                                throw Expression.Error.arityMismatch(.array(name))
+                            }
                             throw Expression.Error.missingDelimiter("]")
                         }
                         stack[stack.count - 1] = .symbol(.array(name), [index], placeholder)
