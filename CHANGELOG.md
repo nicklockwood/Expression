@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.9.2](https://github.com/nicklockwood/Expression/releases/tag/0.9.2) (2017-12-15)
+
+- A dot followed by a digit is now treated as a floating point literal instead of an identifier
+- Parens are no longer stripped around function arguments containing a comma operator (tuples)
+- Fixed edge case when printing description for operators containing special characters
+- Refactored parser implementation to removed unreachable code and improve test coverage
+- Improved error message when trying to pass multiple arguments to an array subscript
+
 ## [0.9.1](https://github.com/nicklockwood/Expression/releases/tag/0.9.1) (2017-12-04)
 
 - Expression description now correctly escapes unprintable characters in quoted symbols

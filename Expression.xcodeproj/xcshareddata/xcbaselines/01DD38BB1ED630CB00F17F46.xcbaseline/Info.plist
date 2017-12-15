@@ -4,7 +4,7 @@
 <dict>
 	<key>runDestinationsByUUID</key>
 	<dict>
-		<key>E50C9B88-491E-4594-B7D1-D599A8F203FC</key>
+		<key>A544E583-C966-4A17-B7DE-008EFD1B4FC2</key>
 		<dict>
 			<key>localComputer</key>
 			<dict>
@@ -30,7 +30,7 @@
 			<key>targetDevice</key>
 			<dict>
 				<key>modelCode</key>
-				<string>iPhone9,2</string>
+				<string>iPhone10,5</string>
 				<key>platformIdentifier</key>
 				<string>com.apple.platform.iphonesimulator</string>
 			</dict>

@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.9.1
+//  Version 0.9.2
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -366,7 +366,7 @@ public class Expression: CustomStringConvertible {
         var characters = UnicodeScalarView(string)
         guard case let .symbol(symbol, _, _)? = characters.parseOperator(),
             case let .infix(name) = symbol, name != "(", name != "[" else {
-                return false
+            return false
         }
         return characters.isEmpty
     }
@@ -1243,8 +1243,8 @@ private extension UnicodeScalarView {
                                 let rhs = stack[i + 3]
                                 guard !rhs.isOperand, case let .symbol(.infix(op2), _, _) = rhs,
                                     op(symbol.name, takesPrecedenceOver: op2) else {
-                                        try collapseStack(from: i + 2)
-                                        return
+                                    try collapseStack(from: i + 2)
+                                    return
                                 }
                             }
                             if symbol.name == ":", case let .symbol(.infix("?"), args, _) = lhs { // ternary
