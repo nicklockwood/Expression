@@ -255,7 +255,7 @@ public class Expression: CustomStringConvertible {
         var pureSymbols = Dictionary<Symbol, Symbol.Evaluator>()
 
         // Evaluators
-        func symbolEvaluator(for symbol: Expression.Symbol) -> Symbol.Evaluator? {
+        func symbolEvaluator(for symbol: Symbol) -> Symbol.Evaluator? {
             if let fn = symbols[symbol] {
                 return fn
             } else if boolSymbols.isEmpty, case .infix("?:") = symbol,
@@ -272,16 +272,13 @@ public class Expression: CustomStringConvertible {
                 guard let fn = defaultEvaluator(for: symbol) else {
                     return errorHandler(for: symbol)
                 }
-                guard optimizing else {
-                    return fn
-                }
-                return { [unowned self] args in
+                return optimizing ? { [unowned self] args in
                     // Rewrite expression to skip custom evaluator
                     pureSymbols[symbol] = customEvaluator(for: symbol, optimizing: false)
                     impureSymbols.removeValue(forKey: symbol)
                     self.root = self.root.optimized(withSymbols: impureSymbols, pureSymbols: pureSymbols)
                     return try fn(args)
-                }
+                } : fn
             }()
             return { args in
                 // Try custom evaluator
@@ -597,14 +594,17 @@ private enum Subexpression: CustomStringConvertible {
             guard isOperand else {
                 return demangle(symbol.name)
             }
+            func needsSeparation(_ lhs: String, _ rhs: String) -> Bool {
+                let last = lhs.unicodeScalars.last!
+                return last == "." || isOperator(last) == isOperator(rhs.unicodeScalars.first!)
+            }
             switch symbol {
             case let .prefix(name):
                 let arg = args[0]
                 let description = "\(arg)"
                 switch arg {
                 case .symbol(.infix, _, _), .symbol(.postfix, _, _), .error,
-                     .symbol where isOperator(name.unicodeScalars.last!)
-                         == isOperator(description.unicodeScalars.first!):
+                     .symbol where needsSeparation(name, description):
                     return "\(demangle(name))(\(description))" // Parens required
                 case .symbol, .literal:
                     return "\(demangle(name))\(description)" // No parens needed
@@ -614,8 +614,7 @@ private enum Subexpression: CustomStringConvertible {
                 let description = "\(arg)"
                 switch arg {
                 case .symbol(.infix, _, _), .symbol(.postfix, _, _), .error,
-                     .symbol where isOperator(name.unicodeScalars.first!)
-                         == isOperator(description.unicodeScalars.last!):
+                     .symbol where needsSeparation(description, name):
                     return "(\(description))\(demangle(name))" // Parens required
                 case .symbol, .literal:
                     return "\(description)\(demangle(name))" // No parens needed
@@ -1111,9 +1110,15 @@ private extension UnicodeScalarView {
     }
 
     mutating func parseOperator() -> Subexpression? {
-        if let op = scanCharacter({ "([,".unicodeScalars.contains($0) }) ??
-            scanCharacters({ isOperator($0) || $0 == "." }) {
-            return .symbol(.infix(op), [], placeholder) // Assume infix, will determine later
+        if var op = scanCharacters({ $0 == "." }) {
+            if let tail = scanCharacters(isOperator) {
+                op += tail
+            }
+            return .symbol(.infix(op), [], placeholder)
+        }
+        if let op = scanCharacters(isOperator) ??
+            scanCharacter({ "([,".unicodeScalars.contains($0) }) {
+            return .symbol(.infix(op), [], placeholder)
         }
         return nil
     }

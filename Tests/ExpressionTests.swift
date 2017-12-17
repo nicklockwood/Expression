@@ -86,6 +86,11 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "-(a + b)")
     }
 
+    func testPrefixRangeFollowedByLessThan() {
+        let expression = Expression("...(<5)")
+        XCTAssertEqual(expression.description, "...(<5)")
+    }
+
     func testNestedPrefixOperatorDescription() {
         let expression = Expression("- -foo")
         XCTAssertEqual(expression.description, "-(-foo)")
@@ -546,6 +551,16 @@ class ExpressionTests: XCTestCase {
     func testSpaceBeforeInfixExpression() {
         let expression = Expression.parse(" 1 + 2", usingCache: false)
         XCTAssertEqual(expression.description, "1 + 2")
+    }
+
+    func testPlusFollowedByDecimalPoint() {
+        let expression = Expression.parse("1+.5", usingCache: false)
+        XCTAssertEqual(expression.description, "1 + 0.5")
+    }
+
+    func testDotsFollowedByLessThan() {
+        let expression = Expression.parse("1..<5", usingCache: false)
+        XCTAssertEqual(expression.description, "1 ..< 5")
     }
 
     // MARK: Delimited expressions
