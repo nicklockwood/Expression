@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.9.3](https://github.com/nicklockwood/Expression/releases/tag/0.9.3) (2017-12-18)
+
+- Hyphens are now only permitted at the start of an operator, which solves an ambiguity with unary minus
+- Dots are now only permitted at the start of an operator, which solves an ambiguity with float literals
+
 ## [0.9.2](https://github.com/nicklockwood/Expression/releases/tag/0.9.2) (2017-12-15)
 
 - A dot followed by a digit is now treated as a floating point literal instead of an identifier

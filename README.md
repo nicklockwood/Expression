@@ -233,7 +233,20 @@ To verify that a given string is safe for use as an identifier, you can use the 
 .postfix(String)
 ```
 
-These symbols represent *operators*. Operators can be one or more characters long, and can contain almost any symbol that wouldn't conflict with a valid identifier name. To verify that a given character sequence is safe for use as an operator, you can use the `Expression.isValidOperator()` method.
+These symbols represent *operators*. Operators can be one or more characters long, and can contain almost any symbol that wouldn't conflict with a valid identifier name, with some caveats:
+
+* Comma (,) is a valid operator on its own, but cannot form part of a longer character sequence
+* The bracket characters `[`, '(', '{', and their counterparts are reserved and cannot be used as operators
+* An operator may begin with one or more dots (.) or hyphens (-), but a dot or hyphen cannot appear after any other character. The following are permitted:
+
+    `...`, `..<`, `.`, `-`, `--`, `-=`, `-->`
+        
+    
+    but the following are not:
+    
+    `+.`, `>.<`, `*-`, `-+-`, `<--`, `.-`, `-.`
+
+To verify that a given character sequence is safe for use as an operator, you can use the `Expression.isValidOperator()` method.
 
 You can overload existing infix operators with a post/prefix variant, or vice-versa. Disambiguation depends on the white-space surrounding the operator (which is the same approach used by Swift).
 
