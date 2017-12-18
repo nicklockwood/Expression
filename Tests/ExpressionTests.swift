@@ -563,6 +563,16 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "1 ..< 5")
     }
 
+    func testLiteralPlusNegativeLiteral() {
+        let expression = Expression("5+-4", options: .noOptimize)
+        XCTAssertEqual(expression.description, "5 + -4")
+    }
+
+    func testLiteralPercentNegativeLiteral() {
+        let expression = Expression("5%-4")
+        XCTAssertEqual(expression.description, "5% - 4")
+    }
+
     // MARK: Delimited expressions
 
     func testBracedExpression() {
@@ -1026,16 +1036,6 @@ class ExpressionTests: XCTestCase {
     func testLiteralPlusVariable() {
         let expression = Expression("3 + foo", constants: ["foo": -7])
         XCTAssertEqual(try expression.evaluate(), -4)
-    }
-
-    func testLiteralPlusNegativeLiteral() {
-        let expression = Expression("5+-4")
-        XCTAssertEqual(try expression.evaluate(), 1)
-    }
-
-    func testLiteralTimesNegativeLiteral() {
-        let expression = Expression("5*-4")
-        XCTAssertEqual(try expression.evaluate(), -20)
     }
 
     func testTwoAdditions() {

@@ -460,11 +460,6 @@ public class Expression: CustomStringConvertible {
         symbols[.infix("/")] = { $0[0] / $0[1] }
         symbols[.infix("%")] = { fmod($0[0], $0[1]) }
 
-        // workaround for operator spacing rules
-        symbols[.infix("+-")] = { $0[0] - $0[1] }
-        symbols[.infix("*-")] = { $0[0] * -$0[1] }
-        symbols[.infix("/-")] = { $0[0] / -$0[1] }
-
         // prefix operators
         symbols[.prefix("-")] = { -$0[0] }
 
@@ -595,8 +590,8 @@ private enum Subexpression: CustomStringConvertible {
                 return demangle(symbol.name)
             }
             func needsSeparation(_ lhs: String, _ rhs: String) -> Bool {
-                let last = lhs.unicodeScalars.last!
-                return last == "." || isOperator(last) == isOperator(rhs.unicodeScalars.first!)
+                let lhs = lhs.unicodeScalars.last!, rhs = rhs.unicodeScalars.first!
+                return lhs == "." || (isOperator(lhs) || lhs == "-") == (isOperator(rhs) || rhs == "-")
             }
             switch symbol {
             case let .prefix(name):
@@ -787,7 +782,7 @@ private func op(_ lhs: String, takesPrecedenceOver rhs: String) -> Bool {
 
 private func isOperator(_ char: UnicodeScalar) -> Bool {
     // Strangely, this is faster than switching on value
-    if "/=­-+!*%<>&|^~?:".unicodeScalars.contains(char) {
+    if "/=­+!*%<>&|^~?:".unicodeScalars.contains(char) {
         return true
     }
     switch char.value {
@@ -1110,7 +1105,7 @@ private extension UnicodeScalarView {
     }
 
     mutating func parseOperator() -> Subexpression? {
-        if var op = scanCharacters({ $0 == "." }) {
+        if var op = scanCharacters({ $0 == "." }) ?? scanCharacters({ $0 == "-" }) {
             if let tail = scanCharacters(isOperator) {
                 op += tail
             }
@@ -1260,6 +1255,9 @@ private extension UnicodeScalarView {
                             try collapseStack(from: 0)
                         } else if case let .symbol(symbol2, _, _) = rhs {
                             if case .prefix = symbol2 {
+                                try collapseStack(from: i + 2)
+                            } else if ["+", "/", "*"].contains(symbol.name) { // Assume infix
+                                stack[i + 2] = .symbol(.prefix(symbol2.name), [], placeholder)
                                 try collapseStack(from: i + 2)
                             } else { // Assume postfix
                                 stack[i + 1] = .symbol(.postfix(symbol.name), [], placeholder)
