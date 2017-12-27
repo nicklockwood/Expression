@@ -268,6 +268,16 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(error.description, "Function foo() expects 2 arguments")
     }
 
+    func testVariadicFunctionArityMismatchErrorDescription() {
+        let error = Expression.Error.arityMismatch(.function("foo", arity: .atLeast(1)))
+        XCTAssertEqual(error.description, "Function foo() expects at least 1 argument")
+    }
+
+    func testVariadicFunctionArityMismatchErrorDescription2() {
+        let error = Expression.Error.arityMismatch(.function("foo", arity: .atLeast(2)))
+        XCTAssertEqual(error.description, "Function foo() expects at least 2 arguments")
+    }
+
     func testInfixOperatorArityMismatchErrorDescription() {
         let error = Expression.Error.arityMismatch(.infix("foo"))
         XCTAssertEqual(error.description, "Infix operator foo expects 2 arguments")
@@ -864,6 +874,13 @@ class ExpressionTests: XCTestCase {
         }
     }
 
+    func testTooFewVariadicArguments() {
+        let expression = Expression("min(3)")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("min", arity: .atLeast(2))))
+        }
+    }
+
     // MARK: Function overloading
 
     func testOverridePow() {
@@ -1081,6 +1098,16 @@ class ExpressionTests: XCTestCase {
     func testPowFunction() {
         let expression = Expression("7 + pow(9, 1/2)")
         XCTAssertEqual(try expression.evaluate(), 10)
+    }
+
+    func testVariadicMinFunction() {
+        let expression = Expression("min(3, 2, 7)")
+        XCTAssertEqual(try expression.evaluate(), 2)
+    }
+
+    func testVariadicMaxFunction() {
+        let expression = Expression("max(7, 8, 9)")
+        XCTAssertEqual(try expression.evaluate(), 9)
     }
 
     // MARK: Function parsing
