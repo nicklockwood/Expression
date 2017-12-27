@@ -1083,6 +1083,16 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 10)
     }
 
+    func testVariadicMinFunction() {
+        let expression = Expression("min(3, 2, 7)")
+        XCTAssertEqual(try expression.evaluate(), 2)
+    }
+
+    func testVariadicMaxFunction() {
+        let expression = Expression("max(7, 8, 9)")
+        XCTAssertEqual(try expression.evaluate(), 9)
+    }
+
     // MARK: Function parsing
 
     func testParseEmptyFunction() {
