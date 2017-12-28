@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.9.3
+//  Version 0.10.0
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -525,8 +525,8 @@ public class Expression: CustomStringConvertible {
         symbols[.function("mod", arity: 2)] = { fmod($0[0], $0[1]) }
 
         // functions - variadic
-        symbols[.function("max", arity: .atLeast(2))] = { $0.reduce($0[0]) { max($0, $1) }}
-        symbols[.function("min", arity: .atLeast(2))] = { $0.reduce($0[0]) { min($0, $1) }}
+        symbols[.function("max", arity: .atLeast(2))] = { $0.reduce($0[0]) { max($0, $1) } }
+        symbols[.function("min", arity: .atLeast(2))] = { $0.reduce($0[0]) { min($0, $1) } }
 
         return symbols
     }()

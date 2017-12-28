@@ -69,11 +69,11 @@ Expression works by parsing an expression string into a tree of symbols, which c
 
 ## Installation
 
-The entire Expression API is encapsulated in a single file, and everything public is prefixed or namespaced, so you can simply drag the `Expression.swift` file into your project to use it. If you prefer, there's a framework for Mac and iOS that you can import, or you can use CocoaPods, Carthage, or Swift Package Manager on Linux.
+The entire Expression API is encapsulated in a single file, and everything public is prefixed or name-spaced, so you can simply drag the `Expression.swift` file into your project to use it. If you prefer, there's a framework for Mac and iOS that you can import, or you can use CocoaPods, Carthage, or Swift Package Manager on Linux.
 
 To install Expression using CocoaPods, add the following to your Podfile:
 
-	pod 'Expression', '~> 0.9.0'
+	pod 'Expression', '~> 0.10.0'
 
 
 ## Integration
@@ -240,7 +240,6 @@ These symbols represent *operators*. Operators can be one or more characters lon
 * An operator may begin with one or more dots (.) or hyphens (-), but a dot or hyphen cannot appear after any other character. The following are permitted:
 
     `...`, `..<`, `.`, `-`, `--`, `-=`, `-->`
-        
     
     but the following are not:
     
@@ -254,15 +253,17 @@ Any valid identifier may also be used as an infix operator, by placing it betwee
 
 Operator precedence follows standard BODMAS order, with multiplication/division given precedence over addition/subtraction. Prefix operators take precedence over postfix operators, which take precedence over infix ones. There is currently no way to specify precedence for custom operators - they all have equal priority to addition/subtraction.
 
-Standard boolean operators are supported, and follow the normal precidence rules, with the caveat that short-circuiting (where the right-hand argument(s) may not be evaluated, depending on the left-hand-side) is not supported. The parser will also recognize the ternary `?:` operator, treating `a ? b : c` as a single infix operator with three arguments.
+Standard boolean operators are supported, and follow the normal precedence rules, with the caveat that short-circuiting (where the right-hand argument(s) may not be evaluated, depending on the left-hand-side) is not supported. The parser will also recognize the ternary `?:` operator, treating `a ? b : c` as a single infix operator with three arguments.
 
 ## Functions
 
 ```swift
-.function(String, arity: Int)
+.function(String, arity: Arity)
 ```
 
-A function symbol is defined with a name and an "arity", which is the number of arguments that it expects. Functions are called in an expression by using their name followed by a comma-delimited sequence of arguments in parentheses. Functions can be overloaded to support different argument counts, but it is up to you to handle argument validation in your evaluator function.
+A function symbol is defined with a name and an "arity", which is the number of arguments that it expects. The `Arity` type is an enum that can be set to either `exactly(Int)` or `atLeast(Int)` for variadic functions. A given function name can be overloaded multiple times with different arities.
+
+Functions are called in an expression by using their name followed by a comma-delimited sequence of arguments in parentheses. If the argument count does not match any of the specified arity variants, an `arityError` will be thrown.
 
 ## Arrays
 
@@ -313,7 +314,7 @@ let expression = Expression(parsedExpression, constants: ["foo": 4, "bar": 5])
 
 By default, expressions are optimized where possible to make evaluation more efficient. Common optimizations include replacing constants with their literal values, and replacing pure functions or operators with their result when all arguments are constant.
 
-The optimizer reduces evaluation time at the cost of increased initialization time, and for an expression that will only be evaluated once or twice, this tradeoff may not be worth it, in which case you can disable optimization using the `options` argument, as follows:
+The optimizer reduces evaluation time at the cost of increased initialization time, and for an expression that will only be evaluated once or twice this tradeoff may not be worth it, in which case you can disable optimization using the `options` argument:
 
 ```swift
 let expression = Expression("foo + bar", options: .noOptimize, ...)
@@ -321,13 +322,13 @@ let expression = Expression("foo + bar", options: .noOptimize, ...)
 
 On the other hand, if your expressions are being evaluated hundreds or thousands of times, you will want to take full advantage of the optimizer to improve your application's performance. To ensure you are getting the best out of Expression's optimizer, follow these guidelines:
 
-* Always pass constant values via the `constants` argument instead of as a variable in the `symbols` dictionary or `evaluator` function. Constant values can be inlined, whereas variables must be re-computed each time the function is evaluated in case they have changed.
+* Always pass constant values via the `constants` or `arrays` arguments instead of as a variable in the `symbols` dictionary or `evaluator` function. Constant values can be inlined, whereas variables must be re-computed each time the function is evaluated in case they have changed.
 
-* If your custom functions and operators are all *pure* - i.e. they have no side effects, and always return the same output for a given set of argument values - then you should set the `pureSymbols` option for your expression. This option tells the optimizer that it's safe to inline any functions or operators in the `symbols` dictionary if all their arguments are constant. Note that the `pureSymbols` option does not affect variables (which are never inlined), nor any symbols matched by the `evaluator` function.
+* If your custom functions and operators are all *pure* - i.e. they have no side effects and always return the same output for a given set of argument values - then you should set the `pureSymbols` option for your expression. This option tells the optimizer that it's safe to inline any functions or operators in the `symbols` dictionary if all their arguments are constant. Note that the `pureSymbols` option does not affect variables or array symbols (which are never inlined), nor any symbols matched by the `evaluator` function.
 
 * Wherever possible, use the `symbols` dictionary to specify custom variables, operators or functions, instead of an `evaluator` function. Just having an `evaluator` function (even one that returns nil for everything) introduces an overhead to both initialization and the first evaluation, so if you don't need it, don't include it. The exception to this is if you have a mix of pure and impure symbols, in which case it's better to put the pure symbols in the `symbols` dictionary (and set the `pureSymbols` option), then put the impure ones in the `evaluator` function.
 
-* If your expressions may contain values which are constant, but where not all possible values can be computed in advance - e.g. encoded values such as in the hex colors example, or arbitrary keypaths that must be looked up in a deep object graph - you can use the `parse()` function to get access to the list of symbols that are actually used in the expression. This allows you to decode or look up just the specific values that are needed, and then pass them as constants to the Expression at initialization time, without needing to use an `evaluator` function (see the "Expert usage" example in the [Integration](#integration) section above).
+* If your expressions may contain values which are constant, but where not all possible values can be computed in advance - e.g. encoded values such as in the hex colors example, or arbitrary key paths that must be looked up in a deep object graph - you can use the `parse()` function to get access to the list of symbols that are actually used in the expression. This allows you to decode or look up just the specific values that are needed, and then pass them as constants to the Expression at initialization time, without needing to use an `evaluator` function (see the "Expert usage" example in the [Integration](#integration) section above).
 
 
 # Standard Library
@@ -347,7 +348,7 @@ let expression = Expression("pow(2,3)", symbols: [
 try expression.evaluate() // this will throw an error because pow() has been undefined
 ```
 
-If you have provided a custom `Evaluator` function, you can fall back to the standard library functions and operators by returning `nil` for unrecognized symbols. If you do not want to provide access to the standard library functions in your expression, throw an `Error` for unrecognized symbols instead of returning `nil`.
+If you have provided a custom `evaluator` function, you can fall back to the standard library functions and operators by returning `nil` for unrecognized symbols. If you do not want to provide access to the standard library functions in your expression, throw an `Error` for unrecognized symbols instead of returning `nil`.
 
 ```swift
 let expression = Expression("3 + 4") { symbol, args in
@@ -384,6 +385,8 @@ pi
 **functions**
 
 ```swift
+// Unary functions
+
 sqrt(x)
 floor(x)
 ceil(x)
@@ -396,11 +399,16 @@ tan(x)
 atan(x)
 abs(x)
 
+// Binary functions
+
 pow(x,y)
-max(x,y)
-min(x,y)
 atan2(x,y)
 mod(x,y)
+
+// Variadic functions
+
+max(x,y,[...])
+min(x,y,[...])
 ```
 
 ## Boolean Symbols
@@ -411,7 +419,7 @@ In addition to math, Expression also supports boolean logic, following the C con
 let expression = Expression("foo ? bar : baz", options: .boolSymbols, ...)
 ```
 
-As with the math symbols, all standard boolean operators can be individually overriden or disabled for a given expression using the `symbols` or `evaluator` constructor arguments.
+As with the math symbols, all standard boolean operators can be individually overridden or disabled for a given expression using the `symbols` or `evaluator` constructor arguments.
 
 Here are the currently supported boolean symbols:
 
@@ -459,7 +467,7 @@ Not much to say about this. It's a calculator. You can type expressions into it,
 
 The Colors example demonstrates how to use Expression to create a (mostly) CSS-compliant color parser. It takes a string containing a named color, hex color or `rgb()` function call, and returns a UIColor object.
 
-Using Expression to parse colors is a bit of a hack, as it only works because it's possible to encode a color as a UInt32, which itself can be stored inside the Double returned by the Expression evaluator. Still, it's a neat trick.
+Using Expression to parse colors is a bit of a hack, as it only works because it's possible to encode a color as four 8-bit components packed into a UInt32, which itself can be stored inside the Double returned by the Expression evaluator. Still, it's a neat trick.
 
 
 ## Layout
@@ -485,4 +493,4 @@ Here are some things to note:
 * Numeric values are measured in screen points. Percentage values are relative to the superview's `width` or `height` property.
 * Remember you can use functions like `min()` and `max()` to ensure that relative values don't go above or below a fixed threshold.
 
-This is just a toy example, but if you like the concept, check out the [Layout framework](https://github.com/schibsted/layout) on Github.
+This is just a toy example, but if you like the concept check out the [Layout framework](https://github.com/schibsted/layout) on Github, which takes this idea to the next level.

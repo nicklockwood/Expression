@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.10.0](https://github.com/nicklockwood/Expression/releases/tag/0.10.0) (2017-12-28)
+
+- Added support for variadic functions. This may cause minor breaking changes to custom Evaluator functions
+- The built-in `min()` and `max()` functions now both support more than two arguments (using the new variadics support) 
+
 ## [0.9.3](https://github.com/nicklockwood/Expression/releases/tag/0.9.3) (2017-12-18)
 
 - Hyphens are now only permitted at the start of an operator, which solves an ambiguity with unary minus
