@@ -264,6 +264,7 @@ public class Expression: CustomStringConvertible {
 
     /// Creates an Expression object from a string
     /// Optionally accepts some or all of:
+    /// - A set of options for configuring expression behavior
     /// - A dictionary of constants for simple static values
     /// - A dictionary of arrays for static collections of related values
     /// - A dictionary of symbols, for implementing custom functions and operators
@@ -489,7 +490,7 @@ public class Expression: CustomStringConvertible {
         return try root.evaluate()
     }
 
-    // Stand math symbols
+    // Standard math symbols
     public static let mathSymbols: [Symbol: Symbol.Evaluator] = {
         var symbols: [Symbol: ([Double]) -> Double] = [:]
 
@@ -1022,7 +1023,7 @@ private extension UnicodeScalarView {
         return nil
     }
 
-    mutating func scanCharacter(_ matching: (UnicodeScalar) -> Bool) -> String? {
+    mutating func scanCharacter(_ matching: (UnicodeScalar) -> Bool = { _ in true }) -> String? {
         if let c = first, matching(c) {
             self = suffix(from: index(after: startIndex))
             return String(c)
@@ -1352,7 +1353,11 @@ private extension UnicodeScalarView {
                         var args = [Subexpression]()
                         if first != ")" {
                             repeat {
-                                try args.append(parseSubexpression(upTo: [",", ")"]))
+                                do {
+                                    try args.append(parseSubexpression(upTo: [",", ")"]))
+                                } catch Expression.Error.unexpectedToken("") {
+                                    throw Expression.Error.unexpectedToken(scanCharacter() ?? "")
+                                }
                             } while scanCharacter(",")
                         }
                         stack[stack.count - 1] = .symbol(

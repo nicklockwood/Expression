@@ -858,6 +858,21 @@ class ExpressionTests: XCTestCase {
         }
     }
 
+    func testMissingFirstArgument() {
+        let expression = Expression.parse("foo(,5)")
+        XCTAssertEqual(expression.error, .unexpectedToken(","))
+    }
+
+    func testMissingLastArgument() { // TODO: should trailing commas be allowed?
+        let expression = Expression.parse("foo(1,)")
+        XCTAssertEqual(expression.error, .unexpectedToken(")"))
+    }
+
+    func testMissingMiddleArgument() {
+        let expression = Expression.parse("foo(1,,2)")
+        XCTAssertEqual(expression.error, .unexpectedToken(","))
+    }
+
     // MARK: Arity errors
 
     func testTooFewArguments() {
