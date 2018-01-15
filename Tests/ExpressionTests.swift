@@ -587,7 +587,7 @@ class ExpressionTests: XCTestCase {
 
     func testBracedExpression() {
         let input = "{ 1 + 2 }"
-        var characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        var characters = Substring.UnicodeScalarView(input.unicodeScalars)
         characters.removeFirst() // Remove opening {
         var expression = Expression.parse(&characters)
         XCTAssertEqual(characters.first, "}")
@@ -595,7 +595,7 @@ class ExpressionTests: XCTestCase {
             XCTFail()
             return
         }
-        characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        characters = Substring.UnicodeScalarView(input.unicodeScalars)
         characters.removeFirst() // Remove opening {
         expression = Expression.parse(&characters, upTo: "\"")
         XCTAssertEqual(characters.first, "}")
@@ -603,7 +603,7 @@ class ExpressionTests: XCTestCase {
             XCTFail()
             return
         }
-        characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        characters = Substring.UnicodeScalarView(input.unicodeScalars)
         characters.removeFirst() // Remove opening {
         expression = Expression.parse(&characters, upTo: "}")
         XCTAssertEqual(characters.first, "}")
@@ -613,7 +613,7 @@ class ExpressionTests: XCTestCase {
 
     func testQuotedExpression() {
         let input = "\" 1 + 2 \""
-        var characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        var characters = Substring.UnicodeScalarView(input.unicodeScalars)
         characters.removeFirst() // Remove opening quote
         var expression = Expression.parse(&characters)
         XCTAssertNil(characters.first)
@@ -621,7 +621,7 @@ class ExpressionTests: XCTestCase {
             XCTFail()
             return
         }
-        characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        characters = Substring.UnicodeScalarView(input.unicodeScalars)
         characters.removeFirst() // Remove opening quote
         expression = Expression.parse(&characters, upTo: "}")
         XCTAssertNil(characters.first)
@@ -629,7 +629,7 @@ class ExpressionTests: XCTestCase {
             XCTFail()
             return
         }
-        characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        characters = Substring.UnicodeScalarView(input.unicodeScalars)
         characters.removeFirst() // Remove opening quote
         expression = Expression.parse(&characters, upTo: "\"")
         XCTAssertEqual(characters.first, "\"")
@@ -639,7 +639,7 @@ class ExpressionTests: XCTestCase {
 
     func testEmptyBracedExpression() {
         let input = "{}"
-        var characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        var characters = Substring.UnicodeScalarView(input.unicodeScalars)
         characters.removeFirst() // Remove opening {
         let expression = Expression.parse(&characters, upTo: "}")
         XCTAssertEqual(characters.first, "}")
@@ -651,7 +651,7 @@ class ExpressionTests: XCTestCase {
 
     func testAllWhitespaceBracedExpression() {
         let input = "{ \n }"
-        var characters = String.UnicodeScalarView.SubSequence(input.unicodeScalars)
+        var characters = Substring.UnicodeScalarView(input.unicodeScalars)
         characters.removeFirst() // Remove opening {
         let expression = Expression.parse(&characters, upTo: "}")
         XCTAssertEqual(characters.first, "}")
@@ -1559,7 +1559,7 @@ class ExpressionTests: XCTestCase {
     }
 
     func testUndefinedTernaryOperator() {
-        let symbols: [Expression.Symbol: Expression.Symbol.Evaluator] = [
+        let symbols: [Expression.Symbol: Expression.SymbolEvaluator] = [
             .infix("?"): { $0[0] != 0 ? $0[1] : 0 },
             .infix(":"): { $0[0] != 0 ? $0[0] : $0[1] },
         ]
