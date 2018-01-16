@@ -35,6 +35,9 @@
 		01DD38C71ED630D200F17F46 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01DD38951ED62F6500F17F46 /* PerformanceTests.swift */; };
 		01DD38D91ED63B1E00F17F46 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01DD38951ED62F6500F17F46 /* PerformanceTests.swift */; };
 		01DD38DB1ED63B1E00F17F46 /* Expression.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 011F79551D8D67BD00C5299A /* Expression.framework */; };
+		01FEBBDC2008C3C8009469E9 /* AnyExpression.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01FEBBDB2008C3C7009469E9 /* AnyExpression.swift */; };
+		01FEBBDD2008C3C8009469E9 /* AnyExpression.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01FEBBDB2008C3C7009469E9 /* AnyExpression.swift */; };
+		01FEBBE02008C51D009469E9 /* AnyExpressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01FEBBDE2008C4F2009469E9 /* AnyExpressionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -119,6 +122,8 @@
 		01DD38951ED62F6500F17F46 /* PerformanceTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
 		01DD38BC1ED630CB00F17F46 /* DebugPerformance.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DebugPerformance.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		01DD38E01ED63B1E00F17F46 /* ReleasePerformance.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ReleasePerformance.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		01FEBBDB2008C3C7009469E9 /* AnyExpression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyExpression.swift; sourceTree = "<group>"; };
+		01FEBBDE2008C4F2009469E9 /* AnyExpressionTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnyExpressionTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -214,6 +219,7 @@
 			isa = PBXGroup;
 			children = (
 				015B35B61D8AD16700ABBD4E /* Expression.swift */,
+				01FEBBDB2008C3C7009469E9 /* AnyExpression.swift */,
 				015B359F1D8AD15600ABBD4E /* Expression.h */,
 				015B35A01D8AD15600ABBD4E /* Info.plist */,
 			);
@@ -224,6 +230,7 @@
 			isa = PBXGroup;
 			children = (
 				01CF6AF61E1C705F0017139E /* ExpressionTests.swift */,
+				01FEBBDE2008C4F2009469E9 /* AnyExpressionTests.swift */,
 				01DD38951ED62F6500F17F46 /* PerformanceTests.swift */,
 				015B35AC1D8AD15600ABBD4E /* Info.plist */,
 			);
@@ -606,6 +613,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				01FEBBDD2008C3C8009469E9 /* AnyExpression.swift in Sources */,
 				011F794D1D8D67BD00C5299A /* Expression.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -614,6 +622,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				01FEBBDC2008C3C8009469E9 /* AnyExpression.swift in Sources */,
 				015B35B71D8AD16700ABBD4E /* Expression.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -622,6 +631,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				01FEBBE02008C51D009469E9 /* AnyExpressionTests.swift in Sources */,
 				01CF6AFB1E1C71020017139E /* ExpressionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

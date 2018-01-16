@@ -9,33 +9,47 @@
 import Expression
 import UIKit
 
-private let colors: [String: Double] = [
-    "red": 0xFF0000FF,
-    "green": 0x00FF00FF,
-    "blue": 0x0000FFFF,
-    "yellow": 0xFFFF00FF,
-    "purple": 0xFF00FFFF,
-    "cyan": 0x00FFFFFF,
-    "pink": 0xFF7F7FFF,
-    "orange": 0xFF7F00FF,
-    "gray": 0x7F7F7FFF,
-    "black": 0x000000FF,
-    "white": 0xFFFFFFFF,
+private let colors: [String: UIColor] = [
+    "red": .red,
+    "green": .green,
+    "blue": .blue,
+    "yellow": .yellow,
+    "purple": .purple,
+    "cyan": .cyan,
+    "pink": UIColor(rgba: 0xFF7F7FFF),
+    "orange": .orange,
+    "gray": .gray,
+    "black": .black,
+    "white": .white,
 ]
 
-private let functions: [Expression.Symbol: Expression.Symbol.Evaluator] = [
+private let functions: [AnyExpression.Symbol: AnyExpression.SymbolEvaluator] = [
     .function("rgb", arity: 3): { args in
-        let red = UInt32(min(255, max(0, args[0]))) << 24
-        let green = UInt32(min(255, max(0, args[1]))) << 16
-        let blue = UInt32(min(255, max(0, args[2]))) << 8
-        return Double(red + green + blue + 255)
+        guard let r = args[0] as? Double,
+            let g = args[1] as? Double,
+            let b = args[2] as? Double else {
+            throw AnyExpression.Error.message("Type mismatch")
+        }
+        return UIColor(
+            red: CGFloat(r / 255),
+            green: CGFloat(g / 255),
+            blue: CGFloat(b / 255),
+            alpha: 1
+        )
     },
     .function("rgba", arity: 4): { args in
-        let red = UInt32(min(255, max(0, args[0]))) << 24
-        let green = UInt32(min(255, max(0, args[1]))) << 16
-        let blue = UInt32(min(255, max(0, args[2]))) << 8
-        let alpha = UInt32(min(1, max(0, args[3])) * 255)
-        return Double(red + green + blue + alpha)
+        guard let r = args[0] as? Double,
+            let g = args[1] as? Double,
+            let b = args[2] as? Double,
+            let a = args[3] as? Double else {
+            throw Expression.Error.message("Type mismatch")
+        }
+        return UIColor(
+            red: CGFloat(r / 255),
+            green: CGFloat(g / 255),
+            blue: CGFloat(b / 255),
+            alpha: CGFloat(a)
+        )
     },
 ]
 
@@ -51,7 +65,8 @@ public extension UIColor {
 
     public convenience init(expression: String) throws {
         let parsedExpression = Expression.parse(expression)
-        var constants = [String: Double]()
+        var constants = [String: Any]()
+
         for symbol in parsedExpression.symbols {
             if case let .variable(name) = symbol {
                 if name.hasPrefix("#") {
@@ -75,17 +90,21 @@ public extension UIColor {
                         // unsupported format
                         continue
                     }
-                    constants[name] = Double("0x" + string)
-                } else if let value = colors[name.lowercased()] {
-                    constants[name] = value
+                    guard let rgba = Double("0x" + string).flatMap({ UInt32(exactly: $0) }) else {
+                        throw Expression.Error.message("Unsupported color format")
+                    }
+                    constants[name] = UIColor(rgba: rgba)
+                } else if let color = colors[name.lowercased()] {
+                    constants[name] = color
                 }
             }
         }
-        let expression = Expression(
+        let expression = AnyExpression(
             expression,
             constants: constants,
             symbols: functions
         )
-        self.init(rgba: UInt32(try expression.evaluate()))
+        let color: UIColor = try expression.evaluate()
+        self.init(cgColor: color.cgColor)
     }
 }
