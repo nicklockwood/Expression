@@ -36,7 +36,7 @@ import Foundation
 /// Immutable wrapper for a parsed expression
 /// Reusing the same Expression instance for multiple evaluations is more efficient
 /// than creating a new one each time you wish to evaluate an expression string.
-public class Expression: CustomStringConvertible {
+public final class Expression: CustomStringConvertible {
     private var root: Subexpression
 
     /// Function prototype for evaluating an expression
