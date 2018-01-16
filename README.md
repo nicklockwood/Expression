@@ -24,6 +24,9 @@
 - [Standard Library](#standard-library)
 	- [Math Symbols](#math-symbols)
     - [Boolean Symbols](#boolean-symbols)
+- [AnyExpression](#anyexpression)
+    - [Usage](#usage-1)
+    - [Symbols](#symbols-1)
 - [Example Projects](#example-projects)
 	- [Calculator](#calculator)
 	- [Colors](#colors)
@@ -34,9 +37,13 @@
 
 ## What?
 
-Expression is a library for Mac and iOS for evaluating numeric expressions at runtime.
+Expression is a library for Mac and iOS for evaluating expressions at runtime.
 
-It is similar to Foundation's built-in Expression class, but with better support for custom operators, a more Swift-friendly API, and a focus on performance.
+The Expression library is split into two parts:
+
+1. The `Expression` class, which is similar to Foundation's built-in `NSExpression` class, but with better support for custom operators, a more Swift-friendly API, and a focus on performance.
+
+2. `AnyExpression`, an extension of Expression that handles arbitrary types and provides additional built-in support for common tasks such as string concatenation and dealing with Optionals.
 
 
 ## Why?
@@ -44,7 +51,7 @@ It is similar to Foundation's built-in Expression class, but with better support
 There are many situations where it is useful to be able to evaluate a simple expression at runtime. Some are demonstrated in the example apps included with the library:
 
 * A scientific calculator
-* A CSS color string parser
+* A CSS-style color string parser
 * A basic layout engine, similar to AutoLayout
 
 But there are other possible applications, e.g.
@@ -62,18 +69,22 @@ Expression is fast, lightweight, well-tested, and written entirely in Swift.
 
 ## How?
 
-Expression works by parsing an expression string into a tree of symbols, which can then be evaluated at runtime. Each symbol maps to a Swift closure (function) which is executed during evaluation. There are built-in functions representing common math operations, or you can provide your own custom ones. 
+Expression works by parsing an expression string into a tree of symbols, which can then be evaluated at runtime. Each symbol maps to a Swift closure (function) which is executed during evaluation. There are built-in functions representing common math operations, or you can provide your own custom ones.
+
+Although `Expression` only works with `Double` values, `AnyExpression` uses a technique called [NaN boxing](https://wingolog.org/archives/2011/05/18/value-representation-in-javascript-implementations) to reference arbitrary data via the unused bit patterns in the IEEE floating point specification.
 
 
 # Usage
 
 ## Installation
 
-The entire Expression API is encapsulated in a single file, and everything public is prefixed or name-spaced, so you can simply drag the `Expression.swift` file into your project to use it. If you prefer, there's a framework for Mac and iOS that you can import, or you can use CocoaPods, Carthage, or Swift Package Manager on Linux.
+The Expression API is encapsulated in a single file, and everything public is prefixed or name-spaced, so you can simply drag the `Expression.swift` file into your project to use it. If you wish to use the AnyExpression extension then include `AnyExpression.swift` as well.
 
-To install Expression using CocoaPods, add the following to your Podfile:
+If you prefer, there's a framework for Mac and iOS that you can import which includes both the `Expression` and `AnyExpression` classes.
 
-	pod 'Expression', '~> 0.10.0'
+You can use CocoaPods, Carthage, or Swift Package Manager. To install Expression using CocoaPods, add the following to your Podfile:
+
+	pod 'Expression', '~> 0.11.0'
 
 
 ## Integration
@@ -83,8 +94,8 @@ You create an `Expression` instance by passing a string containing your expressi
 * A set of configuration options - used to enabled or disable certain features
 * A dictionary of named constants - this is the simplest and most efficient way to specify predefined constants
 * A dictionary of named array constants - this is the simplest and most efficient way to specify predefined arrays of related values
-* A dictionary of symbols and callback functions - this is the most efficient way to provide custom functions or operators
-* A custom Evaluator function - this is the most flexible solution, and can support dynamic variable or function names
+* A dictionary of symbols and `SymbolEvaluator` functions - this is the most efficient way to provide custom functions or operators
+* A custom `Evaluator` function - this is the most flexible solution, and can support dynamic variable or function names
 
 You can then calculate the result by calling the `Expression.evaluate()` function.
 
@@ -97,7 +108,7 @@ Here are some examples:
 // Only using built-in math functions
 
 let expression = Expression("5 + 6")
-let result = try! expression.evaluate() // 11
+let result = try expression.evaluate() // 11
 
 // Intermediate usage:
 // Custom constants and functions
@@ -108,10 +119,10 @@ let expression = Expression("foo + bar(5) + rnd()", constants: [
     .function("bar", arity: 1): { args in args[0] + 1 },
     .function("rnd", arity: 0): { _ in arc4random() },
 ])
-let result = try! expression.evaluate()
+let result = try expression.evaluate()
 
 // Advanced usage:
-// Using a custom Evaluator to decode hex color literals
+// Using a custom `Evaluator` function to decode hex color literals
 
 let hexColor = "#FF0000FF" // rrggbbaa
 let expression = Expression(hexColor) { symbol, args in
@@ -173,7 +184,7 @@ default:
 
 Note that you can check the arity of the function either using pattern matching (as we did above), or just by checking `args.count`. These will always match.
 
-For dynamic symbols, a more performant (but more complex) alternative to using a custom `Evaluator` function is to pre-parse the expression to discover the specific symbols that it's actually using, then calculate the values in advance. Here is how that would work for the hex colors example:
+For dynamic symbols, a more performant (but more complex) alternative to using a custom `Evaluator` function is to pre-parse the expression to discover the specific symbols that it's actually using, then calculate their constant values in advance. Here is how that would work for the hex colors example:
 
 ```swift
 // Expert usage:
@@ -348,7 +359,7 @@ let expression = Expression("pow(2,3)", symbols: [
 try expression.evaluate() // this will throw an error because pow() has been undefined
 ```
 
-If you have provided a custom `evaluator` function, you can fall back to the standard library functions and operators by returning `nil` for unrecognized symbols. If you do not want to provide access to the standard library functions in your expression, throw an `Error` for unrecognized symbols instead of returning `nil`.
+If you have provided a custom `Evaluator` function, you can fall back to the standard library functions and operators by returning `nil` for unrecognized symbols. If you do not want to provide access to the standard library functions in your expression, throw an error for unrecognized symbols instead of returning `nil`.
 
 ```swift
 let expression = Expression("3 + 4") { symbol, args in
@@ -456,18 +467,65 @@ false
 ```
 
 
+# AnyExpression
+
+## Usage
+
+`AnyExpression` is used in almost the exact same way as the `Expression` class, with the following exceptions:
+
+* AnyExpression's `Evaluator` and `SymbolEvaluator` functions accept and return `Any` instead of `Double`
+* Boolean symbols and operators are enabled by default when you create an `AnyExpression`
+* There is no separate `arrays` argument for the AnyExpression constructor. If you wish to pass an array constant, you can add it to the `constants` dictionary
+
+You can create and evaluate an `AnyExpression` instance as follows:
+
+```swift
+let expression = AnyExpression("'hello' + 'world'")
+let result: String = try expression.evaluate() // 'helloworld'
+```
+
+Note the use of single quotes (') for string literals. AnyExpression supports single or double quotes for string literals. There is no difference between these, except that single quotes do not need to be escaped inside a Swift string literal.
+
+Since `AnyExpression`'s `evaluate()` method has a generic return type, you will need to tell it the expected type. In the example above, we did this by specifying an explicit type for the `result` variable, but you could also do it by using the `as` operator (without ! or ?):
+
+```swift
+let result = try expression.evaluate() as String
+```
+
+The `evaluate` function has a certain amount of built-in leniency with respect to types, so if (for example) the expression returns a boolean, but you specify `Double` as the expected type, the type will be converted automatically, but if it returns a string and you ask for `Bool` then a type mismatch error will be thrown.
+
+The currently supported automatic conversions are:
+
+* T -> Optional<T>
+* Int, Float, Bool, etc -> Double
+* Double, Float, Bool, etc -> Int
+* Int, Double, Float, etc -> Bool
+* Any -> String
+
+## Symbols
+
+In addition to adding support for string literals, AnyExpression extends Expression's standard library with some additional symbols for dealing with Optionals and null values:
+
+* `nil` - the null literal
+* `??` - the null coalescing operator
+
+Optional unwrapping is automatic, so there is currently no need for the postfix `?` or `!` operators. `nil` (aka `Optional.none`) and `NSNull` are both treated the same way to avoid confusion when working with JSON or Objective-C API data.
+
+Comparison operators like `==` and !=` are also extended to work with any `Hashable` type, and `+` can be used for string concatenation, as in the example above.
+
+
 # Example Projects
 
 ## Calculator
 
-Not much to say about this. It's a calculator. You can type expressions into it, and it will evaluate them and produce a result (or an error, if what you typed was invalid).
+Not much to say about this. It's a calculator. You can type mathematical expressions into it, and it will evaluate them and produce a result (or an error, if what you typed was invalid).
 
 
 ## Colors
 
-The Colors example demonstrates how to use Expression to create a (mostly) CSS-compliant color parser. It takes a string containing a named color, hex color or `rgb()` function call, and returns a UIColor object.
+The Colors example demonstrates how to use AnyExpression to create a (mostly) CSS-compliant color parser. It takes a string containing a named color, hex color or `rgb()` function call, and returns a UIColor object.
 
-Using Expression to parse colors is a bit of a hack, as it only works because it's possible to encode a color as four 8-bit components packed into a UInt32, which itself can be stored inside the Double returned by the Expression evaluator. Still, it's a neat trick.
+**Note:** An earlier version of the Colors demo relied on a hack of storing the color as `UInt32` inside a `Double`. This was a neat trick, but it allowed you to write illogical things like `#ffffff / purple * pi` because colors were treated as numbers within an expression. By using AnyExpression instead, we are able to treat colors as a distinct type, and reject basic type violations.
 
 
 ## Layout
@@ -476,9 +534,9 @@ This is where things get interesting: The Layout example demonstrates a crude-bu
 
 It's conceptually similar to AutoLayout, but with some important differences:
 
-* The expressions can be as simple or as complex as you like. In AutoLayout, every constraint uses a choice between a few fixed formulae, where only the operands are interchangeable.
-* Instead of applying an arbitrary number of constraints between properties of views, each view just has four fixed properties that can be calculated however you like.
-* Layout is deterministic. There is no weighting system used for resolving conflicts, and circular references are forbidden. Despite that, weighted relationships can be achieved using explicit multipliers.
+* The expressions can be as simple or as complex as you like. In AutoLayout every constraint uses a fixed formula, where only the operands are interchangeable.
+* Instead of applying an arbitrary number of constraints between properties of views, each view just has a size and position that can be calculated however you like.
+* Layout is deterministic. There is no weighting system used for resolving conflicts, and circular references are forbidden. Weighted relationships can be achieved using explicit multipliers.
 
 Default layout values for the example views have been set in the Storyboard, but you can edit them live in the app by tapping a view and typing in new values.
 

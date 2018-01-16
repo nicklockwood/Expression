@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.11.0](https://github.com/nicklockwood/Expression/releases/tag/0.11.0) (2018-01-16)
+
+- Added `AnyExpression` extension for dealing with arbitrary data types
+- Renamed `Symbol.Evaluator` to `SymbolEvaluator` (the old name is now deprecated)
+- Improved error messages for missing function arguments
+
 ## [0.10.0](https://github.com/nicklockwood/Expression/releases/tag/0.10.0) (2017-12-28)
 
 - Added support for variadic functions. This may cause minor breaking changes to custom Evaluator functions

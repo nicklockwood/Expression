@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.10.0
+//  Version 0.11.0
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -498,7 +498,7 @@ public final class Expression: CustomStringConvertible {
         return try root.evaluate()
     }
 
-    // Standard math symbols
+    /// Standard math symbols
     public static let mathSymbols: [Symbol: SymbolEvaluator] = {
         var symbols: [Symbol: ([Double]) -> Double] = [:]
 
@@ -540,7 +540,7 @@ public final class Expression: CustomStringConvertible {
         return symbols
     }()
 
-    // Stand boolean symbols
+    /// Standard boolean symbols
     public static let boolSymbols: [Symbol: SymbolEvaluator] = {
         var symbols: [Symbol: ([Double]) -> Double] = [:]
 
