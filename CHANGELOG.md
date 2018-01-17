@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.11.1](https://github.com/nicklockwood/Expression/releases/tag/0.11.1) (2018-01-17)
+
+- Fixed optimization bug where custom symbols could unexpectedly produce NaN output in AnyExpression
+- The `pureSymbols` option now has no effect for AnyExpression (regular Expression is unaffected)
+
 ## [0.11.0](https://github.com/nicklockwood/Expression/releases/tag/0.11.0) (2018-01-16)
 
 - Added `AnyExpression` extension for dealing with arbitrary data types

@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.11.0
+//  Version 0.11.1
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -151,8 +151,6 @@ public struct AnyExpression: CustomStringConvertible {
             case let .variable(name):
                 if let value = constants[name] {
                     numericConstants[name] = store(value)
-                } else if name.count >= 2, "'\"".contains(name.first!), name.last == name.first {
-                    numericConstants[name] = store(String(name.dropFirst().dropLast()))
                 } else if let fn = symbols[symbol] {
                     impureSymbols[symbol] = fn
                 } else if name == "nil" {
@@ -161,6 +159,8 @@ public struct AnyExpression: CustomStringConvertible {
                     numericConstants["false"] = store(false)
                 } else if name == "true" {
                     numericConstants["true"] = store(true)
+                } else if name.count >= 2, "'\"".contains(name.first!), name.last == name.first {
+                    numericConstants[name] = store(String(name.dropFirst().dropLast()))
                 }
             case let .array(name):
                 if let array = constants[name] as? [Any] {
@@ -225,7 +225,7 @@ public struct AnyExpression: CustomStringConvertible {
                 var doubleArgs = [Double]()
                 for arg in anyArgs {
                     guard let doubleValue = arg as? Double ?? (arg as? NSNumber).map({
-                        return Double(truncating: $0)
+                        Double(truncating: $0)
                     }) else {
                         _ = try AnyExpression.unwrap(arg)
                         return nil
