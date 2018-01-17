@@ -97,6 +97,13 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertFalse(try expression.evaluate())
     }
 
+    func testCustomArraySymbol() {
+        let expression = AnyExpression("a[100000000]", symbols: [
+            .array("a"): { args in args[0] }
+        ])
+        XCTAssertEqual(try expression.evaluate(), 100000000)
+    }
+
     // MARK: Numeric types
 
     func testAddNumbers() {
@@ -579,6 +586,15 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
+    func testDisableNullCoalescing() {
+        let expression = AnyExpression("nil ?? 'foo'", symbols: [
+            .infix("??"): { _ in throw AnyExpression.Error.message("Disabled") }
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssert("\(error)".contains("Disabled"))
+        }
+    }
+
     // MARK: Return type casting
 
     func testCastBoolResultAsDouble() {
@@ -704,5 +720,13 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertFalse(try expression.evaluate())
         // Note: can't currently optimize bool symbols because they need to store result
         XCTAssertEqual(expression.symbols, [.infix("&&")])
+    }
+
+    func testPureFunctionResultNotMangledByInlining() {
+        let expression = AnyExpression("foo('bar')", options: .pureSymbols, symbols: [
+            .function("foo", arity: 1): { args in "foo\(args[0])" }
+        ])
+        XCTAssertEqual(try expression.evaluate(), "foobar")
+        XCTAssertEqual(try expression.evaluate(), "foobar")
     }
 }

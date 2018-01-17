@@ -112,7 +112,6 @@ public struct AnyExpression: CustomStringConvertible {
                 if "\(value)".contains("rawValue") {
                     break
                 }
-                // TODO: implement strict bool handling instead of treating as a number
                 return Double(truncating: numberValue)
             default:
                 break
@@ -145,37 +144,49 @@ public struct AnyExpression: CustomStringConvertible {
         // Handle string literals and constants
         var numericConstants = [String: Double]()
         var arrayConstants = [String: [Double]]()
-        var numericSymbols = [Symbol: ([Double]) throws -> Double]()
+        var pureSymbols = [Symbol: ([Double]) throws -> Double]()
+        var impureSymbols = [Symbol: ([Any]) throws -> Any]()
         for symbol in expression.symbols {
             switch symbol {
-            case .variable("nil"):
-                numericConstants["nil"] = store(nil as Any? as Any)
-            case .variable("false"):
-                numericConstants["false"] = store(false)
-            case .variable("true"):
-                numericConstants["true"] = store(true)
             case let .variable(name):
                 if let value = constants[name] {
                     numericConstants[name] = store(value)
                 } else if name.count >= 2, "'\"".contains(name.first!), name.last == name.first {
                     numericConstants[name] = store(String(name.dropFirst().dropLast()))
+                } else if let fn = symbols[symbol] {
+                    impureSymbols[symbol] = fn
+                } else if name == "nil" {
+                    numericConstants["nil"] = store(nil as Any? as Any)
+                } else if name == "false" {
+                    numericConstants["false"] = store(false)
+                } else if name == "true" {
+                    numericConstants["true"] = store(true)
                 }
             case let .array(name):
                 if let array = constants[name] as? [Any] {
                     arrayConstants[name] = array.map { store($0) }
+                } else if let fn = symbols[symbol] {
+                    impureSymbols[symbol] = fn
                 }
             case .infix("??"):
+                // Not sure why anyone would override this, but the option is there
+                if let fn = symbols[symbol] {
+                    impureSymbols[symbol] = fn
+                    break
+                }
                 // Note: the ?? operator should be safe to inline, as it doesn't store any
                 // values, but symbols which store values cannot be safely inlined since they
                 // are potentially side-effectful, which is why they are currently declared
                 // in the evaluator function below instead of here
-                numericSymbols[symbol] = { args in
+                pureSymbols[symbol] = { args in
                     let lhs = args[0]
                     return load(lhs).map { AnyExpression.isNil($0) ? args[1] : lhs } ?? lhs
                 }
             // TODO: literal string as function (formatted string)?
             default:
-                break
+                if let fn = symbols[symbol] {
+                    impureSymbols[symbol] = fn
+                }
             }
         }
 
@@ -183,30 +194,19 @@ public struct AnyExpression: CustomStringConvertible {
         // and won't be re-stored, so must not be cleared
         let literals = values
 
-        // Convert symbols
-        for (symbol, closure) in symbols {
-            numericSymbols[symbol] = { args in
-                let anyArgs = args.map { load($0) ?? $0 }
-                let value = try closure(anyArgs)
-                return store(value)
-            }
-        }
-
         // Set description based on the parsed expression, prior to
         // peforming optimizations. This avoids issues with inlined
         // constants and string literals being converted to `nan`
         description = expression.description
 
         // Build Expression
-        var nestedOptions = options.subtracting(.boolSymbols)
-        if symbols.isEmpty {
-            nestedOptions.insert(.pureSymbols)
-        }
         let expression = Expression(expression,
-                                    options: nestedOptions,
+                                    options: options
+                                        .subtracting(.boolSymbols)
+                                        .union(.pureSymbols),
                                     constants: numericConstants,
                                     arrays: arrayConstants,
-                                    symbols: numericSymbols) { symbol, args in
+                                    symbols: pureSymbols) { symbol, args in
             var stored = false
             let anyArgs: [Any] = args.map {
                 if let value = load($0) {
@@ -215,7 +215,7 @@ public struct AnyExpression: CustomStringConvertible {
                 }
                 return $0
             }
-            if let value = try evaluator?(symbol, anyArgs) {
+            if let value = try impureSymbols[symbol]?(anyArgs) ?? evaluator?(symbol, anyArgs) {
                 return store(value)
             }
             func doubleArgs() throws -> [Double]? {
