@@ -22,6 +22,11 @@
                BlueprintName = "DebugPerformance"
                ReferencedContainer = "container:Expression.xcodeproj">
             </BuildableReference>
+            <SkippedTests>
+               <Test
+                  Identifier = "PerformanceTests">
+               </Test>
+            </SkippedTests>
          </TestableReference>
       </Testables>
       <AdditionalOptions>

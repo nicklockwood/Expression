@@ -32,7 +32,7 @@
 import Expression
 import XCTest
 
-let symbols: [Expression.Symbol: Expression.Symbol.Evaluator] = [
+let symbols: [Expression.Symbol: Expression.SymbolEvaluator] = [
     .variable("a"): { _ in 5 },
     .variable("b"): { _ in 6 },
     .variable("c"): { _ in 7 },
@@ -41,6 +41,17 @@ let symbols: [Expression.Symbol: Expression.Symbol.Evaluator] = [
     .function("foo", arity: 0): { _ in .pi },
     .function("foo", arity: 2): { $0[0] - $0[1] },
     .function("bar", arity: 1): { $0[0] - 2 },
+]
+
+let anySymbols: [AnyExpression.Symbol: AnyExpression.SymbolEvaluator] = [
+    .variable("a"): { _ in 5 },
+    .variable("b"): { _ in 6 },
+    .variable("c"): { _ in 7 },
+    .variable("hello"): { _ in "hello" },
+    .variable("world"): { _ in "world" },
+    .function("foo", arity: 0): { _ in "foo" },
+    .function("foo", arity: 2): { "\($0[0])\($0[1])" },
+    .function("bar", arity: 1): { (Double("\($0[0])") ?? 0) - 2 },
 ]
 
 let shortExpressions = [
@@ -80,6 +91,15 @@ let reallyLongExpression: String = {
     }
     return "foo(" + parts.joined(separator: "+") + " + bar(5), a) + b"
 }()
+
+let booleanExpressions = [
+    "true && false",
+    "a == b",
+    "foo(5, 6) != foo(5, 6)",
+    "a ? hello : world",
+    "false || true",
+    "pi > 3",
+]
 
 let parseRepetitions = 500
 let evalRepetitions = 5000
@@ -130,6 +150,17 @@ class PerformanceTests: XCTestCase {
         }
     }
 
+    func testParsingBooleanExpressions() {
+        let expressions = booleanExpressions
+        measure {
+            for _ in 0 ..< parseRepetitions {
+                for exp in expressions {
+                    _ = Expression.parse(exp, usingCache: false)
+                }
+            }
+        }
+    }
+
     // MARK: optimizing
 
     func testOptimizingShortExpressions() {
@@ -138,6 +169,17 @@ class PerformanceTests: XCTestCase {
             for _ in 0 ..< parseRepetitions {
                 for exp in expressions {
                     _ = Expression(exp, options: .pureSymbols, symbols: symbols)
+                }
+            }
+        }
+    }
+
+    func testOptimizingShortAnyExpressions() {
+        let expressions = shortExpressions.map { Expression.parse($0, usingCache: false) }
+        measure {
+            for _ in 0 ..< parseRepetitions {
+                for exp in expressions {
+                    _ = AnyExpression(exp, options: .pureSymbols, symbols: anySymbols)
                 }
             }
         }
@@ -154,6 +196,17 @@ class PerformanceTests: XCTestCase {
         }
     }
 
+    func testOptimizingMediumAnyExpressions() {
+        let expressions = mediumExpressions.map { Expression.parse($0, usingCache: false) }
+        measure {
+            for _ in 0 ..< parseRepetitions {
+                for exp in expressions {
+                    _ = AnyExpression(exp, options: .pureSymbols, symbols: anySymbols)
+                }
+            }
+        }
+    }
+
     func testOptimizingLongExpressions() {
         let expressions = longExpressions.map { Expression.parse($0, usingCache: false) }
         measure {
@@ -165,11 +218,53 @@ class PerformanceTests: XCTestCase {
         }
     }
 
+    func testOptimizingLongAnyExpressions() {
+        let expressions = longExpressions.map { Expression.parse($0, usingCache: false) }
+        measure {
+            for _ in 0 ..< parseRepetitions {
+                for exp in expressions {
+                    _ = AnyExpression(exp, options: .pureSymbols, symbols: anySymbols)
+                }
+            }
+        }
+    }
+
     func testOptimizingReallyLongExpressions() {
         let exp = Expression.parse(reallyLongExpression, usingCache: false)
         measure {
             for _ in 0 ..< parseRepetitions {
                 _ = Expression(exp, options: .pureSymbols, symbols: symbols)
+            }
+        }
+    }
+
+    func testOptimizingReallyLongAnyExpressions() {
+        let exp = Expression.parse(reallyLongExpression, usingCache: false)
+        measure {
+            for _ in 0 ..< parseRepetitions {
+                _ = AnyExpression(exp, options: .pureSymbols, symbols: anySymbols)
+            }
+        }
+    }
+
+    func testOptimizingBooleanExpressions() {
+        let expressions = booleanExpressions.map { Expression.parse($0, usingCache: false) }
+        measure {
+            for _ in 0 ..< parseRepetitions {
+                for exp in expressions {
+                    _ = Expression(exp, options: [.boolSymbols, .pureSymbols], symbols: symbols)
+                }
+            }
+        }
+    }
+
+    func testOptimizingBooleanAnyExpressions() {
+        let expressions = booleanExpressions.map { Expression.parse($0, usingCache: false) }
+        measure {
+            for _ in 0 ..< parseRepetitions {
+                for exp in expressions {
+                    _ = AnyExpression(exp, options: [.boolSymbols, .pureSymbols], symbols: anySymbols)
+                }
             }
         }
     }
@@ -187,12 +282,34 @@ class PerformanceTests: XCTestCase {
         }
     }
 
+    func testEvaluatingShortAnyExpressions() {
+        let expressions = shortExpressions.map { AnyExpression($0, options: .pureSymbols, symbols: anySymbols) }
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                for exp in expressions {
+                    _ = try! exp.evaluate() as Any
+                }
+            }
+        }
+    }
+
     func testEvaluatingMediumExpressions() {
         let expressions = mediumExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) }
         measure {
             for _ in 0 ..< evalRepetitions {
                 for exp in expressions {
                     _ = try! exp.evaluate()
+                }
+            }
+        }
+    }
+
+    func testEvaluatingMediumAnyExpressions() {
+        let expressions = mediumExpressions.map { AnyExpression($0, options: .pureSymbols, symbols: anySymbols) }
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                for exp in expressions {
+                    _ = try! exp.evaluate() as Any
                 }
             }
         }
@@ -209,11 +326,53 @@ class PerformanceTests: XCTestCase {
         }
     }
 
+    func testEvaluatingLongAnyExpressions() {
+        let expressions = mediumExpressions.map { AnyExpression($0, options: .pureSymbols, symbols: anySymbols) }
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                for exp in expressions {
+                    _ = try! exp.evaluate() as Any
+                }
+            }
+        }
+    }
+
     func testEvaluatingReallyLongExpression() {
         let exp = Expression(reallyLongExpression, options: .pureSymbols, symbols: symbols)
         measure {
             for _ in 0 ..< evalRepetitions {
                 _ = try! exp.evaluate()
+            }
+        }
+    }
+
+    func testEvaluatingReallyLongAnyExpression() {
+        let exp = AnyExpression(reallyLongExpression, options: .pureSymbols, symbols: anySymbols)
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                _ = try! exp.evaluate() as Any
+            }
+        }
+    }
+
+    func testEvaluatingBooleanExpressions() {
+        let expressions = booleanExpressions.map { Expression($0, options: [.boolSymbols, .pureSymbols], symbols: symbols) }
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                for exp in expressions {
+                    _ = try! exp.evaluate()
+                }
+            }
+        }
+    }
+
+    func testEvaluatingBooleanAnyExpressions() {
+        let expressions = booleanExpressions.map { AnyExpression($0, options: [.boolSymbols, .pureSymbols], symbols: anySymbols) }
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                for exp in expressions {
+                    _ = try! exp.evaluate() as Any
+                }
             }
         }
     }
@@ -231,12 +390,34 @@ class PerformanceTests: XCTestCase {
         }
     }
 
+    func testEvaluatingShortAnyExpressionsWithEmptyEvaluator() {
+        let expressions = shortExpressions.map { AnyExpression($0, options: .pureSymbols, symbols: anySymbols) { _, _ in nil } }
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                for exp in expressions {
+                    _ = try! exp.evaluate() as Any
+                }
+            }
+        }
+    }
+
     func testEvaluatingMediumExpressionsWithEmptyEvaluator() {
         let expressions = mediumExpressions.map { Expression($0, options: .pureSymbols, symbols: symbols) { _, _ in nil } }
         measure {
             for _ in 0 ..< evalRepetitions {
                 for exp in expressions {
                     _ = try! exp.evaluate()
+                }
+            }
+        }
+    }
+
+    func testEvaluatingMediumAnyExpressionsWithEmptyEvaluator() {
+        let expressions = mediumExpressions.map { AnyExpression($0, options: .pureSymbols, symbols: anySymbols) { _, _ in nil } }
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                for exp in expressions {
+                    _ = try! exp.evaluate() as Any
                 }
             }
         }
@@ -253,11 +434,53 @@ class PerformanceTests: XCTestCase {
         }
     }
 
+    func testEvaluatingLongAnyExpressionsWithEmptyEvaluator() {
+        let expressions = mediumExpressions.map { AnyExpression($0, options: .pureSymbols, symbols: anySymbols) { _, _ in nil } }
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                for exp in expressions {
+                    _ = try! exp.evaluate() as Any
+                }
+            }
+        }
+    }
+
     func testEvaluatingReallyLongExpressionWithEmptyEvaluator() {
         let exp = Expression(reallyLongExpression, options: .pureSymbols, symbols: symbols) { _, _ in nil }
         measure {
             for _ in 0 ..< evalRepetitions {
                 _ = try! exp.evaluate()
+            }
+        }
+    }
+
+    func testEvaluatingReallyLongAnyExpressionWithEmptyEvaluator() {
+        let exp = AnyExpression(reallyLongExpression, options: .pureSymbols, symbols: anySymbols) { _, _ in nil }
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                _ = try! exp.evaluate() as Any
+            }
+        }
+    }
+
+    func testEvaluatingBooleanExpressionsWithEmptyEvaluator() {
+        let expressions = booleanExpressions.map { Expression($0, options: [.boolSymbols, .pureSymbols], symbols: symbols) { _, _ in nil } }
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                for exp in expressions {
+                    _ = try! exp.evaluate()
+                }
+            }
+        }
+    }
+
+    func testEvaluatingBooleanAnyExpressionsWithEmptyEvaluator() {
+        let expressions = booleanExpressions.map { AnyExpression($0, options: [.boolSymbols, .pureSymbols], symbols: anySymbols) { _, _ in nil } }
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                for exp in expressions {
+                    _ = try! exp.evaluate() as Any
+                }
             }
         }
     }
