@@ -1425,6 +1425,16 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "\(5.0 + .pi)")
     }
 
+    func testDeferredOptimizationDisabled() {
+        let expression = Expression("5 + pi", options: .noDeferredOptimize) { _, _ in nil }
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
+        XCTAssertEqual(expression.description, "5 + pi")
+        XCTAssertEqual(try expression.evaluate(), 5 + .pi)
+        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
+        XCTAssertEqual(expression.description, "5 + pi")
+        XCTAssertEqual(try expression.evaluate(), 5 + .pi)
+    }
+
     func testOverriddenBuiltInConstantNotInlinedWithEvaluator() {
         let expression = Expression("5 + pi") { symbol, _ in
             if case .variable("pi") = symbol {

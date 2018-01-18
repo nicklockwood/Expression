@@ -149,7 +149,13 @@ class AnyExpressionTests: XCTestCase {
     func testEvilEdgeCase2() {
         let evilValue = Double(bitPattern: (-Double.nan).bitPattern + 2) // outside range of stored variables
         let expression = AnyExpression("evil + 5", constants: ["evil": evilValue])
-        XCTAssertEqual((try expression.evaluate() as Double).bitPattern, evilValue.bitPattern)
+        XCTAssertEqual((try expression.evaluate() as Double).bitPattern, (evilValue + 5).bitPattern)
+    }
+
+    func testEvilEdgeCase3() {
+        let evilValue = Double(bitPattern: (-Double.nan).bitPattern - 1) // outside range of stored variables
+        let expression = AnyExpression("evil + 5", constants: ["evil": evilValue])
+        XCTAssertEqual((try expression.evaluate() as Double).bitPattern, (evilValue + 5).bitPattern)
     }
 
     func testFloatNaN() {
@@ -694,32 +700,26 @@ class AnyExpressionTests: XCTestCase {
 
     func testTimesOperatorInlinedForDoubles() {
         let expression = AnyExpression("5 * foo", constants: ["foo": 5])
-        XCTAssertEqual(try expression.evaluate(), 25)
-        // Note: symbol optimization is deferred, so symbols will
-        // only be empty after the first evaluation
         XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(try expression.evaluate(), 25)
     }
 
     func testPlusOperatorInlinedForDoubles() {
         let expression = AnyExpression("5 + foo", constants: ["foo": 5])
-        XCTAssertEqual(try expression.evaluate(), 10)
-        // Note: symbol optimization is deferred, so symbols will
-        // only be empty after the first evaluation
         XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(try expression.evaluate(), 10)
     }
 
-    func testPlusOperatorNotInlinedForStrings() {
+    func testPlusOperatorInlinedForStrings() {
         let expression = AnyExpression("5 + foo", constants: ["foo": "bar"])
+        XCTAssertEqual(expression.symbols, [])
         XCTAssertEqual(try expression.evaluate(), "5bar")
-        // Note: can't optimize concat operator because it needs to store result
-        XCTAssertEqual(expression.symbols, [.infix("+")])
     }
 
-    func testBooleanAndOperatorNotInlined() {
+    func testBooleanAndOperatorInlined() {
         let expression = AnyExpression("true && false")
+        XCTAssertEqual(expression.symbols, [])
         XCTAssertFalse(try expression.evaluate())
-        // Note: can't currently optimize bool symbols because they need to store result
-        XCTAssertEqual(expression.symbols, [.infix("&&")])
     }
 
     func testPureFunctionResultNotMangledByInlining() {
@@ -728,5 +728,13 @@ class AnyExpressionTests: XCTestCase {
         ])
         XCTAssertEqual(try expression.evaluate(), "foobar")
         XCTAssertEqual(try expression.evaluate(), "foobar")
+    }
+
+    func testPureFunctionResultNotMangledByDeferredInlining() {
+        let expression = AnyExpression("foo(5 + 6)", options: .pureSymbols, symbols: [
+            .function("foo", arity: 1): { args in "foo\(args[0])" },
+        ])
+        XCTAssertEqual(try expression.evaluate(), "foo11.0")
+        XCTAssertEqual(try expression.evaluate(), "foo11.0")
     }
 }

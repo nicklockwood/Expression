@@ -247,7 +247,10 @@ public final class Expression: CustomStringConvertible {
     public struct Options: OptionSet {
 
         /// Disable optimizations such as constant substitution
-        public static let noOptimize = Options(rawValue: 1 << 1)
+        public static let noOptimize = Options(rawValue: 1 << 0)
+
+        /// Disable deferred optimizations (mutating expression after first evaluation)
+        public static let noDeferredOptimize = Options(rawValue: 1 << 1)
 
         /// Enable standard boolean operators and constants
         public static let boolSymbols = Options(rawValue: 1 << 2)
@@ -301,6 +304,8 @@ public final class Expression: CustomStringConvertible {
         evaluator: Evaluator? = nil
     ) {
         root = expression.root
+
+        // Symbols
         let boolSymbols = options.contains(.boolSymbols) ? Expression.boolSymbols : [:]
         var impureSymbols = Dictionary<Symbol, SymbolEvaluator>()
         var pureSymbols = Dictionary<Symbol, SymbolEvaluator>()
@@ -364,7 +369,7 @@ public final class Expression: CustomStringConvertible {
         }
 
         // Resolve symbols and optimize expression
-        let optimize = !options.contains(.noOptimize)
+        let deferredOptimize = !options.contains(.noOptimize) && !options.contains(.noDeferredOptimize)
         for symbol in root.symbols {
             if case let .variable(name) = symbol, let value = constants[name] {
                 pureSymbols[symbol] = { _ in value }
@@ -383,13 +388,13 @@ public final class Expression: CustomStringConvertible {
                 } else {
                     impureSymbols[symbol] = fn
                 }
-            } else if let fn = customEvaluator(for: symbol, optimizing: optimize) {
+            } else if let fn = customEvaluator(for: symbol, optimizing: deferredOptimize) {
                 impureSymbols[symbol] = fn
             } else {
                 pureSymbols[symbol] = defaultEvaluator(for: symbol) ?? errorHandler(for: symbol)
             }
         }
-        if !optimize {
+        if options.contains(.noOptimize) {
             for (symbol, evaluator) in pureSymbols {
                 impureSymbols[symbol] = evaluator
             }
