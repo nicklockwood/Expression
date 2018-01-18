@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.11.1
+//  Version 0.11.2
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -218,7 +218,7 @@ public struct AnyExpression: CustomStringConvertible {
                     pureSymbols[symbol] = { args in
                         // We potentially lose precision by converting all numbers to doubles
                         // TODO: find alternative approach that doesn't lose precision
-                        return try fn(args.map {
+                        try fn(args.map {
                             guard let doubleValue = loadNumber($0) else {
                                 _ = try AnyExpression.unwrap(load($0))
                                 try throwTypeMismatch(symbol, args.map(load))
@@ -250,7 +250,7 @@ public struct AnyExpression: CustomStringConvertible {
                 default:
                     pureSymbols[symbol] = { args in
                         // TODO: find alternative approach that doesn't lose precision
-                        return try store(fn(args.map {
+                        try store(fn(args.map {
                             guard let doubleValue = loadNumber($0) else {
                                 _ = try AnyExpression.unwrap(load($0))
                                 try throwTypeMismatch(symbol, args.map(load))

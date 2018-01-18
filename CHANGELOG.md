@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.11.2](https://github.com/nicklockwood/Expression/releases/tag/0.11.2) (2018-01-18)
+
+- Significantly improved AnyExpression evaluation performance
+- The `pureSymbols` option is now taken into account when optimizing custom AnyExpression symbols
+- Added `noDeferredOptimize` option to disable additional optimization of expressions during first evaluation
+- Updated performance tests to include tests for boolean expressions and AnyExpression
+
 ## [0.11.1](https://github.com/nicklockwood/Expression/releases/tag/0.11.1) (2018-01-17)
 
 - Fixed optimization bug where custom symbols could unexpectedly produce NaN output in AnyExpression

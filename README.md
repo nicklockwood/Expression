@@ -475,6 +475,7 @@ false
 
 * AnyExpression's `Evaluator` and `SymbolEvaluator` functions accept and return `Any` instead of `Double`
 * Boolean symbols and operators are enabled by default when you create an `AnyExpression`
+* Built-in operators and constants cannot be overridden by the custom `Evaluator` function (but can be overridden using the `symbols` dictionary)
 * There is no separate `arrays` argument for the AnyExpression constructor. If you wish to pass an array constant, you can add it to the `constants` dictionary
 
 You can create and evaluate an `AnyExpression` instance as follows:
