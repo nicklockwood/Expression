@@ -147,7 +147,7 @@ class AnyExpressionTests: XCTestCase {
     }
 
     func testEvilEdgeCase2() {
-        let evilValue = Double(bitPattern: (-Double.nan).bitPattern + 2) // outside range of stored variables
+        let evilValue = Double(bitPattern: (-Double.nan).bitPattern + 1 + 4) // outside range of stored variables
         let expression = AnyExpression("evil + 5", constants: ["evil": evilValue])
         XCTAssertEqual((try expression.evaluate() as Double).bitPattern, (evilValue + 5).bitPattern)
     }
@@ -388,9 +388,9 @@ class AnyExpressionTests: XCTestCase {
 
     func testNilString2() {
         let null: String? = nil
-        let expression1 = AnyExpression("foo == nil ? 'bar' : foo", constants: ["foo": null as Any])
+        let expression1 = AnyExpression("foo == nil ? 'bar' : 'foo'", constants: ["foo": null as Any])
         XCTAssertEqual(try expression1.evaluate(), "bar")
-        let expression2 = AnyExpression("foo == nil ? 'bar' : foo", constants: ["foo": "foo"])
+        let expression2 = AnyExpression("foo == nil ? 'bar' : 'foo'", constants: ["foo": "notnull"])
         XCTAssertEqual(try expression2.evaluate(), "foo")
     }
 
@@ -655,8 +655,12 @@ class AnyExpressionTests: XCTestCase {
 
     func testCastNSNullResultAsAny() {
         let expression = AnyExpression("null", constants: ["null": NSNull()])
-        // TODO: should this be treated as nil instead?
-        XCTAssertEqual("\(try expression.evaluate() as Any)", "\(NSNull())")
+        XCTAssertEqual("\(try expression.evaluate() as Any)", "nil")
+    }
+
+    func testCastNSNullResultAsOptionalAny() {
+        let expression = AnyExpression("nil", constants: ["null": NSNull()])
+        XCTAssertNil(try expression.evaluate() as Any?)
     }
 
     func testCastBoolResultAsOptionalBool() {

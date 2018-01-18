@@ -86,12 +86,22 @@ public struct AnyExpression: CustomStringConvertible {
         evaluator: Evaluator? = nil
     ) {
         let mask = (-Double.nan).bitPattern
+        let indexOffset = 4
+
+        func bitPattern(for index: Int) -> UInt64 {
+            assert(index > -indexOffset)
+            return UInt64(index + indexOffset) | mask
+        }
+
+        let nilIndex = bitPattern(for: -1)
+        let falseIndex = bitPattern(for: -2)
+        let trueIndex = bitPattern(for: -3)
 
         var values = [Any]()
         func store(_ value: Any) -> Double {
             switch value {
-            case is Bool:
-                break
+            case let bool as Bool:
+                return Double(bitPattern: bool ? trueIndex : falseIndex)
             case let doubleValue as Double:
                 return doubleValue
             case let floatValue as Float:
@@ -112,31 +122,30 @@ public struct AnyExpression: CustomStringConvertible {
                 if "\(value)".contains("rawValue") {
                     break
                 }
-                // TODO: implement strict bool handling instead of treating as a number
                 return Double(truncating: numberValue)
+            case _ where AnyExpression.isNil(value):
+                return Double(bitPattern: nilIndex)
             default:
                 break
             }
-            var index: Int?
-            if AnyExpression.isNil(value) {
-                index = values.index(where: { AnyExpression.isNil($0) })
-            } else if let lhs = value as? AnyHashable {
-                index = values.index(where: { $0 as? AnyHashable == lhs })
-            } else if let lhs = value as? [AnyHashable] {
-                index = values.index(where: { ($0 as? [AnyHashable]).map { $0 == lhs } ?? false })
-            }
-            if index == nil {
-                values.append(value)
-                index = values.count - 1
-            }
-            return Double(bitPattern: UInt64(index! + 1) | mask)
+            values.append(value)
+            return Double(bitPattern: bitPattern(for: values.count - 1))
         }
         func loadIfStored(_ arg: Double) -> Any? {
             let bits = arg.bitPattern
             if bits & mask == mask {
-                let index = Int(bits ^ mask) - 1
-                if values.indices.contains(index) {
-                    return values[index]
+                switch bits {
+                case nilIndex:
+                    return nil as Any? as Any
+                case trueIndex:
+                    return true
+                case falseIndex:
+                    return false
+                default:
+                    let index = Int(bits ^ mask) - indexOffset
+                    if values.indices.contains(index) {
+                        return values[index]
+                    }
                 }
             }
             return nil
@@ -146,6 +155,24 @@ public struct AnyExpression: CustomStringConvertible {
         }
         func loadNumber(_ arg: Double) -> Double? {
             return loadIfStored(arg).map { ($0 as? NSNumber).map { Double(truncating: $0) } } ?? arg
+        }
+        func equalArgs(_ lhs: Double, _ rhs: Double) -> Bool {
+            let lhs = load(lhs), rhs = load(rhs)
+            switch (lhs, rhs) {
+            case let (lhs as Double, rhs as Double):
+                return lhs == rhs
+            case let (lhs as String, rhs as String):
+                return lhs == rhs
+            case let (lhs as AnyHashable, rhs as AnyHashable):
+                return lhs == rhs
+            case let (lhs as [AnyHashable], rhs as [AnyHashable]):
+                return lhs == rhs
+            case let (lhs, rhs) where AnyExpression.isNil(lhs) && AnyExpression.isNil(rhs):
+                return true
+            default:
+                // TODO: should comparing non-equatable values be an error?
+                return false
+            }
         }
         func throwTypeMismatch(_ symbol: Symbol, _ anyArgs: [Any]) throws -> Never {
             throw Error.message("\(symbol) cannot be used with arguments of type (\(anyArgs.map { "\(type(of: $0))" }.joined(separator: ", ")))")
@@ -207,21 +234,9 @@ public struct AnyExpression: CustomStringConvertible {
                 case .variable("true"):
                     numericConstants["true"] = store(true)
                 case .infix("=="):
-                    pureSymbols[symbol] = { args in
-                        if let lhs = loadNumber(args[0]), let rhs = loadNumber(args[1]) {
-                            return store(lhs == rhs)
-                        }
-                        // Value is not a number, and NaN != NaN so we must compare bit patterns
-                        return store(args[0].bitPattern == args[1].bitPattern)
-                    }
+                    pureSymbols[symbol] = { args in store(equalArgs(args[0], args[1])) }
                 case .infix("!="):
-                    pureSymbols[symbol] = { args in
-                        if let lhs = loadNumber(args[0]), let rhs = loadNumber(args[1]) {
-                            return store(lhs != rhs)
-                        }
-                        // Value is not a number, and NaN != NaN so we must compare bit patterns
-                        return store(args[0].bitPattern != args[1].bitPattern)
-                    }
+                    pureSymbols[symbol] = { args in store(!equalArgs(args[0], args[1])) }
                 case .infix("?:"):
                     pureSymbols[symbol] = { args in
                         guard args.count == 3 else {
