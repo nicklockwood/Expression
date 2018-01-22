@@ -505,7 +505,7 @@ public final class Expression: CustomStringConvertible {
 
     /// Standard math symbols
     public static let mathSymbols: [Symbol: SymbolEvaluator] = {
-        var symbols: [Symbol: ([Double]) -> Double] = [:]
+        var symbols: [Symbol: SymbolEvaluator] = [:]
 
         // constants
         symbols[.variable("pi")] = { _ in .pi }
@@ -547,7 +547,7 @@ public final class Expression: CustomStringConvertible {
 
     /// Standard boolean symbols
     public static let boolSymbols: [Symbol: SymbolEvaluator] = {
-        var symbols: [Symbol: ([Double]) -> Double] = [:]
+        var symbols: [Symbol: SymbolEvaluator] = [:]
 
         // boolean constants
         symbols[.variable("true")] = { _ in 1 }

@@ -111,6 +111,12 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 9)
     }
 
+    func testMathConstants() {
+        let expression = AnyExpression("pi")
+        XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(try expression.evaluate(), Double.pi)
+    }
+
     func testAddNumericConstants() {
         let expression = AnyExpression("a + b", constants: [
             "a": UInt64(4),

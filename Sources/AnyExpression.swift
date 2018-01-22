@@ -93,17 +93,17 @@ public struct AnyExpression: CustomStringConvertible {
             return UInt64(index + indexOffset) | mask
         }
 
-        let nilIndex = bitPattern(for: -1)
-        let falseIndex = bitPattern(for: -2)
-        let trueIndex = bitPattern(for: -3)
+        let nilBits = bitPattern(for: -1)
+        let falseBits = bitPattern(for: -2)
+        let trueBits = bitPattern(for: -3)
 
         var values = [Any]()
         func store(_ value: Any) -> Double {
             switch value {
-            case let bool as Bool:
-                return Double(bitPattern: bool ? trueIndex : falseIndex)
             case let doubleValue as Double:
                 return doubleValue
+            case let boolValue as Bool:
+                return Double(bitPattern: boolValue ? trueBits : falseBits)
             case let floatValue as Float:
                 return Double(floatValue)
             case is Int, is UInt, is Int32, is UInt32:
@@ -113,8 +113,7 @@ public struct AnyExpression: CustomStringConvertible {
                     return Double(uintValue)
                 }
             case let intValue as Int64:
-                if intValue <= 9007199254740992 as Int64,
-                    intValue >= -9223372036854775808 as Int64 {
+                if intValue <= 9007199254740992 as Int64, intValue >= -9223372036854775808 as Int64 {
                     return Double(intValue)
                 }
             case let numberValue as NSNumber:
@@ -124,7 +123,7 @@ public struct AnyExpression: CustomStringConvertible {
                 }
                 return Double(truncating: numberValue)
             case _ where AnyExpression.isNil(value):
-                return Double(bitPattern: nilIndex)
+                return Double(bitPattern: nilBits)
             default:
                 break
             }
@@ -135,11 +134,11 @@ public struct AnyExpression: CustomStringConvertible {
             let bits = arg.bitPattern
             if bits & mask == mask {
                 switch bits {
-                case nilIndex:
+                case nilBits:
                     return nil as Any? as Any
-                case trueIndex:
+                case trueBits:
                     return true
-                case falseIndex:
+                case falseBits:
                     return false
                 default:
                     let index = Int(bits ^ mask) - indexOffset
@@ -185,8 +184,8 @@ public struct AnyExpression: CustomStringConvertible {
         // Handle string literals and constants
         var numericConstants = [String: Double]()
         var arrayConstants = [String: [Double]]()
-        var pureSymbols = [Symbol: ([Double]) throws -> Double]()
-        var impureSymbols = [Symbol: ([Any]) throws -> Any]()
+        var pureSymbols = [Symbol: Expression.SymbolEvaluator]()
+        var impureSymbols = [Symbol: SymbolEvaluator]()
         for symbol in expression.symbols {
             if case let .variable(name) = symbol, let value = constants[name] {
                 numericConstants[name] = store(value)
@@ -199,9 +198,10 @@ public struct AnyExpression: CustomStringConvertible {
                     impureSymbols[symbol] = fn
                 }
             } else if let fn = Expression.mathSymbols[symbol] {
-                if case .infix("+") = symbol {
+                switch symbol {
+                case .infix("+"):
                     pureSymbols[symbol] = { args in
-                        switch try (AnyExpression.unwrap(load(args[0])), AnyExpression.unwrap(load(args[1]))) {
+                        switch (load(args[0]), load(args[1])) {
                         case let (lhs as String, rhs):
                             return try store("\(lhs)\(AnyExpression.stringify(rhs))")
                         case let (lhs, rhs as String):
@@ -211,10 +211,14 @@ public struct AnyExpression: CustomStringConvertible {
                         case let (lhs as NSNumber, rhs as NSNumber):
                             return Double(truncating: lhs) + Double(truncating: rhs)
                         case let (lhs, rhs):
+                            _ = try AnyExpression.unwrap(lhs)
+                            _ = try AnyExpression.unwrap(rhs)
                             try throwTypeMismatch(.infix("+"), [lhs, rhs])
                         }
                     }
-                } else {
+                case .variable("pi"):
+                    numericConstants["pi"] = .pi
+                default:
                     pureSymbols[symbol] = { args in
                         // We potentially lose precision by converting all numbers to doubles
                         // TODO: find alternative approach that doesn't lose precision
