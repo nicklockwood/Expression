@@ -63,13 +63,22 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate() as String, "world")
     }
 
+    func testArrayBounds() {
+        let expression = AnyExpression("array[2]", constants: [
+            "array": ["hello", "world"],
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssert("\(error)".contains("bounds"))
+        }
+    }
+
     func testLookUpArrayWithString() {
         let expression = AnyExpression("a[b]", constants: [
             "a": ["hello", "world"],
             "b": "oops",
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("out of bounds"))
+            XCTAssert("\(error)".contains("String"))
         }
     }
 
@@ -382,6 +391,30 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertFalse(try expression.evaluate())
     }
 
+    func testCustomEqualsOperatorWhenBooleansDisabled() {
+        let expression = AnyExpression("5 == 6", options: []) { symbol, args in
+            switch symbol {
+            case .infix("=="):
+                return true
+            default:
+                return nil
+            }
+        }
+        XCTAssertTrue(try expression.evaluate())
+    }
+
+    func testCustomEqualsOperatorIgnoredWhenBooleansEnabled() {
+        let expression = AnyExpression("5 == 6") { symbol, args in
+            switch symbol {
+            case .infix("=="):
+                return true
+            default:
+                return nil
+            }
+        }
+        XCTAssertFalse(try expression.evaluate())
+    }
+
     // MARK: Optionals
 
     func testNilString() {
@@ -486,6 +519,27 @@ class AnyExpressionTests: XCTestCase {
         let expression = AnyExpression("'foo' %% 'bar'")
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssert("\(error)".contains("Undefined infix operator %%"))
+        }
+    }
+
+    func testUnknownOperatorWithEvaluator() {
+        let expression = AnyExpression("'foo' %% 'bar'") { symbol, args in nil }
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssert("\(error)".contains("Undefined infix operator %%"))
+        }
+    }
+
+    func testUnknownVariable() {
+        let expression = AnyExpression("foo")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssert("\(error)".contains("Undefined variable foo"))
+        }
+    }
+
+    func testUnknownVariableWithEvaluator() {
+        let expression = AnyExpression("foo") { symbol, args in nil }
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssert("\(error)".contains("Undefined variable foo"))
         }
     }
 
@@ -746,5 +800,16 @@ class AnyExpressionTests: XCTestCase {
         ])
         XCTAssertEqual(try expression.evaluate(), "foo11.0")
         XCTAssertEqual(try expression.evaluate(), "foo11.0")
+    }
+
+    func testVariableNotInlined() {
+        var foo = 5
+        let expression = AnyExpression("foo", options: .pureSymbols, symbols: [
+            .variable("foo"): { _ in foo },
+        ])
+        XCTAssertEqual(expression.symbols, [.variable("foo")])
+        XCTAssertEqual(try expression.evaluate(), foo)
+        foo += 1
+        XCTAssertEqual(try expression.evaluate(), foo)
     }
 }

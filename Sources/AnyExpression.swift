@@ -85,242 +85,67 @@ public struct AnyExpression: CustomStringConvertible {
         symbols: [Symbol: SymbolEvaluator] = [:],
         evaluator: Evaluator? = nil
     ) {
-        let mask = (-Double.nan).bitPattern
-        let indexOffset = 4
-
-        func bitPattern(for index: Int) -> UInt64 {
-            assert(index > -indexOffset)
-            return UInt64(index + indexOffset) | mask
-        }
-
-        let nilBits = bitPattern(for: -1)
-        let falseBits = bitPattern(for: -2)
-        let trueBits = bitPattern(for: -3)
-
-        var values = [Any]()
-        func store(_ value: Any) -> Double {
-            switch value {
-            case let doubleValue as Double:
-                return doubleValue
-            case let boolValue as Bool:
-                return Double(bitPattern: boolValue ? trueBits : falseBits)
-            case let floatValue as Float:
-                return Double(floatValue)
-            case is Int, is UInt, is Int32, is UInt32:
-                return Double(truncating: value as! NSNumber)
-            case let uintValue as UInt64:
-                if uintValue <= 9007199254740992 as UInt64 {
-                    return Double(uintValue)
-                }
-            case let intValue as Int64:
-                if intValue <= 9007199254740992 as Int64, intValue >= -9223372036854775808 as Int64 {
-                    return Double(intValue)
-                }
-            case let numberValue as NSNumber:
-                // Hack to avoid losing type info for UIFont.Weight, etc
-                if "\(value)".contains("rawValue") {
-                    break
-                }
-                return Double(truncating: numberValue)
-            case _ where AnyExpression.isNil(value):
-                return Double(bitPattern: nilBits)
-            default:
-                break
-            }
-            values.append(value)
-            return Double(bitPattern: bitPattern(for: values.count - 1))
-        }
-        func loadIfStored(_ arg: Double) -> Any? {
-            let bits = arg.bitPattern
-            if bits & mask == mask {
-                switch bits {
-                case nilBits:
-                    return nil as Any? as Any
-                case trueBits:
-                    return true
-                case falseBits:
-                    return false
-                default:
-                    let index = Int(bits ^ mask) - indexOffset
-                    if values.indices.contains(index) {
-                        return values[index]
-                    }
-                }
-            }
-            return nil
-        }
-        func load(_ arg: Double) -> Any {
-            return loadIfStored(arg) ?? arg
-        }
-        func loadNumber(_ arg: Double) -> Double? {
-            return loadIfStored(arg).map { ($0 as? NSNumber).map { Double(truncating: $0) } } ?? arg
-        }
-        func equalArgs(_ lhs: Double, _ rhs: Double) -> Bool {
-            let lhs = load(lhs), rhs = load(rhs)
-            switch (lhs, rhs) {
-            case let (lhs as Double, rhs as Double):
-                return lhs == rhs
-            case let (lhs as String, rhs as String):
-                return lhs == rhs
-            case let (lhs as AnyHashable, rhs as AnyHashable):
-                return lhs == rhs
-            case let (lhs as [AnyHashable], rhs as [AnyHashable]):
-                return lhs == rhs
-            case let (lhs, rhs) where AnyExpression.isNil(lhs) && AnyExpression.isNil(rhs):
-                return true
-            default:
-                // TODO: should comparing non-equatable values be an error?
-                return false
-            }
-        }
-        func throwTypeMismatch(_ symbol: Symbol, _ anyArgs: [Any]) throws -> Never {
-            throw Error.message("\(symbol) cannot be used with arguments of type (\(anyArgs.map { "\(type(of: $0))" }.joined(separator: ", ")))")
-        }
-
         // Options
         let usePureSymbols = options.contains(.pureSymbols)
-        let boolSymbols = options.contains(.boolSymbols) ? Expression.boolSymbols : [:]
+        let useBoolSymbols = options.contains(.boolSymbols)
 
-        // Handle string literals and constants
-        var numericConstants = [String: Double]()
-        var arrayConstants = [String: [Double]]()
-        var pureSymbols = [Symbol: Expression.SymbolEvaluator]()
-        var impureSymbols = [Symbol: SymbolEvaluator]()
-        for symbol in expression.symbols {
-            if case let .variable(name) = symbol, let value = constants[name] {
-                numericConstants[name] = store(value)
-            } else if let fn = symbols[symbol] {
-                if usePureSymbols {
-                    pureSymbols[symbol] = { args in
-                        try store(fn(args.map(load)))
-                    }
-                } else {
-                    impureSymbols[symbol] = fn
-                }
-            } else if let fn = Expression.mathSymbols[symbol] {
-                switch symbol {
-                case .infix("+"):
-                    pureSymbols[symbol] = { args in
-                        switch (load(args[0]), load(args[1])) {
-                        case let (lhs as String, rhs):
-                            return try store("\(lhs)\(AnyExpression.stringify(rhs))")
-                        case let (lhs, rhs as String):
-                            return try store("\(AnyExpression.stringify(lhs))\(rhs)")
-                        case let (lhs as Double, rhs as Double):
-                            return lhs + rhs
-                        case let (lhs as NSNumber, rhs as NSNumber):
-                            return Double(truncating: lhs) + Double(truncating: rhs)
-                        case let (lhs, rhs):
-                            _ = try AnyExpression.unwrap(lhs)
-                            _ = try AnyExpression.unwrap(rhs)
-                            try throwTypeMismatch(.infix("+"), [lhs, rhs])
-                        }
-                    }
-                case .variable("pi"):
-                    numericConstants["pi"] = .pi
-                default:
-                    pureSymbols[symbol] = { args in
-                        // We potentially lose precision by converting all numbers to doubles
-                        // TODO: find alternative approach that doesn't lose precision
-                        try fn(args.map {
-                            guard let doubleValue = loadNumber($0) else {
-                                _ = try AnyExpression.unwrap(load($0))
-                                try throwTypeMismatch(symbol, args.map(load))
-                            }
-                            return doubleValue
-                        })
-                    }
-                }
-            } else if let fn = boolSymbols[symbol] {
-                switch symbol {
-                case .variable("false"):
-                    numericConstants["false"] = store(false)
-                case .variable("true"):
-                    numericConstants["true"] = store(true)
-                case .infix("=="):
-                    pureSymbols[symbol] = { args in store(equalArgs(args[0], args[1])) }
-                case .infix("!="):
-                    pureSymbols[symbol] = { args in store(!equalArgs(args[0], args[1])) }
-                case .infix("?:"):
-                    pureSymbols[symbol] = { args in
-                        guard args.count == 3 else {
-                            throw Error.undefinedSymbol(symbol)
-                        }
-                        if let number = loadNumber(args[0]) {
-                            return number != 0 ? args[1] : args[2]
-                        }
-                        try throwTypeMismatch(symbol, args.map(load))
-                    }
-                default:
-                    pureSymbols[symbol] = { args in
-                        // TODO: find alternative approach that doesn't lose precision
-                        try store(fn(args.map {
-                            guard let doubleValue = loadNumber($0) else {
-                                _ = try AnyExpression.unwrap(load($0))
-                                try throwTypeMismatch(symbol, args.map(load))
-                            }
-                            return doubleValue
-                        }) != 0)
-                    }
-                }
-            } else {
-                switch symbol {
-                case .variable("nil"):
-                    numericConstants["nil"] = store(nil as Any? as Any)
-                case let .variable(name):
-                    if name.count >= 2, "'\"".contains(name.first!), name.last == name.first {
-                        numericConstants[name] = store(String(name.dropFirst().dropLast()))
-                    }
-                case let .array(name):
-                    if let array = constants[name] as? [Any] {
-                        arrayConstants[name] = array.map { store($0) }
-                    }
-                case .infix("??"):
-                    pureSymbols[symbol] = { args in
-                        let lhs = load(args[0])
-                        return AnyExpression.isNil(lhs) ? args[1] : args[0]
-                    }
-                default:
-                    break
-                }
-            }
-        }
-
-        // Set description based on the parsed expression, prior to
-        // peforming optimizations. This avoids issues with inlined
-        // constants and string literals being converted to `nan`
-        description = expression.description
-
-        // Build Evaluator
-        let needsEvaluator = evaluator != nil || !impureSymbols.isEmpty
-        let numericEvaluator: Expression.Evaluator? = needsEvaluator ? { symbol, args in
-            let anyArgs = args.map(load)
-            if let value = try impureSymbols[symbol]?(anyArgs) ?? evaluator?(symbol, anyArgs) {
-                return store(value)
-            }
-            return nil
-        } : nil
-
-        // Build Expression
-        let expression = Expression(
+        self.init(
             expression,
-            options: options.subtracting(.boolSymbols).union([.pureSymbols, .noDeferredOptimize]),
-            constants: numericConstants,
-            arrays: arrayConstants,
-            symbols: pureSymbols,
-            evaluator: numericEvaluator
+            impureSymbols: { symbol in
+                if let fn = symbols[symbol] {
+                    if case .variable = symbol {
+                        return fn
+                    } else if usePureSymbols {
+                        return nil
+                    } else {
+                        return fn
+                    }
+                } else if let evaluator = evaluator {
+                    switch symbol {
+                    case .variable("nil"), .infix("??"),
+                         _ where Expression.mathSymbols[symbol] != nil,
+                         _ where useBoolSymbols && Expression.boolSymbols[symbol] != nil:
+                        return nil
+                    case let .variable(name) where
+                        name.count >= 2 && "'\"".contains(name.first!) && name.last == name.first:
+                        return nil
+                    default:
+                        return { args in
+                            guard let value = try evaluator(symbol, args) else {
+                                throw Error.undefinedSymbol(symbol)
+                            }
+                            return value
+                        }
+                    }
+                } else if !useBoolSymbols, Expression.boolSymbols[symbol] != nil {
+                    return { _ in throw Error.undefinedSymbol(symbol) }
+                } else {
+                    return nil
+                }
+            },
+            pureSymbols: { symbol in
+                if case let .variable(name) = symbol {
+                    if let value = constants[name] {
+                        return { _ in value }
+                    }
+                } else if case let .array(name) = symbol {
+                    if let array = constants[name] as? [Any] {
+                        return { args in
+                            guard let number = args[0] as? NSNumber else {
+                                try AnyExpression.throwTypeMismatch(symbol, args)
+                            }
+                            guard let index = Int(exactly: number), array.indices.contains(index) else {
+                                throw Error.arrayBounds(symbol, Double(truncating: number))
+                            }
+                            return array[index]
+                        }
+                    }
+                } else if usePureSymbols {
+                    return symbols[symbol]
+                }
+                return nil
+            }
         )
-
-        // These are constant values that won't change between evaluations
-        // and won't be re-stored, so must not be cleared
-        let literals = values
-
-        self.evaluator = {
-            defer { values = literals }
-            let value = try expression.evaluate()
-            return load(value)
-        }
-        self.expression = expression
     }
 
     /// Alternative constructor for advanced users
@@ -420,9 +245,6 @@ public struct AnyExpression: CustomStringConvertible {
                 return false
             }
         }
-        func throwTypeMismatch(_ symbol: Symbol, _ anyArgs: [Any]) throws -> Never {
-            throw Error.message("\(symbol) cannot be used with arguments of type (\(anyArgs.map { "\(type(of: $0))" }.joined(separator: ", ")))")
-        }
 
         // Set description based on the parsed expression, prior to
         // peforming optimizations. This avoids issues with inlined
@@ -434,12 +256,27 @@ public struct AnyExpression: CustomStringConvertible {
             expression,
             impureSymbols: { symbol in
                 impureSymbols(symbol).map { fn in
-                    { args in try store(fn(args.map(load))) }
+                    switch symbol {
+                    case .variable, .function(_, arity: 0):
+                        return { _ in try store(fn([])) }
+                    default:
+                        return { try store(fn($0.map(load))) }
+                    }
                 }
             },
             pureSymbols: { symbol in
                 if let fn = pureSymbols(symbol) {
-                    return { try store(fn($0.map(load))) }
+                    switch symbol {
+                    case .variable, .function(_, arity: 0):
+                        do {
+                            let value = try store(fn([]))
+                            return { _ in value }
+                        } catch {
+                            return { _ in throw error }
+                        }
+                    default:
+                        return { try store(fn($0.map(load))) }
+                    }
                 } else if let fn = Expression.mathSymbols[symbol] {
                     switch symbol {
                     case .infix("+"):
@@ -456,7 +293,7 @@ public struct AnyExpression: CustomStringConvertible {
                             case let (lhs, rhs):
                                 _ = try AnyExpression.unwrap(lhs)
                                 _ = try AnyExpression.unwrap(rhs)
-                                try throwTypeMismatch(symbol, [lhs, rhs])
+                                try AnyExpression.throwTypeMismatch(symbol, [lhs, rhs])
                             }
                         }
                     case .variable, .function(_, arity: 0):
@@ -468,7 +305,7 @@ public struct AnyExpression: CustomStringConvertible {
                             try fn(args.map {
                                 guard let doubleValue = loadNumber($0) else {
                                     _ = try AnyExpression.unwrap(load($0))
-                                    try throwTypeMismatch(symbol, args.map(load))
+                                    try AnyExpression.throwTypeMismatch(symbol, args.map(load))
                                 }
                                 return doubleValue
                             })
@@ -492,7 +329,7 @@ public struct AnyExpression: CustomStringConvertible {
                             if let number = loadNumber(args[0]) {
                                 return number != 0 ? args[1] : args[2]
                             }
-                            try throwTypeMismatch(symbol, args.map(load))
+                            try AnyExpression.throwTypeMismatch(symbol, args.map(load))
                         }
                     default:
                         return { args in
@@ -500,7 +337,7 @@ public struct AnyExpression: CustomStringConvertible {
                             try store(fn(args.map {
                                 guard let doubleValue = loadNumber($0) else {
                                     _ = try AnyExpression.unwrap(load($0))
-                                    try throwTypeMismatch(symbol, args.map(load))
+                                    try AnyExpression.throwTypeMismatch(symbol, args.map(load))
                                 }
                                 return doubleValue
                             }) != 0)
@@ -517,7 +354,7 @@ public struct AnyExpression: CustomStringConvertible {
                         }
                     case let .variable(name):
                         guard name.count >= 2, "'\"".contains(name.first!), name.last == name.first else {
-                            fallthrough
+                            return nil
                         }
                         let stringRef = store(String(name.dropFirst().dropLast()))
                         return { _ in stringRef }
@@ -560,6 +397,11 @@ public struct AnyExpression: CustomStringConvertible {
 
 // Private API
 private extension AnyExpression {
+
+    // Throw a type mismatch error
+    static func throwTypeMismatch(_ symbol: Symbol, _ args: [Any]) throws -> Never {
+        throw Error.message("\(symbol) cannot be used with arguments of type (\(args.map { "\(type(of: $0))" }.joined(separator: ", ")))")
+    }
 
     // Convert any object to a string
     static func stringify(_ value: Any) throws -> String {
