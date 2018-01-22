@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.11.3](https://github.com/nicklockwood/Expression/releases/tag/0.11.3) (2018-01-22)
+
+- Added new initializers for Expression and AnyExpression to simplify and improve performance when using advanced features
+- Attempting to index an array with a non-numeric type in AnyExpression now produces a more meaningful error message
+- Fixed optimization bug when using the built-in `pi` constant
+
 ## [0.11.2](https://github.com/nicklockwood/Expression/releases/tag/0.11.2) (2018-01-18)
 
 - Significantly improved AnyExpression evaluation performance

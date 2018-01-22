@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.11.2
+//  Version 0.11.3
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -409,7 +409,7 @@ public final class Expression: CustomStringConvertible {
         )
     }
 
-    /// Alternative constructor for advanced users
+    /// Alternative constructor for advanced usage
     /// Allows for dynamic symbol lookup or generation without any performance overhead
     /// Note that both math and boolean symbols are enabled by default - to disable them
     /// return `{ _ in throw Expression.Error.undefinedSymbol(symbol) }` from your lookup function

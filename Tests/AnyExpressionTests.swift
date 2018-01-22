@@ -392,7 +392,7 @@ class AnyExpressionTests: XCTestCase {
     }
 
     func testCustomEqualsOperatorWhenBooleansDisabled() {
-        let expression = AnyExpression("5 == 6", options: []) { symbol, args in
+        let expression = AnyExpression("5 == 6", options: []) { symbol, _ in
             switch symbol {
             case .infix("=="):
                 return true
@@ -404,7 +404,7 @@ class AnyExpressionTests: XCTestCase {
     }
 
     func testCustomEqualsOperatorIgnoredWhenBooleansEnabled() {
-        let expression = AnyExpression("5 == 6") { symbol, args in
+        let expression = AnyExpression("5 == 6") { symbol, _ in
             switch symbol {
             case .infix("=="):
                 return true
@@ -523,7 +523,7 @@ class AnyExpressionTests: XCTestCase {
     }
 
     func testUnknownOperatorWithEvaluator() {
-        let expression = AnyExpression("'foo' %% 'bar'") { symbol, args in nil }
+        let expression = AnyExpression("'foo' %% 'bar'") { _, _ in nil }
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssert("\(error)".contains("Undefined infix operator %%"))
         }
@@ -537,7 +537,7 @@ class AnyExpressionTests: XCTestCase {
     }
 
     func testUnknownVariableWithEvaluator() {
-        let expression = AnyExpression("foo") { symbol, args in nil }
+        let expression = AnyExpression("foo") { _, _ in nil }
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssert("\(error)".contains("Undefined variable foo"))
         }
@@ -656,6 +656,19 @@ class AnyExpressionTests: XCTestCase {
         let expression = AnyExpression("nil ?? 'foo'", symbols: [
             .infix("??"): { _ in throw AnyExpression.Error.message("Disabled") },
         ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssert("\(error)".contains("Disabled"))
+        }
+    }
+
+    func testDisableVariableSymbol() {
+        let expression = AnyExpression(
+            Expression.parse("foo"),
+            impureSymbols: { _ in nil },
+            pureSymbols: { _ in
+                { _ in throw AnyExpression.Error.message("Disabled") }
+            }
+        )
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssert("\(error)".contains("Disabled"))
         }
@@ -811,5 +824,43 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), foo)
         foo += 1
         XCTAssertEqual(try expression.evaluate(), foo)
+    }
+
+    // MARK: Symbol precedence
+
+    func testConstantTakesPrecedenceOverSymbol() {
+        let expression = AnyExpression(
+            "foo",
+            constants: ["foo": "foo"],
+            symbols: [.variable("foo"): { _ in "bar" }]
+        )
+        XCTAssertEqual(try expression.evaluate(), "foo")
+    }
+
+    func testArrayConstantTakesPrecedenceOverSymbol() {
+        let expression = AnyExpression(
+            "foo[0]",
+            constants: ["foo": ["foo"]],
+            symbols: [.array("foo"): { _ in "bar" }]
+        )
+        XCTAssertEqual(try expression.evaluate(), "foo")
+    }
+
+    func testConstantTakesPrecedenceOverEvaluator() {
+        let expression = AnyExpression(
+            "foo",
+            constants: ["foo": "foo"],
+            evaluator: { symbol, args in "bar" }
+        )
+        XCTAssertEqual(try expression.evaluate(), "foo")
+    }
+
+    func testArrayConstantTakesPrecedenceOverEvaluator() {
+        let expression = AnyExpression(
+            "foo[0]",
+            constants: ["foo": ["foo"]],
+            evaluator: { symbol, args in "bar" }
+        )
+        XCTAssertEqual(try expression.evaluate(), "foo")
     }
 }

@@ -677,6 +677,13 @@ class ExpressionTests: XCTestCase {
         }
     }
 
+    func testEmptyParens() {
+        let expression = Expression("foo(")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken(""))
+        }
+    }
+
     func testMissingRHS() {
         let expression = Expression("1 + ")
         XCTAssertThrowsError(try expression.evaluate()) { error in
@@ -1821,6 +1828,44 @@ class ExpressionTests: XCTestCase {
     func testEverythingTakesPrecedenceOverComma() {
         let expression = Expression("3 * 2, 2 * 3", symbols: [.infix(","): { $0[0] + $0[1] }])
         XCTAssertEqual(try expression.evaluate(), 12)
+    }
+
+    // MARK: Symbol precedence
+
+    func testConstantTakesPrecedenceOverSymbol() {
+        let expression = Expression(
+            "foo",
+            constants: ["foo": 5],
+            symbols: [.variable("foo"): { _ in 6 }]
+        )
+        XCTAssertEqual(try expression.evaluate(), 5)
+    }
+
+    func testArrayConstantTakesPrecedenceOverSymbol() {
+        let expression = Expression(
+            "foo[0]",
+            arrays: ["foo": [5]],
+            symbols: [.array("foo"): { _ in 6 }]
+        )
+        XCTAssertEqual(try expression.evaluate(), 5)
+    }
+
+    func testConstantTakesPrecedenceOverEvaluator() {
+        let expression = Expression(
+            "foo",
+            constants: ["foo": 5],
+            evaluator: { symbol, args in 6 }
+        )
+        XCTAssertEqual(try expression.evaluate(), 5)
+    }
+
+    func testArrayConstantTakesPrecedenceOverEvaluator() {
+        let expression = Expression(
+            "foo[0]",
+            arrays: ["foo": [5]],
+            evaluator: { symbol, args in 6 }
+        )
+        XCTAssertEqual(try expression.evaluate(), 5)
     }
 
     // MARK: Cache

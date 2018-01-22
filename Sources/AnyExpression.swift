@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.11.2
+//  Version 0.11.3
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -92,23 +92,27 @@ public struct AnyExpression: CustomStringConvertible {
         self.init(
             expression,
             impureSymbols: { symbol in
-                if let fn = symbols[symbol] {
-                    if case .variable = symbol {
-                        return fn
-                    } else if usePureSymbols {
+                switch symbol {
+                case let .variable(name), let .array(name):
+                    if constants[name] != nil {
                         return nil
-                    } else {
-                        return fn
+                    } else if let fn = symbols[symbol] {
+                        return fn // Variables and array symbols are never pure
                     }
-                } else if let evaluator = evaluator {
+                default:
+                    if let fn = symbols[symbol] {
+                        return usePureSymbols ? nil : fn
+                    }
+                }
+                if let evaluator = evaluator {
                     switch symbol {
                     case .variable("nil"), .infix("??"),
                          _ where Expression.mathSymbols[symbol] != nil,
                          _ where useBoolSymbols && Expression.boolSymbols[symbol] != nil:
-                        return nil
-                    case let .variable(name) where
-                        name.count >= 2 && "'\"".contains(name.first!) && name.last == name.first:
-                        return nil
+                        return nil // Standard library
+                    case let .variable(name) where constants[name] != nil ||
+                            name.first == "\"" || (name.first == "'" && name.last == "'"):
+                        return nil // String
                     default:
                         return { args in
                             guard let value = try evaluator(symbol, args) else {
@@ -117,18 +121,16 @@ public struct AnyExpression: CustomStringConvertible {
                             return value
                         }
                     }
-                } else if !useBoolSymbols, Expression.boolSymbols[symbol] != nil {
-                    return { _ in throw Error.undefinedSymbol(symbol) }
-                } else {
-                    return nil
                 }
+                return nil
             },
             pureSymbols: { symbol in
-                if case let .variable(name) = symbol {
+                switch symbol {
+                case let .variable(name):
                     if let value = constants[name] {
                         return { _ in value }
                     }
-                } else if case let .array(name) = symbol {
+                case let .array(name):
                     if let array = constants[name] as? [Any] {
                         return { args in
                             guard let number = args[0] as? NSNumber else {
@@ -140,15 +142,17 @@ public struct AnyExpression: CustomStringConvertible {
                             return array[index]
                         }
                     }
-                } else if usePureSymbols {
-                    return symbols[symbol]
+                default:
+                    if usePureSymbols {
+                        return symbols[symbol]
+                    }
                 }
                 return nil
             }
         )
     }
 
-    /// Alternative constructor for advanced users
+    /// Alternative constructor for advanced usage
     /// Allows for dynamic symbol lookup or generation without any performance overhead
     /// Note that standard library symbols are all enabled by default - to disable them
     /// return `{ _ in throw AnyExpression.Error.undefinedSymbol(symbol) }` from your lookup function
@@ -369,7 +373,7 @@ public struct AnyExpression: CustomStringConvertible {
         // and won't be re-stored, so must not be cleared
         let literals = values
 
-        self.evaluator = {
+        evaluator = {
             defer { values = literals }
             let value = try expression.evaluate()
             return load(value)
@@ -427,8 +431,6 @@ private extension AnyExpression {
             return value
         }
         switch T.self {
-        case let type as _Optional.Type where anyValue is NSNull:
-            return type.nullValue as? T
         case is Double.Type, is Optional<Double>.Type:
             if let value = anyValue as? NSNumber {
                 return Double(truncating: value) as? T
@@ -482,15 +484,12 @@ private extension AnyExpression {
 // Used to test if a value is Optional
 private protocol _Optional {
     var value: Any? { get }
-    static var nullValue: Any { get }
 }
 
 extension Optional: _Optional {
     fileprivate var value: Any? { return self }
-    static var nullValue: Any { return none as Any }
 }
 
 extension ImplicitlyUnwrappedOptional: _Optional {
     fileprivate var value: Any? { return self }
-    static var nullValue: Any { return none as Any }
 }
