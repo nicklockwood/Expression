@@ -332,7 +332,10 @@ public final class Expression: CustomStringConvertible {
                     // Rewrite expression to skip custom evaluator
                     pureSymbols[symbol] = customEvaluator(for: symbol, optimizing: false)
                     impureSymbols.removeValue(forKey: symbol)
-                    self.root = self.root.optimized(withSymbols: impureSymbols, pureSymbols: pureSymbols)
+                    self.root = self.root.optimized(
+                        withImpureSymbols: { impureSymbols[$0] },
+                        pureSymbols: { pureSymbols[$0] }
+                    )
                     return try fn(args)
                 } : fn
             }()
@@ -400,7 +403,25 @@ public final class Expression: CustomStringConvertible {
             }
             pureSymbols.removeAll()
         }
-        root = root.optimized(withSymbols: impureSymbols, pureSymbols: pureSymbols)
+        root = root.optimized(
+            withImpureSymbols: { impureSymbols[$0] },
+            pureSymbols: { pureSymbols[$0] }
+        )
+    }
+
+    /// Alternative constructor for advanced users
+    /// Allows for dynamic symbol lookup or generation without any performance overhead
+    /// Note that both math and boolean symbols are enabled by default - to disable them
+    /// return `{ _ in throw Expression.Error.undefinedSymbol(symbol) }` from your lookup function
+    public init(
+        _ expression: ParsedExpression,
+        impureSymbols: (Symbol) -> SymbolEvaluator?,
+        pureSymbols: (Symbol) -> SymbolEvaluator?
+    ) {
+        root = expression.root.optimized(
+            withImpureSymbols: impureSymbols,
+            pureSymbols: { pureSymbols($0) ?? Expression.mathSymbols[$0] ?? Expression.boolSymbols[$0] }
+        )
     }
 
     /// Verify that the string is a valid identifier
@@ -720,15 +741,24 @@ private enum Subexpression: CustomStringConvertible {
         }
     }
 
-    func optimized(withSymbols impureSymbols: [Expression.Symbol: Expression.SymbolEvaluator],
-                   pureSymbols: [Expression.Symbol: Expression.SymbolEvaluator]) -> Subexpression {
+    func optimized(
+        withImpureSymbols impureSymbols: (Expression.Symbol) -> Expression.SymbolEvaluator?,
+        pureSymbols: (Expression.Symbol) -> Expression.SymbolEvaluator?
+    ) -> Subexpression {
 
         guard case .symbol(let symbol, var args, _) = self else {
             return self
         }
-        args = args.map { $0.optimized(withSymbols: impureSymbols, pureSymbols: pureSymbols) }
-        guard let fn = pureSymbols[symbol] else {
-            return .symbol(symbol, args, impureSymbols[symbol]!)
+        args = args.map {
+            $0.optimized(withImpureSymbols: impureSymbols, pureSymbols: pureSymbols)
+        }
+        if let fn = impureSymbols(symbol) {
+            return .symbol(symbol, args, fn)
+        }
+        guard let fn = pureSymbols(symbol) else {
+            return .symbol(symbol, args, { _ in
+                throw Expression.Error.undefinedSymbol(symbol)
+            })
         }
         var argValues = [Double]()
         for arg in args {
