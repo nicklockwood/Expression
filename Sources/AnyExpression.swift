@@ -323,6 +323,223 @@ public struct AnyExpression: CustomStringConvertible {
         self.expression = expression
     }
 
+    /// Alternative constructor for advanced users
+    /// Allows for dynamic symbol lookup or generation without any performance overhead
+    /// Note that standard library symbols are all enabled by default - to disable them
+    /// return `{ _ in throw AnyExpression.Error.undefinedSymbol(symbol) }` from your lookup function
+    public init(
+        _ expression: ParsedExpression,
+        impureSymbols: (Symbol) -> SymbolEvaluator?,
+        pureSymbols: (Symbol) -> SymbolEvaluator?
+    ) {
+        let mask = (-Double.nan).bitPattern
+        let indexOffset = 4
+
+        func bitPattern(for index: Int) -> UInt64 {
+            assert(index > -indexOffset)
+            return UInt64(index + indexOffset) | mask
+        }
+
+        let nilBits = bitPattern(for: -1)
+        let falseBits = bitPattern(for: -2)
+        let trueBits = bitPattern(for: -3)
+
+        var values = [Any]()
+        func store(_ value: Any) -> Double {
+            switch value {
+            case let doubleValue as Double:
+                return doubleValue
+            case let boolValue as Bool:
+                return Double(bitPattern: boolValue ? trueBits : falseBits)
+            case let floatValue as Float:
+                return Double(floatValue)
+            case is Int, is UInt, is Int32, is UInt32:
+                return Double(truncating: value as! NSNumber)
+            case let uintValue as UInt64:
+                if uintValue <= 9007199254740992 as UInt64 {
+                    return Double(uintValue)
+                }
+            case let intValue as Int64:
+                if intValue <= 9007199254740992 as Int64, intValue >= -9223372036854775808 as Int64 {
+                    return Double(intValue)
+                }
+            case let numberValue as NSNumber:
+                // Hack to avoid losing type info for UIFont.Weight, etc
+                if "\(value)".contains("rawValue") {
+                    break
+                }
+                return Double(truncating: numberValue)
+            case _ where AnyExpression.isNil(value):
+                return Double(bitPattern: nilBits)
+            default:
+                break
+            }
+            values.append(value)
+            return Double(bitPattern: bitPattern(for: values.count - 1))
+        }
+        func loadIfStored(_ arg: Double) -> Any? {
+            let bits = arg.bitPattern
+            if bits & mask == mask {
+                switch bits {
+                case nilBits:
+                    return nil as Any? as Any
+                case trueBits:
+                    return true
+                case falseBits:
+                    return false
+                default:
+                    let index = Int(bits ^ mask) - indexOffset
+                    if values.indices.contains(index) {
+                        return values[index]
+                    }
+                }
+            }
+            return nil
+        }
+        func load(_ arg: Double) -> Any {
+            return loadIfStored(arg) ?? arg
+        }
+        func loadNumber(_ arg: Double) -> Double? {
+            return loadIfStored(arg).map { ($0 as? NSNumber).map { Double(truncating: $0) } } ?? arg
+        }
+        func equalArgs(_ lhs: Double, _ rhs: Double) -> Bool {
+            let lhs = load(lhs), rhs = load(rhs)
+            switch (lhs, rhs) {
+            case let (lhs as Double, rhs as Double):
+                return lhs == rhs
+            case let (lhs as String, rhs as String):
+                return lhs == rhs
+            case let (lhs as AnyHashable, rhs as AnyHashable):
+                return lhs == rhs
+            case let (lhs as [AnyHashable], rhs as [AnyHashable]):
+                return lhs == rhs
+            case let (lhs, rhs) where AnyExpression.isNil(lhs) && AnyExpression.isNil(rhs):
+                return true
+            default:
+                // TODO: should comparing non-equatable values be an error?
+                return false
+            }
+        }
+        func throwTypeMismatch(_ symbol: Symbol, _ anyArgs: [Any]) throws -> Never {
+            throw Error.message("\(symbol) cannot be used with arguments of type (\(anyArgs.map { "\(type(of: $0))" }.joined(separator: ", ")))")
+        }
+
+        // Set description based on the parsed expression, prior to
+        // peforming optimizations. This avoids issues with inlined
+        // constants and string literals being converted to `nan`
+        description = expression.description
+
+        // Build Expression
+        let expression = Expression(
+            expression,
+            impureSymbols: { symbol in
+                impureSymbols(symbol).map { fn in
+                    { args in try store(fn(args.map(load))) }
+                }
+            },
+            pureSymbols: { symbol in
+                if let fn = pureSymbols(symbol) {
+                    return { try store(fn($0.map(load))) }
+                } else if let fn = Expression.mathSymbols[symbol] {
+                    switch symbol {
+                    case .infix("+"):
+                        return { args in
+                            switch (load(args[0]), load(args[1])) {
+                            case let (lhs as String, rhs):
+                                return try store("\(lhs)\(AnyExpression.stringify(rhs))")
+                            case let (lhs, rhs as String):
+                                return try store("\(AnyExpression.stringify(lhs))\(rhs)")
+                            case let (lhs as Double, rhs as Double):
+                                return lhs + rhs
+                            case let (lhs as NSNumber, rhs as NSNumber):
+                                return Double(truncating: lhs) + Double(truncating: rhs)
+                            case let (lhs, rhs):
+                                _ = try AnyExpression.unwrap(lhs)
+                                _ = try AnyExpression.unwrap(rhs)
+                                try throwTypeMismatch(symbol, [lhs, rhs])
+                            }
+                        }
+                    case .variable, .function(_, arity: 0):
+                        return fn
+                    default:
+                        return { args in
+                            // We potentially lose precision by converting all numbers to doubles
+                            // TODO: find alternative approach that doesn't lose precision
+                            try fn(args.map {
+                                guard let doubleValue = loadNumber($0) else {
+                                    _ = try AnyExpression.unwrap(load($0))
+                                    try throwTypeMismatch(symbol, args.map(load))
+                                }
+                                return doubleValue
+                            })
+                        }
+                    }
+                } else if let fn = Expression.boolSymbols[symbol] {
+                    switch symbol {
+                    case .variable("false"):
+                        return { _ in Double(bitPattern: falseBits) }
+                    case .variable("true"):
+                        return { _ in Double(bitPattern: trueBits) }
+                    case .infix("=="):
+                        return { Double(bitPattern: equalArgs($0[0], $0[1]) ? trueBits : falseBits) }
+                    case .infix("!="):
+                        return { Double(bitPattern: equalArgs($0[0], $0[1]) ? falseBits : trueBits) }
+                    case .infix("?:"):
+                        return { args in
+                            guard args.count == 3 else {
+                                throw Error.undefinedSymbol(symbol)
+                            }
+                            if let number = loadNumber(args[0]) {
+                                return number != 0 ? args[1] : args[2]
+                            }
+                            try throwTypeMismatch(symbol, args.map(load))
+                        }
+                    default:
+                        return { args in
+                            // TODO: find alternative approach that doesn't lose precision
+                            try store(fn(args.map {
+                                guard let doubleValue = loadNumber($0) else {
+                                    _ = try AnyExpression.unwrap(load($0))
+                                    try throwTypeMismatch(symbol, args.map(load))
+                                }
+                                return doubleValue
+                            }) != 0)
+                        }
+                    }
+                } else {
+                    switch symbol {
+                    case .variable("nil"):
+                        return { _ in Double(bitPattern: nilBits) }
+                    case .infix("??"):
+                        return { args in
+                            let lhs = load(args[0])
+                            return AnyExpression.isNil(lhs) ? args[1] : args[0]
+                        }
+                    case let .variable(name):
+                        guard name.count >= 2, "'\"".contains(name.first!), name.last == name.first else {
+                            fallthrough
+                        }
+                        let stringRef = store(String(name.dropFirst().dropLast()))
+                        return { _ in stringRef }
+                    default:
+                        return nil
+                    }
+                }
+            }
+        )
+
+        // These are constant values that won't change between evaluations
+        // and won't be re-stored, so must not be cleared
+        let literals = values
+
+        self.evaluator = {
+            defer { values = literals }
+            let value = try expression.evaluate()
+            return load(value)
+        }
+        self.expression = expression
+    }
+
     /// Evaluate the expression
     public func evaluate<T>() throws -> T {
         guard let value: T = try AnyExpression.cast(evaluator()) else {
