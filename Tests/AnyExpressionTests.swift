@@ -32,6 +32,16 @@
 @testable import Expression
 import XCTest
 
+private struct HashableStruct: Hashable {
+    let foo: Int
+    var hashValue: Int {
+        return foo.hashValue
+    }
+    static func == (lhs: HashableStruct, rhs: HashableStruct) -> Bool {
+        return lhs.foo == rhs.foo
+    }
+}
+
 class AnyExpressionTests: XCTestCase {
 
     // MARK: Description
@@ -94,14 +104,6 @@ class AnyExpressionTests: XCTestCase {
         let expression = AnyExpression("a == b", constants: [
             "a": ["hello", "world"],
             "b": ["world", "hello"],
-        ])
-        XCTAssertFalse(try expression.evaluate())
-    }
-
-    func testCompareStringAndArray() {
-        let expression = AnyExpression("a == b", constants: [
-            "a": ["world", "hello"],
-            "b": "hello world",
         ])
         XCTAssertFalse(try expression.evaluate())
     }
@@ -322,7 +324,7 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertFalse(try expression4.evaluate())
     }
 
-    func testEquateObjects() {
+    func testEquateNSObjects() {
         let object1 = NSObject()
         let object2 = NSObject()
         let constants: [String: Any] = [
@@ -336,6 +338,72 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertTrue(try expression2.evaluate())
         let expression3 = AnyExpression("b == c", constants: constants)
         XCTAssertTrue(try expression3.evaluate())
+    }
+
+    func testEquateArrays() {
+        let constants: [String: Any] = [
+            "a": ["hello", "world"],
+            "b": ["goodbye", "world"],
+            "c": ["goodbye", "world"],
+        ]
+        let expression1 = AnyExpression("a == b", constants: constants)
+        XCTAssertFalse(try expression1.evaluate())
+        let expression2 = AnyExpression("a != b", constants: constants)
+        XCTAssertTrue(try expression2.evaluate())
+        let expression3 = AnyExpression("b == c", constants: constants)
+        XCTAssertTrue(try expression3.evaluate())
+    }
+
+    func testEquateDictionaries() {
+        let constants: [String: Any] = [
+            "a": ["hello": "world"],
+            "b": ["goodbye": "world"],
+            "c": ["goodbye": "world"],
+        ]
+        let expression1 = AnyExpression("a == b", constants: constants)
+        XCTAssertFalse(try expression1.evaluate())
+        let expression2 = AnyExpression("a != b", constants: constants)
+        XCTAssertTrue(try expression2.evaluate())
+        let expression3 = AnyExpression("b == c", constants: constants)
+        XCTAssertTrue(try expression3.evaluate())
+    }
+
+    func testEquateHashableStructs() {
+        let a = HashableStruct(foo: 4)
+        let b = HashableStruct(foo: 5)
+        let c = HashableStruct(foo: 5)
+        let constants: [String: Any] = [
+            "a": a,
+            "b": b,
+            "c": c,
+        ]
+        let expression1 = AnyExpression("a == b", constants: constants)
+        XCTAssertFalse(try expression1.evaluate())
+        let expression2 = AnyExpression("a != b", constants: constants)
+        XCTAssertTrue(try expression2.evaluate())
+        let expression3 = AnyExpression("b == c", constants: constants)
+        XCTAssertTrue(try expression3.evaluate())
+    }
+
+    func testEquateTuples() {
+        let tuples: [Any] = [
+            (1, 2),
+            (1, 2, 3),
+            (1, 2, 3, 4),
+            (1, 2, 3, 4, 5),
+            (1, 2, 3, 4, 5, 6),
+        ]
+        for tuple in tuples {
+            let expression1 = AnyExpression("a == b", constants: [
+                "a": tuple, "b": tuple,
+            ])
+            XCTAssertTrue(try expression1.evaluate())
+            let expression2 = AnyExpression("a == b", constants: [
+                "a": tuple, "b": (1, 3),
+            ])
+            XCTAssertFalse(try expression2.evaluate())
+
+        }
     }
 
     func testGreaterThanWithLargeIntegers() {

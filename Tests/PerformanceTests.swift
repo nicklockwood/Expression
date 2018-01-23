@@ -32,6 +32,16 @@
 import Expression
 import XCTest
 
+private struct HashableStruct: Hashable {
+    let foo: Int
+    var hashValue: Int {
+        return foo.hashValue
+    }
+    static func == (lhs: HashableStruct, rhs: HashableStruct) -> Bool {
+        return lhs.foo == rhs.foo
+    }
+}
+
 let symbols: [Expression.Symbol: Expression.SymbolEvaluator] = [
     .variable("a"): { _ in 5 },
     .variable("b"): { _ in 6 },
@@ -589,5 +599,127 @@ class PerformanceTests: XCTestCase {
                 }
             }
         }
+    }
+
+    // MARK: == performance
+
+    func testEquateDoubles() {
+        let symbols: [AnyExpression.Symbol: AnyExpression.SymbolEvaluator] = [
+            .variable("a"): { _ in 5 },
+            .variable("b"): { _ in 6 },
+        ]
+        let equalExpression = AnyExpression("a == a", symbols: symbols)
+        let unequalExpression = AnyExpression("a == b", symbols: symbols)
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                _ = try! equalExpression.evaluate() as Any
+                _ = try! unequalExpression.evaluate() as Any
+            }
+        }
+        XCTAssertTrue(try equalExpression.evaluate())
+        XCTAssertFalse(try unequalExpression.evaluate())
+    }
+
+    func testEquateBools() {
+        let symbols: [AnyExpression.Symbol: AnyExpression.SymbolEvaluator] = [
+            .variable("a"): { _ in true },
+            .variable("b"): { _ in false },
+        ]
+        let equalExpression = AnyExpression("a == a", symbols: symbols)
+        let unequalExpression = AnyExpression("a == b", symbols: symbols)
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                _ = try! equalExpression.evaluate() as Any
+                _ = try! unequalExpression.evaluate() as Any
+            }
+        }
+        XCTAssertTrue(try equalExpression.evaluate())
+        XCTAssertFalse(try unequalExpression.evaluate())
+    }
+
+    func testEquateStrings() {
+        let symbols: [AnyExpression.Symbol: AnyExpression.SymbolEvaluator] = [
+            .variable("a"): { _ in "a" },
+            .variable("b"): { _ in "b" },
+        ]
+        let equalExpression = AnyExpression("a == a", symbols: symbols)
+        let unequalExpression = AnyExpression("a == b", symbols: symbols)
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                _ = try! equalExpression.evaluate() as Any
+                _ = try! unequalExpression.evaluate() as Any
+            }
+        }
+        XCTAssertTrue(try equalExpression.evaluate())
+        XCTAssertFalse(try unequalExpression.evaluate())
+    }
+
+    func testEquateNSObjects() {
+        let objectA = NSObject()
+        let symbols: [AnyExpression.Symbol: AnyExpression.SymbolEvaluator] = [
+            .variable("a"): { _ in objectA },
+            .variable("b"): { _ in NSObject() },
+        ]
+        let equalExpression = AnyExpression("a == a", symbols: symbols)
+        let unequalExpression = AnyExpression("a == b", symbols: symbols)
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                _ = try! equalExpression.evaluate() as Any
+                _ = try! unequalExpression.evaluate() as Any
+            }
+        }
+        XCTAssertTrue(try equalExpression.evaluate())
+        XCTAssertFalse(try unequalExpression.evaluate())
+    }
+
+    func testEquateArrays() {
+        let symbols: [AnyExpression.Symbol: AnyExpression.SymbolEvaluator] = [
+            .variable("a"): { _ in ["hello"] },
+            .variable("b"): { _ in ["goodbye"] },
+        ]
+        let equalExpression = AnyExpression("a == a", symbols: symbols)
+        let unequalExpression = AnyExpression("a == b", symbols: symbols)
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                _ = try! equalExpression.evaluate() as Any
+                _ = try! unequalExpression.evaluate() as Any
+            }
+        }
+        XCTAssertTrue(try equalExpression.evaluate())
+        XCTAssertFalse(try unequalExpression.evaluate())
+    }
+
+    func testEquateHashables() {
+        let symbols: [AnyExpression.Symbol: AnyExpression.SymbolEvaluator] = [
+            .variable("a"): { _ in HashableStruct(foo: 5) },
+            .variable("b"): { _ in HashableStruct(foo: 6) },
+        ]
+        let equalExpression = AnyExpression("a == a", symbols: symbols)
+        let unequalExpression = AnyExpression("a == b", symbols: symbols)
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                _ = try! equalExpression.evaluate() as Any
+                _ = try! unequalExpression.evaluate() as Any
+            }
+        }
+        XCTAssertTrue(try equalExpression.evaluate())
+        XCTAssertFalse(try unequalExpression.evaluate())
+    }
+
+    func testCompareAgainstNil() {
+        let symbols: [AnyExpression.Symbol: AnyExpression.SymbolEvaluator] = [
+            .variable("a"): { _ in NSNull() },
+            .variable("b"): { _ in 5 },
+        ]
+        let equalExpression = AnyExpression("a == a", symbols: symbols)
+        let unequalExpression = AnyExpression("a == b", symbols: symbols)
+        measure {
+            for _ in 0 ..< evalRepetitions {
+                _ = try! equalExpression.evaluate() as Any
+                _ = try! unequalExpression.evaluate() as Any
+            }
+        }
+        XCTAssertTrue(try equalExpression.evaluate())
+        XCTAssertFalse(try unequalExpression.evaluate())
     }
 }

@@ -232,20 +232,35 @@ public struct AnyExpression: CustomStringConvertible {
             return loadIfStored(arg).map { ($0 as? NSNumber).map { Double(truncating: $0) } } ?? arg
         }
         func equalArgs(_ lhs: Double, _ rhs: Double) -> Bool {
-            let lhs = load(lhs), rhs = load(rhs)
-            switch (lhs, rhs) {
+            switch (AnyExpression.safeUnwrap(load(lhs)), AnyExpression.safeUnwrap(load(rhs))) {
+            case (nil, nil):
+                return true
+            case (nil, _), (_, nil):
+                return false
             case let (lhs as Double, rhs as Double):
-                return lhs == rhs
-            case let (lhs as String, rhs as String):
                 return lhs == rhs
             case let (lhs as AnyHashable, rhs as AnyHashable):
                 return lhs == rhs
             case let (lhs as [AnyHashable], rhs as [AnyHashable]):
                 return lhs == rhs
-            case let (lhs, rhs) where AnyExpression.isNil(lhs) && AnyExpression.isNil(rhs):
-                return true
+            case let (lhs as [AnyHashable: AnyHashable], rhs as [AnyHashable: AnyHashable]):
+                return lhs == rhs
+            case let (lhs as (AnyHashable, AnyHashable), rhs as (AnyHashable, AnyHashable)):
+                return lhs == rhs
+            case let (lhs as (AnyHashable, AnyHashable, AnyHashable),
+                      rhs as (AnyHashable, AnyHashable, AnyHashable)):
+                return lhs == rhs
+            case let (lhs as (AnyHashable, AnyHashable, AnyHashable, AnyHashable),
+                      rhs as (AnyHashable, AnyHashable, AnyHashable, AnyHashable)):
+                return lhs == rhs
+            case let (lhs as (AnyHashable, AnyHashable, AnyHashable, AnyHashable, AnyHashable),
+                      rhs as (AnyHashable, AnyHashable, AnyHashable, AnyHashable, AnyHashable)):
+                return lhs == rhs
+            case let (lhs as (AnyHashable, AnyHashable, AnyHashable, AnyHashable, AnyHashable, AnyHashable),
+                      rhs as (AnyHashable, AnyHashable, AnyHashable, AnyHashable, AnyHashable, AnyHashable)):
+                return lhs == rhs
             default:
-                // TODO: should comparing non-equatable values be an error?
+                // TODO: should we throw an error if types are not Hashable?
                 return false
             }
         }
@@ -454,19 +469,27 @@ private extension AnyExpression {
         throw AnyExpression.Error.message("Return type mismatch: \(type(of: anyValue)) is not compatible with \(T.self)")
     }
 
-    // Unwraps a potentially optional value or throws if nil
-    static func unwrap(_ value: Any) throws -> Any {
+    // Unwraps a potentially optional value
+    static func safeUnwrap(_ value: Any) -> Any? {
         switch value {
         case let optional as _Optional:
             guard let value = optional.value else {
                 fallthrough
             }
-            return try unwrap(value)
+            return safeUnwrap(value)
         case is NSNull:
-            throw AnyExpression.Error.message("Unexpected nil value")
+            return nil
         default:
             return value
         }
+    }
+
+    // Unwraps a potentially optional value or throws if nil
+    static func unwrap(_ value: Any) throws -> Any {
+        guard let value = safeUnwrap(value) else {
+            throw AnyExpression.Error.message("Unexpected nil value")
+        }
+        return value
     }
 
     // Test if a value is nil
