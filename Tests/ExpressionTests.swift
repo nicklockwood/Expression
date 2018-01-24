@@ -1777,7 +1777,7 @@ class ExpressionTests: XCTestCase {
         let expression = Expression(
             "foo",
             constants: ["foo": 5],
-            evaluator: { symbol, args in 6 }
+            evaluator: { _, _ in 6 }
         )
         XCTAssertEqual(try expression.evaluate(), 5)
     }
@@ -1786,7 +1786,7 @@ class ExpressionTests: XCTestCase {
         let expression = Expression(
             "foo[0]",
             arrays: ["foo": [5]],
-            evaluator: { symbol, args in 6 }
+            evaluator: { _, _ in 6 }
         )
         XCTAssertEqual(try expression.evaluate(), 5)
     }

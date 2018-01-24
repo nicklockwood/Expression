@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.11.3
+//  Version 0.11.4
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -336,7 +336,7 @@ public struct AnyExpression: CustomStringConvertible {
 
     /// Alternative constructor with only pure symbols
     public init(_ expression: ParsedExpression, pureSymbols: (Symbol) -> SymbolEvaluator?) {
-        self.init(expression, impureSymbols: { _ in nil}, pureSymbols: pureSymbols)
+        self.init(expression, impureSymbols: { _ in nil }, pureSymbols: pureSymbols)
     }
 
     @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")

@@ -37,6 +37,7 @@ private struct HashableStruct: Hashable {
     var hashValue: Int {
         return foo.hashValue
     }
+
     static func == (lhs: HashableStruct, rhs: HashableStruct) -> Bool {
         return lhs.foo == rhs.foo
     }

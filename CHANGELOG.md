@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.11.4](https://github.com/nicklockwood/Expression/releases/tag/0.11.4) (2018-01-24)
+
+- Improved AnyExpression == operator implementation, now supports equating tuples and dictionaries
+- Array symbols implemented using `symbols` dictionary are no longer inlined by optimizer, in accordance with documentation
+- Deprecated the `Evaluator` function and provided alternative initializers for `Expression` and `AnyExpression`
+- Removed deferred optimization. Expressions using a custom `Evaluator` function may now run slower as a result
+
 ## [0.11.3](https://github.com/nicklockwood/Expression/releases/tag/0.11.3) (2018-01-22)
 
 - Added new initializers for Expression and AnyExpression to simplify and improve performance when using advanced features

@@ -37,6 +37,7 @@ private struct HashableStruct: Hashable {
     var hashValue: Int {
         return foo.hashValue
     }
+
     static func == (lhs: HashableStruct, rhs: HashableStruct) -> Bool {
         return lhs.foo == rhs.foo
     }
@@ -409,7 +410,6 @@ class AnyExpressionTests: XCTestCase {
                 "a": tuple, "b": (1, 3),
             ])
             XCTAssertFalse(try expression2.evaluate())
-
         }
     }
 
@@ -948,7 +948,7 @@ class AnyExpressionTests: XCTestCase {
         let expression = AnyExpression(
             "foo",
             constants: ["foo": "foo"],
-            evaluator: { symbol, args in "bar" }
+            evaluator: { _, _ in "bar" }
         )
         XCTAssertEqual(try expression.evaluate(), "foo")
     }
@@ -957,7 +957,7 @@ class AnyExpressionTests: XCTestCase {
         let expression = AnyExpression(
             "foo[0]",
             constants: ["foo": ["foo"]],
-            evaluator: { symbol, args in "bar" }
+            evaluator: { _, _ in "bar" }
         )
         XCTAssertEqual(try expression.evaluate(), "foo")
     }

@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.11.3
+//  Version 0.11.4
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -339,7 +339,7 @@ public final class Expression: CustomStringConvertible {
 
     /// Alternative constructor with only pure symbols
     public convenience init(_ expression: ParsedExpression, pureSymbols: (Symbol) -> SymbolEvaluator?) {
-        self.init(expression, impureSymbols: { _ in nil}, pureSymbols: pureSymbols)
+        self.init(expression, impureSymbols: { _ in nil }, pureSymbols: pureSymbols)
     }
 
     @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
@@ -363,7 +363,7 @@ public final class Expression: CustomStringConvertible {
 
     @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
     public convenience init(
-         _ parsedExpression: ParsedExpression,
+        _ parsedExpression: ParsedExpression,
         options: Options = [],
         constants: [String: Double] = [:],
         arrays: [String: [Double]] = [:],
