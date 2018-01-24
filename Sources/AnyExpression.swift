@@ -169,7 +169,7 @@ public struct AnyExpression: CustomStringConvertible {
         func loadNumber(_ arg: Double) -> Double? {
             return loadIfStored(arg).map { ($0 as? NSNumber).map { Double(truncating: $0) } } ?? arg
         }
-        func equalArgs(_ lhs: Double, _ rhs: Double) -> Bool {
+        func equalArgs(_ lhs: Double, _ rhs: Double) throws -> Bool {
             switch (AnyExpression.safeUnwrap(load(lhs)), AnyExpression.safeUnwrap(load(rhs))) {
             case (nil, nil):
                 return true
@@ -197,9 +197,13 @@ public struct AnyExpression: CustomStringConvertible {
             case let (lhs as (AnyHashable, AnyHashable, AnyHashable, AnyHashable, AnyHashable, AnyHashable),
                       rhs as (AnyHashable, AnyHashable, AnyHashable, AnyHashable, AnyHashable, AnyHashable)):
                 return lhs == rhs
-            default:
-                // TODO: should we throw an error if types are not Hashable?
-                return false
+            case let (lhs?, rhs?):
+                if type(of: lhs) == type(of: rhs) {
+                    throw Error.message(
+                        "\(Symbol.infix("==")) can only be used with arguments that implement Hashable"
+                    )
+                }
+                try AnyExpression.throwTypeMismatch(.infix("=="), [lhs, rhs])
             }
         }
 
@@ -275,9 +279,9 @@ public struct AnyExpression: CustomStringConvertible {
                     case .variable("true"):
                         return { _ in Double(bitPattern: trueBits) }
                     case .infix("=="):
-                        return { Double(bitPattern: equalArgs($0[0], $0[1]) ? trueBits : falseBits) }
+                        return { Double(bitPattern: try equalArgs($0[0], $0[1]) ? trueBits : falseBits) }
                     case .infix("!="):
-                        return { Double(bitPattern: equalArgs($0[0], $0[1]) ? falseBits : trueBits) }
+                        return { Double(bitPattern: try equalArgs($0[0], $0[1]) ? falseBits : trueBits) }
                     case .infix("?:"):
                         return { args in
                             guard args.count == 3 else {

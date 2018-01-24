@@ -43,6 +43,14 @@ private struct HashableStruct: Hashable {
     }
 }
 
+private struct EquatableStruct: Equatable {
+    let foo: Int
+
+    static func == (lhs: EquatableStruct, rhs: EquatableStruct) -> Bool {
+        return lhs.foo == rhs.foo
+    }
+}
+
 class AnyExpressionTests: XCTestCase {
 
     // MARK: Description
@@ -409,7 +417,12 @@ class AnyExpressionTests: XCTestCase {
             let expression2 = AnyExpression("a == b", constants: [
                 "a": tuple, "b": (1, 3),
             ])
-            XCTAssertFalse(try expression2.evaluate())
+            do {
+                let result: Bool = try expression2.evaluate()
+                XCTAssertFalse(result)
+            } catch {
+                XCTAssert("\(error)".contains("arguments of type"))
+            }
         }
     }
 
@@ -763,6 +776,26 @@ class AnyExpressionTests: XCTestCase {
         )
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssert("\(error)".contains("Disabled"))
+        }
+    }
+
+    func testCompareStringAndArray() {
+        let expression = AnyExpression("a == b", constants: [
+            "a": ["world", "hello"],
+            "b": "hello world",
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssert("\(error)".contains("arguments of type"))
+        }
+    }
+
+    func testCompareEquatableStructs() {
+        let expression = AnyExpression("a == b", constants: [
+            "a": EquatableStruct(foo: 1),
+            "b": EquatableStruct(foo: 1),
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssert("\(error)".contains("Hashable"))
         }
     }
 
