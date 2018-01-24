@@ -457,11 +457,12 @@ public final class Expression: CustomStringConvertible {
                     return array[index]
                 }
             } else if let fn = symbolEvaluator(for: symbol) {
-                if case .variable = symbol {
+                switch symbol {
+                case .variable, .array:
                     impureSymbols[symbol] = fn
-                } else if options.contains(.pureSymbols) {
+                case _ where options.contains(.pureSymbols):
                     pureSymbols[symbol] = fn
-                } else {
+                default:
                     impureSymbols[symbol] = fn
                 }
             } else if let fn = customEvaluator(for: symbol) {

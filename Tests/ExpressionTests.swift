@@ -1325,10 +1325,22 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "10")
     }
 
+    func testVariableSymbolNotInlined() {
+        let expression = Expression("5 + foo", options: .pureSymbols, symbols: [.variable("foo"): { _ in 5 }])
+        XCTAssertEqual(expression.symbols, [.variable("foo"), .infix("+")])
+        XCTAssertEqual(expression.description, "5 + foo")
+    }
+
     func testArrayInlined() {
         let expression = Expression("5 + foo[0]", arrays: ["foo": [5]])
         XCTAssertEqual(expression.symbols, [])
         XCTAssertEqual(expression.description, "10")
+    }
+
+    func testArraySymbolNotInlined() {
+        let expression = Expression("5 + foo[0]", options: .pureSymbols, symbols: [.array("foo"): { _ in 5 }])
+        XCTAssertEqual(expression.symbols, [.array("foo"), .infix("+")])
+        XCTAssertEqual(expression.description, "5 + foo[0]")
     }
 
     func testPotentiallyImpureConstantNotInlined() {

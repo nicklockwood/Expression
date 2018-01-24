@@ -855,10 +855,27 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(expression.symbols, [.function("foo", arity: 1)])
     }
 
+    func testVariableSymbolNotInlined() {
+        var foo = 5
+        let expression = AnyExpression("foo", options: .pureSymbols, symbols: [
+            .variable("foo"): { _ in foo },
+        ])
+        XCTAssertEqual(expression.symbols, [.variable("foo")])
+        XCTAssertEqual(try expression.evaluate(), foo)
+        foo += 1
+        XCTAssertEqual(try expression.evaluate(), foo)
+    }
+
     func testArrayConstantsInlined() {
         let expression = AnyExpression("foo[bar]", constants: ["foo": ["baz"], "bar": 0])
         XCTAssertEqual(expression.symbols, [])
         XCTAssertEqual(try expression.evaluate(), "baz")
+    }
+
+    func testArraySymbolNotInlined() {
+        let expression = AnyExpression("foo[0]", options: .pureSymbols, symbols: [.array("foo"): { _ in 5 }])
+        XCTAssertEqual(expression.symbols, [.array("foo")])
+        XCTAssertEqual(expression.description, "foo[0]")
     }
 
     func testNullCoalescingOperatorInlined() {
@@ -905,17 +922,6 @@ class AnyExpressionTests: XCTestCase {
         ])
         XCTAssertEqual(try expression.evaluate(), "foo11.0")
         XCTAssertEqual(try expression.evaluate(), "foo11.0")
-    }
-
-    func testVariableNotInlined() {
-        var foo = 5
-        let expression = AnyExpression("foo", options: .pureSymbols, symbols: [
-            .variable("foo"): { _ in foo },
-        ])
-        XCTAssertEqual(expression.symbols, [.variable("foo")])
-        XCTAssertEqual(try expression.evaluate(), foo)
-        foo += 1
-        XCTAssertEqual(try expression.evaluate(), foo)
     }
 
     // MARK: Symbol precedence
