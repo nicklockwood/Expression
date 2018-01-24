@@ -95,9 +95,8 @@ You create an `Expression` instance by passing a string containing your expressi
 * A dictionary of named constants - this is the simplest and most efficient way to specify predefined constants
 * A dictionary of named array constants - this is the simplest and most efficient way to specify predefined arrays of related values
 * A dictionary of symbols and `SymbolEvaluator` functions - this is the most efficient way to provide custom functions or operators
-* A custom `Evaluator` function - this is the most flexible solution, and can support dynamic variable or function names
 
-You can then calculate the result by calling the `Expression.evaluate()` function.
+You can then calculate the result by calling the `evaluate()` method.
 
 By default, Expression already implements most standard math functions and operators, so you only need to provide a custom symbol dictionary or evaluator function if your app needs to support additional functions or variables. You can mix and match implementations, so if you have some custom constants or arrays and some custom functions or operators, you can provide separate constants and symbols dictionaries.
 
@@ -111,29 +110,34 @@ let expression = Expression("5 + 6")
 let result = try expression.evaluate() // 11
 
 // Intermediate usage:
-// Custom constants and functions
+// Custom constants, variables and  and functions
 
-let expression = Expression("foo + bar(5) + rnd()", constants: [
+var bar = 7 // variable
+let expression = Expression("foo + bar + baz(5) + rnd()", constants: [
     "foo": 5,
 ], symbols: [
-    .function("bar", arity: 1): { args in args[0] + 1 },
+    .variable("bar"): { _ in bar },
+    .function("baz", arity: 1): { args in args[0] + 1 },
     .function("rnd", arity: 0): { _ in arc4random() },
 ])
 let result = try expression.evaluate()
 
 // Advanced usage:
-// Using a custom `Evaluator` function to decode hex color literals
+// Using the alternative constructor to dynamically hex color literals
 
 let hexColor = "#FF0000FF" // rrggbbaa
-let expression = Expression(hexColor) { symbol, args in
-    if case .variable(let name), name.hasPrefix("#") { {
+let expression = Expression(hexColor, pureSymbols: { symbol in
+    if case .variable(let name) = symbol, name.hasPrefix("#") { {
         let hex = String(name.characters.dropFirst())
-        return Double("0x" + hex)
+        guard let value = Double("0x" + hex) else {
+            return { _ in throw Expression.Error.message("Malformed color constant #\(hex)") }
+        }
+        return { _ in value }
     }
     return nil // pass to default evaluator
-}
+})
 let color: UIColor = {
-    let rgba = UInt32(try! expression.evaluate())
+    let rgba = UInt32(try expression.evaluate())
     let red = CGFloat((rgba & 0xFF000000) >> 24) / 255
     let green = CGFloat((rgba & 0x00FF0000) >> 16) / 255
     let blue = CGFloat((rgba & 0x0000FF00) >> 8) / 255
@@ -142,9 +146,9 @@ let color: UIColor = {
 }()
 ```
 
-Note that the `evaluate()` function can throw an error. An error will be thrown during evaluation if the expression was malformed, or if it references an unknown symbol.
+Note that the `evaluate()` function may throw an error. An error will be thrown automaticallu during evaluation if the expression was malformed, or if it references an unknown symbol. Your custom symbol implementations may also throw application-specific errors, as in the colors example above.
 
-For a simple, hard-coded expression like the first example, there is no possibility of an error being thrown. If you accept user-entered expressions, you must always ensure that you catch and handle errors. The error messages produced by Expression are detailed and human-readable (but not localized, currently).
+For a simple, hard-coded expression like the first example there is no possibility of an error being thrown, but if you accept user-entered expressions, you must always ensure that you catch and handle errors. The error messages produced by Expression are detailed and human-readable (but not localized).
 
 ```swift
 do {
@@ -155,16 +159,18 @@ do {
 }
 ```
 
-When using the `constants`, `arrays` and `symbols` dictionaries, error message generation is handled automatically by the Expression library. If you need to support dynamic symbol decoding (as in the hex color example earlier), you can use a custom `Evaluator` function, which is a little bit more complex.
+When using the `constants`, `arrays` and `symbols` dictionaries, error message generation is handled automatically by the Expression library. If you need to support dynamic symbol decoding (as in the hex color example earlier), you can use the `init(impureSymbols:pureSymbols)` initializer, which is a little bit more complex.
 
-Your custom `Evaluator` function can return either a `Double` or `nil` or it can throw an error. If you do not recognize a symbol, you should return nil so that it can be handled by the default evaluator.
+The `init(impureSymbols:pureSymbols)` initializer accepts one or both of a pair of lookup functions that accept a `Symbol` and return a `SymbolEvaluator` function. This interface is very powerful because it allows you to dynamically resolve symbols (such as the hex color constants in the colors example) without needing to create a dictionary of all possible values in advance.
 
-In some cases you may be *certain* that a symbol is incorrect, and this is an opportunity to provide a more useful error message. The following example matches a function `bar` with an arity of 1 (meaning that it takes one argument). This will only match calls to `bar` that take a single argument, and will ignore calls with zero or multiple arguments.
+For each symbol, your lookup functions can return either a `SymbolEvaluator` function, or nil. If you do not recognize a symbol, you should return nil so that it can be handled by the default evaluator. If neither lookup function matches the symbol, and it is not one of the standard math or boolean functions, Expression will throw an error.
+
+In some cases you may be *certain* that a symbol is incorrect, and this is an opportunity to provide a more useful error message than the default ".unknownSymbol`. The following example matches a function `bar` with an arity of 1 (meaning that it takes one argument). This will only match calls to `bar` that take a single argument, and will ignore calls with zero or multiple arguments.
 
 ```swift
 switch symbol {
 case .function("bar", arity: 1):
-    return args[0] + 1
+    return { args in args[0] + 1 }
 default:
     return nil // pass to default evaluator
 }
@@ -175,43 +181,16 @@ Since `bar` is a custom function, we know that it should only take one argument,
 ```swift
 switch symbol {
 case .function("bar", let arity):
-    guard arity == 1 else { throw Expression.Error.arityMismatch(symbol) }
-    return args[0] + 1
+    guard arity == 1 else {
+        return { _ in throw Expression.Error.arityMismatch(symbol) }
+    }
+    return { arg in args[0] + 1 }
 default:
     return nil // pass to default evaluator
 }
 ```
 
-Note that you can check the arity of the function either using pattern matching (as we did above), or just by checking `args.count`. These will always match.
-
-For dynamic symbols, a more performant (but more complex) alternative to using a custom `Evaluator` function is to pre-parse the expression to discover the specific symbols that it's actually using, then calculate their constant values in advance. Here is how that would work for the hex colors example:
-
-```swift
-// Expert usage:
-// Pre-parsing to get the symbols, then initializing Expression with
-// precalculated hex color constants to improve evaluation performance
-
-let hexColor = "#FF0000FF" // rrggbbaa
-let parsedExpression = Expression.parse(hexColor)
-var constants = [String: Double]()
-for symbol in parsedExpression.symbols {
-    if case .variable(let name), name.hasPrefix("#") { {
-        let hex = String(name.characters.dropFirst())
-        if let value = Double("0x" + hex) {
-            constants[name] = value
-        }
-    }
-}
-let expression = Expression(parsedExpression, constants: constants)
-let color: UIColor = {
-    let rgba = UInt32(try! expression.evaluate())
-    let red = CGFloat((rgba & 0xFF000000) >> 24) / 255
-    let green = CGFloat((rgba & 0x00FF0000) >> 16) / 255
-    let blue = CGFloat((rgba & 0x0000FF00) >> 8) / 255
-    let alpha = CGFloat((rgba & 0x000000FF) >> 0) / 255
-    return UIColor(red: red, green: green, blue: blue, alpha: alpha)
-}()
-``` 
+Note that you can either check the arity of the function at lookup time using pattern matching (as we did above), or by checking `args.count` when the function is called. These will always match.
 
 
 # Symbols
@@ -333,20 +312,18 @@ let expression = Expression("foo + bar", options: .noOptimize, ...)
 
 On the other hand, if your expressions are being evaluated hundreds or thousands of times, you will want to take full advantage of the optimizer to improve your application's performance. To ensure you are getting the best out of Expression's optimizer, follow these guidelines:
 
-* Always pass constant values via the `constants` or `arrays` arguments instead of as a variable in the `symbols` dictionary or `evaluator` function. Constant values can be inlined, whereas variables must be re-computed each time the function is evaluated in case they have changed.
+* Always pass constant values via the `constants` or `arrays` arguments instead of as a variable in the `symbols` dictionary. Constant values can be inlined, whereas variables must be re-computed each time the function is evaluated in case they have changed.
 
 * If your custom functions and operators are all *pure* - i.e. they have no side effects and always return the same output for a given set of argument values - then you should set the `pureSymbols` option for your expression. This option tells the optimizer that it's safe to inline any functions or operators in the `symbols` dictionary if all their arguments are constant. Note that the `pureSymbols` option does not affect variables or array symbols (which are never inlined), nor any symbols matched by the `evaluator` function.
 
-* Wherever possible, use the `symbols` dictionary to specify custom variables, operators or functions, instead of an `evaluator` function. Just having an `evaluator` function (even one that returns nil for everything) introduces an overhead to both initialization and the first evaluation, so if you don't need it, don't include it. The exception to this is if you have a mix of pure and impure symbols, in which case it's better to put the pure symbols in the `symbols` dictionary (and set the `pureSymbols` option), then put the impure ones in the `evaluator` function.
-
-* If your expressions may contain values which are constant, but where not all possible values can be computed in advance - e.g. encoded values such as in the hex colors example, or arbitrary key paths that must be looked up in a deep object graph - you can use the `parse()` function to get access to the list of symbols that are actually used in the expression. This allows you to decode or look up just the specific values that are needed, and then pass them as constants to the Expression at initialization time, without needing to use an `evaluator` function (see the "Expert usage" example in the [Integration](#integration) section above).
+* If your expressions may contain values which are constant, but where not all possible values can be computed in advance - e.g. encoded values such as in the hex colors example, or arbitrary key paths that must be looked up in a deep object graph - you can use the `init(pureSymbols:)` initializer to decode or look up just the specific values that are needed.
 
 
 # Standard Library
 
 ## Math Symbols
 
-By default, Expression supports a number of basic math functions, operators, and constants that are generally useful independent of a particular application.
+By default, Expression supports a number of basic math functions, operators, and constants that are generally useful, independent of any particular application.
 
 If you use a custom symbol dictionary, you can override any default symbol, or overload default functions with a different number of arguments (arity). Any symbols from the standard library that you do not explicitly override will still be available.
 
@@ -359,17 +336,17 @@ let expression = Expression("pow(2,3)", symbols: [
 try expression.evaluate() // this will throw an error because pow() has been undefined
 ```
 
-If you have provided a custom `Evaluator` function, you can fall back to the standard library functions and operators by returning `nil` for unrecognized symbols. If you do not want to provide access to the standard library functions in your expression, throw an error for unrecognized symbols instead of returning `nil`.
+If you are using the `init(impureSymbols:pureSymbols:)` initializer, you can fall back to the standard library functions and operators by returning `nil` for unrecognized symbols. If you do not want to provide access to the standard library functions in your expression, throw an error for unrecognized symbols instead of returning `nil`.
 
 ```swift
-let expression = Expression("3 + 4") { symbol, args in
+let expression = Expression("3 + 4", puresSymbols: { symbol in
     switch symbol {
     case .function("foo", arity: 1):
-        return args[0] + 1
+        return { args in args[0] + 1 }
     default:
-        throw Expression.Error.undefinedSymbol(symbol)
+        return { _ in throw Expression.Error.undefinedSymbol(symbol) }
     }
-}
+})
 try expression.evaluate() // this will throw an error because no standard library operators are supported, including +
 ```
 
@@ -475,7 +452,6 @@ false
 
 * AnyExpression's `Evaluator` and `SymbolEvaluator` functions accept and return `Any` instead of `Double`
 * Boolean symbols and operators are enabled by default when you create an `AnyExpression`
-* Built-in operators and constants cannot be overridden by the custom `Evaluator` function (but can be overridden using the `symbols` dictionary)
 * There is no separate `arrays` argument for the AnyExpression constructor. If you wish to pass an array constant, you can add it to the `constants` dictionary
 
 You can create and evaluate an `AnyExpression` instance as follows:

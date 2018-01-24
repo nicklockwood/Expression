@@ -42,6 +42,7 @@ public final class Expression: CustomStringConvertible {
     /// Function prototype for evaluating an expression
     /// Return nil for an unrecognized symbol, or throw an error if the symbol is recognized
     /// but there is some other problem (e.g. wrong number of arguments for a function)
+    @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
     public typealias Evaluator = (_ symbol: Symbol, _ args: [Double]) throws -> Double?
 
     /// Evaluator for individual symbols
@@ -276,22 +277,19 @@ public final class Expression: CustomStringConvertible {
     /// - A dictionary of constants for simple static values
     /// - A dictionary of arrays for static collections of related values
     /// - A dictionary of symbols, for implementing custom functions and operators
-    /// - A custom evaluator function for more complex symbol processing
     public convenience init(
         _ expression: String,
         options: Options = [],
         constants: [String: Double] = [:],
         arrays: [String: [Double]] = [:],
-        symbols: [Symbol: SymbolEvaluator] = [:],
-        evaluator: Evaluator? = nil
+        symbols: [Symbol: SymbolEvaluator] = [:]
     ) {
         self.init(
             Expression.parse(expression),
             options: options,
             constants: constants,
             arrays: arrays,
-            symbols: symbols,
-            evaluator: evaluator
+            symbols: symbols
         )
     }
 
@@ -301,8 +299,95 @@ public final class Expression: CustomStringConvertible {
         options: Options = [],
         constants: [String: Double] = [:],
         arrays: [String: [Double]] = [:],
+        symbols: [Symbol: SymbolEvaluator] = [:]
+    ) {
+        self.init(
+            expression: expression,
+            options: options,
+            constants: constants,
+            arrays: arrays,
+            symbols: symbols
+        )
+    }
+
+    /// Alternative constructor for advanced usage
+    /// Allows for dynamic symbol lookup or generation without any performance overhead
+    /// Note that both math and boolean symbols are enabled by default - to disable them
+    /// return `{ _ in throw Expression.Error.undefinedSymbol(symbol) }` from your lookup function
+    public init(
+        _ expression: ParsedExpression,
+        impureSymbols: (Symbol) -> SymbolEvaluator?,
+        pureSymbols: (Symbol) -> SymbolEvaluator? = { _ in nil }
+    ) {
+        root = expression.root.optimized(
+            withImpureSymbols: impureSymbols,
+            pureSymbols: {
+                if let fn = pureSymbols($0) ?? Expression.mathSymbols[$0] ?? Expression.boolSymbols[$0] {
+                    return fn
+                }
+                // Check for arity mismatch
+                if case let .function(called, arity) = $0 {
+                    let keys = Set(Expression.mathSymbols.keys).union(Expression.boolSymbols.keys)
+                    for case let .function(name, expected) in keys where name == called && arity != expected {
+                        return { _ in throw Error.arityMismatch(.function(called, arity: expected)) }
+                    }
+                }
+                return nil
+            }
+        )
+    }
+
+    /// Alternative constructor with only pure symbols
+    public convenience init(_ expression: ParsedExpression, pureSymbols: (Symbol) -> SymbolEvaluator?) {
+        self.init(expression, impureSymbols: { _ in nil}, pureSymbols: pureSymbols)
+    }
+
+    @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
+    public convenience init(
+        _ expression: String,
+        options: Options = [],
+        constants: [String: Double] = [:],
+        arrays: [String: [Double]] = [:],
         symbols: [Symbol: SymbolEvaluator] = [:],
-        evaluator: Evaluator? = nil
+        evaluator: Evaluator?
+    ) {
+        self.init(
+            expression: Expression.parse(expression),
+            options: options,
+            constants: constants,
+            arrays: arrays,
+            symbols: symbols,
+            evaluator: evaluator
+        )
+    }
+
+    @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
+    public convenience init(
+         _ parsedExpression: ParsedExpression,
+        options: Options = [],
+        constants: [String: Double] = [:],
+        arrays: [String: [Double]] = [:],
+        symbols: [Symbol: SymbolEvaluator] = [:],
+        evaluator: Evaluator?
+    ) {
+        self.init(
+            expression: parsedExpression,
+            options: options,
+            constants: constants,
+            arrays: arrays,
+            symbols: symbols,
+            evaluator: evaluator
+        )
+    }
+
+    // Legacy initializer implementation
+    private convenience init(
+        expression: ParsedExpression,
+        options: Options = [],
+        constants: [String: Double] = [:],
+        arrays: [String: [Double]] = [:],
+        symbols: [Symbol: SymbolEvaluator] = [:],
+        evaluator: ((Symbol, [Double]) throws -> Double?)? = nil
     ) {
         // Symbols
         let boolSymbols = options.contains(.boolSymbols) ? Expression.boolSymbols : [:]
@@ -352,9 +437,8 @@ public final class Expression: CustomStringConvertible {
             // Check for arity mismatch
             if case let .function(called, arity) = symbol {
                 let keys = Set(Expression.mathSymbols.keys).union(boolSymbols.keys).union(symbols.keys)
-                for case let .function(name, requiredArity) in keys
-                    where name == called && arity != requiredArity {
-                    return { _ in throw Error.arityMismatch(.function(called, arity: requiredArity)) }
+                for case let .function(name, expected) in keys where name == called && arity != expected {
+                    return { _ in throw Error.arityMismatch(.function(called, arity: expected)) }
                 }
             }
             // Not found
@@ -393,21 +477,6 @@ public final class Expression: CustomStringConvertible {
             pureSymbols.removeAll()
         }
         self.init(expression, impureSymbols: { impureSymbols[$0] }, pureSymbols: { pureSymbols[$0] })
-    }
-
-    /// Alternative constructor for advanced usage
-    /// Allows for dynamic symbol lookup or generation without any performance overhead
-    /// Note that both math and boolean symbols are enabled by default - to disable them
-    /// return `{ _ in throw Expression.Error.undefinedSymbol(symbol) }` from your lookup function
-    public init(
-        _ expression: ParsedExpression,
-        impureSymbols: (Symbol) -> SymbolEvaluator?,
-        pureSymbols: (Symbol) -> SymbolEvaluator?
-    ) {
-        root = expression.root.optimized(
-            withImpureSymbols: impureSymbols,
-            pureSymbols: { pureSymbols($0) ?? Expression.mathSymbols[$0] ?? Expression.boolSymbols[$0] }
-        )
     }
 
     /// Verify that the string is a valid identifier
@@ -474,6 +543,7 @@ public final class Expression: CustomStringConvertible {
         _ input: inout Substring.UnicodeScalarView,
         upTo delimiters: String...
     ) -> ParsedExpression {
+
         var unicodeScalarView = UnicodeScalarView(input)
         let start = unicodeScalarView
         var subexpression: Subexpression

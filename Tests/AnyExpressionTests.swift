@@ -62,6 +62,13 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "foo(bar)")
     }
 
+    // MARK: Deprecated initializer
+
+    func testDeprecatedInitializer() {
+        let expression = AnyExpression(Expression.parse("pi")) { _, _ in nil }
+        XCTAssertEqual(try expression.evaluate(), Double.pi)
+    }
+
     // MARK: Arrays
 
     func testLookUpArrayConstant() {
@@ -731,10 +738,27 @@ class AnyExpressionTests: XCTestCase {
 
     func testDisableVariableSymbol() {
         let expression = AnyExpression(
-            Expression.parse("foo"),
-            impureSymbols: { _ in nil },
-            pureSymbols: { _ in
-                { _ in throw AnyExpression.Error.message("Disabled") }
+            Expression.parse("foo + pi"),
+            pureSymbols: { symbol in
+                if case .variable("foo") = symbol {
+                    return { _ in throw AnyExpression.Error.message("Disabled") }
+                }
+                return nil
+            }
+        )
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssert("\(error)".contains("Disabled"))
+        }
+    }
+
+    func testDisableVariableSymbol2() {
+        let expression = AnyExpression(
+            Expression.parse("foo + pi"),
+            impureSymbols: { symbol in
+                if case .variable("foo") = symbol {
+                    return { _ in throw AnyExpression.Error.message("Disabled") }
+                }
+                return nil
             }
         )
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in

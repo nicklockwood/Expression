@@ -889,8 +889,22 @@ class ExpressionTests: XCTestCase {
         }
     }
 
+    func testTooFewArgumentsWithAdvancedInitializer() {
+        let expression = Expression(Expression.parse("pow(4)"), pureSymbols: { _ in nil })
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("pow", arity: 2)))
+        }
+    }
+
     func testTooManyArguments() {
         let expression = Expression("pow(4,5,6)")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("pow", arity: 2)))
+        }
+    }
+
+    func testTooManyArgumentsWithAdvancedInitializer() {
+        let expression = Expression(Expression.parse("pow(4,5,6)"), impureSymbols: { _ in nil })
         XCTAssertThrowsError(try expression.evaluate()) { error in
             XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("pow", arity: 2)))
         }
@@ -960,6 +974,13 @@ class ExpressionTests: XCTestCase {
                 XCTFail()
             }
         }
+    }
+
+    // MARK: Deprecated initializer
+
+    func testDeprecatedInitializer() {
+        let expression = Expression(Expression.parse("pi")) { _, _ in nil }
+        XCTAssertEqual(try expression.evaluate(), .pi)
     }
 
     // MARK: Arrays

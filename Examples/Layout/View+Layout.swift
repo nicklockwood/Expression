@@ -57,19 +57,23 @@ fileprivate class LayoutData: NSObject {
         }
     }
 
-    private func common(_ symbol: Expression.Symbol, _: [Double]) throws -> Double? {
+    private func common(_ symbol: Expression.Symbol) -> Expression.SymbolEvaluator? {
         switch symbol {
         case .variable("auto"):
-            throw Expression.Error.message("`auto` can only be used for width or height")
+            return { _ in throw Expression.Error.message("`auto` can only be used for width or height") }
         case let .variable(name):
             let parts = name.components(separatedBy: ".")
             if parts.count == 2 {
-                if let sublayout = view.window?.subview(forKey: parts[0])?.layout {
-                    return try sublayout.computedValue(forKey: parts[1])
+                return { [unowned self] _ in
+                    if let sublayout = self.view.window?.subview(forKey: parts[0])?.layout {
+                        return try sublayout.computedValue(forKey: parts[1])
+                    }
+                    throw Expression.Error.message("No view found for key `\(parts[0])`")
                 }
-                throw Expression.Error.message("No view found for key `\(parts[0])`")
             }
-            return try computedValue(forKey: parts[0])
+            return { [unowned self] _ in
+                try self.computedValue(forKey: parts[0])
+            }
         default:
             return nil
         }
@@ -78,65 +82,87 @@ fileprivate class LayoutData: NSObject {
     var key: String?
     var left: String? {
         didSet {
-            props["left"] = Expression(left ?? "0") { [unowned self] symbol, args in
-                switch symbol {
-                case .postfix("%"):
-                    return self.view.superview.map { Double($0.frame.width) / 100 * args[0] }
-                default:
-                    return try self.common(symbol, args)
+            props["left"] = Expression(
+                Expression.parse(left ?? "0"),
+                impureSymbols: { symbol in
+                    switch symbol {
+                    case .postfix("%"):
+                        return { [unowned self] args in
+                            self.view.superview.map { Double($0.frame.width) / 100 * args[0] } ?? 0
+                        }
+                    default:
+                        return self.common(symbol)
+                    }
                 }
-            }
+            )
         }
     }
 
     var top: String? {
         didSet {
-            props["top"] = Expression(top ?? "0") { [unowned self] symbol, args in
-                switch symbol {
-                case .postfix("%"):
-                    return self.view.superview.map { Double($0.frame.height) / 100 * args[0] }
-                default:
-                    return try self.common(symbol, args)
+            props["top"] = Expression(
+                Expression.parse(top ?? "0"),
+                impureSymbols: { symbol in
+                    switch symbol {
+                    case .postfix("%"):
+                        return { [unowned self] args in
+                            self.view.superview.map { Double($0.frame.height) / 100 * args[0] } ?? 0
+                        }
+                    default:
+                        return self.common(symbol)
+                    }
                 }
-            }
+            )
         }
     }
 
     var width: String? {
         didSet {
-            props["width"] = Expression(width ?? "100%") { [unowned self] symbol, args in
-                switch symbol {
-                case .postfix("%"):
-                    return self.view.superview.map { Double($0.frame.width) / 100 * args[0] }
-                case .variable("auto"):
-                    if let superview = self.view.superview {
-                        return Double(self.view.systemLayoutSizeFitting(superview.frame.size).width)
+            props["width"] = Expression(
+                Expression.parse(width ?? "100%"),
+                impureSymbols: { symbol in
+                    switch symbol {
+                    case .postfix("%"):
+                        return { [unowned self] args in
+                            self.view.superview.map { Double($0.frame.width) / 100 * args[0] } ?? 0
+                        }
+                    case .variable("auto"):
+                        return { [unowned self] args in
+                            self.view.superview.map { superview in
+                                Double(self.view.systemLayoutSizeFitting(superview.frame.size).width)
+                            } ?? 0
+                        }
+                    default:
+                        return self.common(symbol)
                     }
-                    return 0
-                default:
-                    return try self.common(symbol, args)
                 }
-            }
+            )
         }
     }
 
     var height: String? {
         didSet {
-            props["height"] = Expression(height ?? "100%") { [unowned self] symbol, args in
-                switch symbol {
-                case .postfix("%"):
-                    return self.view.superview.map { Double($0.frame.height) / 100 * args[0] }
-                case .variable("auto"):
-                    if let superview = self.view.superview {
-                        var size = superview.frame.size
-                        size.width = CGFloat(try self.computedValue(forKey: "width"))
-                        return Double(self.view.systemLayoutSizeFitting(size).height)
+            props["height"] = Expression(
+                Expression.parse(height ?? "100%"),
+                impureSymbols: { symbol in
+                    switch symbol {
+                    case .postfix("%"):
+                        return { [unowned self] args in
+                            self.view.superview.map { Double($0.frame.height) / 100 * args[0] } ?? 0
+                        }
+                    case .variable("auto"):
+                        return { [unowned self] args in
+                            try self.view.superview.map { superview in
+                                var size = superview.frame.size
+                                size.width = CGFloat(try self.computedValue(forKey: "width"))
+                                return Double(self.view.systemLayoutSizeFitting(size).height)
+                            } ?? 0
+                        }
+                    default:
+                        return self.common(symbol)
                     }
-                    return 0
-                default:
-                    return try self.common(symbol, args)
                 }
-            }
+            )
         }
     }
 

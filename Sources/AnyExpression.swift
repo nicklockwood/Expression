@@ -41,6 +41,7 @@ public struct AnyExpression: CustomStringConvertible {
     /// Function prototype for evaluating an expression
     /// Return nil for an unrecognized symbol, or throw an error if the symbol is recognized
     /// but there is some other problem (e.g. wrong number or type of arguments)
+    @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
     public typealias Evaluator = (_ symbol: Symbol, _ args: [Any]) throws -> Any?
 
     /// Evaluator for individual symbols
@@ -55,100 +56,37 @@ public struct AnyExpression: CustomStringConvertible {
     /// Options for configuring an expression
     public typealias Options = Expression.Options
 
-    /// Creates an Expression object from a string
+    /// Creates an AnyExpression instance from a string
     /// Optionally accepts some or all of:
     /// - A set of options for configuring expression behavior
     /// - A dictionary of constants for simple static values (including arrays)
     /// - A dictionary of symbols, for implementing custom functions and operators
-    /// - A custom evaluator function for more complex symbol processing
     public init(
         _ expression: String,
         options: Options = .boolSymbols,
         constants: [String: Any] = [:],
-        symbols: [Symbol: SymbolEvaluator] = [:],
-        evaluator: Evaluator? = nil
+        symbols: [Symbol: SymbolEvaluator] = [:]
     ) {
         self.init(
             Expression.parse(expression),
             options: options,
             constants: constants,
-            symbols: symbols,
-            evaluator: evaluator
+            symbols: symbols
         )
     }
 
     /// Alternative constructor that accepts a pre-parsed expression
     public init(
         _ expression: ParsedExpression,
-        options: Options = .boolSymbols,
+        options: Options = [],
         constants: [String: Any] = [:],
-        symbols: [Symbol: SymbolEvaluator] = [:],
-        evaluator: Evaluator? = nil
+        symbols: [Symbol: SymbolEvaluator] = [:]
     ) {
-        // Options
-        let usePureSymbols = options.contains(.pureSymbols)
-        let useBoolSymbols = options.contains(.boolSymbols)
-
         self.init(
-            expression,
-            impureSymbols: { symbol in
-                switch symbol {
-                case let .variable(name), let .array(name):
-                    if constants[name] != nil {
-                        return nil
-                    } else if let fn = symbols[symbol] {
-                        return fn // Variables and array symbols are never pure
-                    }
-                default:
-                    if let fn = symbols[symbol] {
-                        return usePureSymbols ? nil : fn
-                    }
-                }
-                if let evaluator = evaluator {
-                    switch symbol {
-                    case .variable("nil"), .infix("??"),
-                         _ where Expression.mathSymbols[symbol] != nil,
-                         _ where useBoolSymbols && Expression.boolSymbols[symbol] != nil:
-                        return nil // Standard library
-                    case let .variable(name) where constants[name] != nil ||
-                            name.first == "\"" || (name.first == "'" && name.last == "'"):
-                        return nil // String
-                    default:
-                        return { args in
-                            guard let value = try evaluator(symbol, args) else {
-                                throw Error.undefinedSymbol(symbol)
-                            }
-                            return value
-                        }
-                    }
-                }
-                return nil
-            },
-            pureSymbols: { symbol in
-                switch symbol {
-                case let .variable(name):
-                    if let value = constants[name] {
-                        return { _ in value }
-                    }
-                case let .array(name):
-                    if let array = constants[name] as? [Any] {
-                        return { args in
-                            guard let number = args[0] as? NSNumber else {
-                                try AnyExpression.throwTypeMismatch(symbol, args)
-                            }
-                            guard let index = Int(exactly: number), array.indices.contains(index) else {
-                                throw Error.arrayBounds(symbol, Double(truncating: number))
-                            }
-                            return array[index]
-                        }
-                    }
-                default:
-                    if usePureSymbols {
-                        return symbols[symbol]
-                    }
-                }
-                return nil
-            }
+            expression: expression,
+            options: options,
+            constants: constants,
+            symbols: symbols
         )
     }
 
@@ -159,7 +97,7 @@ public struct AnyExpression: CustomStringConvertible {
     public init(
         _ expression: ParsedExpression,
         impureSymbols: (Symbol) -> SymbolEvaluator?,
-        pureSymbols: (Symbol) -> SymbolEvaluator?
+        pureSymbols: (Symbol) -> SymbolEvaluator? = { _ in nil }
     ) {
         let mask = (-Double.nan).bitPattern
         let indexOffset = 4
@@ -266,7 +204,7 @@ public struct AnyExpression: CustomStringConvertible {
         }
 
         // Set description based on the parsed expression, prior to
-        // peforming optimizations. This avoids issues with inlined
+        // performing optimizations. This avoids issues with inlined
         // constants and string literals being converted to `nan`
         description = expression.description
 
@@ -372,7 +310,7 @@ public struct AnyExpression: CustomStringConvertible {
                             return AnyExpression.isNil(lhs) ? args[1] : args[0]
                         }
                     case let .variable(name):
-                        guard name.count >= 2, "'\"".contains(name.first!), name.last == name.first else {
+                        guard name.count >= 2, "'\"".contains(name.first!) else {
                             return nil
                         }
                         let stringRef = store(String(name.dropFirst().dropLast()))
@@ -394,6 +332,119 @@ public struct AnyExpression: CustomStringConvertible {
             return load(value)
         }
         self.expression = expression
+    }
+
+    /// Alternative constructor with only pure symbols
+    public init(_ expression: ParsedExpression, pureSymbols: (Symbol) -> SymbolEvaluator?) {
+        self.init(expression, impureSymbols: { _ in nil}, pureSymbols: pureSymbols)
+    }
+
+    @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
+    public init(
+        _ expression: String,
+        options: Options = .boolSymbols,
+        constants: [String: Any] = [:],
+        symbols: [Symbol: SymbolEvaluator] = [:],
+        evaluator: Evaluator?
+    ) {
+        self.init(
+            expression: Expression.parse(expression),
+            options: options,
+            constants: constants,
+            symbols: symbols,
+            evaluator: evaluator
+        )
+    }
+
+    @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
+    public init(
+        _ parsedExpression: ParsedExpression,
+        options: Options = .boolSymbols,
+        constants: [String: Any] = [:],
+        symbols: [Symbol: SymbolEvaluator] = [:],
+        evaluator: Evaluator?
+    ) {
+        self.init(
+            expression: parsedExpression,
+            options: options,
+            constants: constants,
+            symbols: symbols,
+            evaluator: evaluator
+        )
+    }
+
+    // Legacy initializer implementation
+    private init(
+        expression: ParsedExpression,
+        options: Options = .boolSymbols,
+        constants: [String: Any] = [:],
+        symbols: [Symbol: SymbolEvaluator] = [:],
+        evaluator: ((Symbol, [Any]) throws -> Any?)? = nil
+    ) {
+        // Options
+        let usePureSymbols = options.contains(.pureSymbols)
+        let useBoolSymbols = options.contains(.boolSymbols)
+
+        self.init(
+            expression,
+            impureSymbols: { symbol in
+                switch symbol {
+                case let .variable(name), let .array(name):
+                    if constants[name] != nil {
+                        return nil
+                    } else if let fn = symbols[symbol] {
+                        return fn // Variables and array symbols are never pure
+                    }
+                default:
+                    if let fn = symbols[symbol] {
+                        return usePureSymbols ? nil : fn
+                    }
+                }
+                if let evaluator = evaluator {
+                    switch symbol {
+                    case .variable("nil"), .infix("??"),
+                         _ where Expression.mathSymbols[symbol] != nil,
+                         _ where useBoolSymbols && Expression.boolSymbols[symbol] != nil:
+                        return nil // Standard library
+                    case let .variable(name) where constants[name] != nil || "'\"".contains(name.first!):
+                        return nil // String
+                    default:
+                        return { args in
+                            guard let value = try evaluator(symbol, args) else {
+                                throw Error.undefinedSymbol(symbol)
+                            }
+                            return value
+                        }
+                    }
+                }
+                return nil
+            },
+            pureSymbols: { symbol in
+                switch symbol {
+                case let .variable(name):
+                    if let value = constants[name] {
+                        return { _ in value }
+                    }
+                case let .array(name):
+                    if let array = constants[name] as? [Any] {
+                        return { args in
+                            guard let number = args[0] as? NSNumber else {
+                                try AnyExpression.throwTypeMismatch(symbol, args)
+                            }
+                            guard let index = Int(exactly: number), array.indices.contains(index) else {
+                                throw Error.arrayBounds(symbol, Double(truncating: number))
+                            }
+                            return array[index]
+                        }
+                    }
+                default:
+                    if usePureSymbols {
+                        return symbols[symbol]
+                    }
+                }
+                return nil
+            }
+        )
     }
 
     /// Evaluate the expression
