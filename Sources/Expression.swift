@@ -37,7 +37,7 @@ import Foundation
 /// Reusing the same Expression instance for multiple evaluations is more efficient
 /// than creating a new one each time you wish to evaluate an expression string.
 public final class Expression: CustomStringConvertible {
-    private var root: Subexpression
+    private let root: Subexpression
 
     /// Function prototype for evaluating an expression
     /// Return nil for an unrecognized symbol, or throw an error if the symbol is recognized
@@ -247,10 +247,11 @@ public final class Expression: CustomStringConvertible {
     public struct Options: OptionSet {
 
         /// Disable optimizations such as constant substitution
-        public static let noOptimize = Options(rawValue: 1 << 0)
+        public static let noOptimize = Options(rawValue: 1 << 1)
 
-        /// Disable deferred optimizations (mutating expression after first evaluation)
-        public static let noDeferredOptimize = Options(rawValue: 1 << 1)
+        /// Disable deferred optimizations
+        @available(*, deprecated, message: "No longer has any effect")
+        public static let noDeferredOptimize = Options(rawValue: 1 << 0)
 
         /// Enable standard boolean operators and constants
         public static let boolSymbols = Options(rawValue: 1 << 2)
@@ -295,7 +296,7 @@ public final class Expression: CustomStringConvertible {
     }
 
     /// Alternative constructor that accepts a pre-parsed expression
-    public init(
+    public convenience init(
         _ expression: ParsedExpression,
         options: Options = [],
         constants: [String: Double] = [:],
@@ -303,8 +304,6 @@ public final class Expression: CustomStringConvertible {
         symbols: [Symbol: SymbolEvaluator] = [:],
         evaluator: Evaluator? = nil
     ) {
-        root = expression.root
-
         // Symbols
         let boolSymbols = options.contains(.boolSymbols) ? Expression.boolSymbols : [:]
         var impureSymbols = Dictionary<Symbol, SymbolEvaluator>()
@@ -320,7 +319,7 @@ public final class Expression: CustomStringConvertible {
             }
             return nil
         }
-        func customEvaluator(for symbol: Symbol, optimizing: Bool) -> SymbolEvaluator? {
+        func customEvaluator(for symbol: Symbol) -> SymbolEvaluator? {
             guard let evaluator = evaluator else {
                 return nil
             }
@@ -328,16 +327,7 @@ public final class Expression: CustomStringConvertible {
                 guard let fn = defaultEvaluator(for: symbol) else {
                     return errorHandler(for: symbol)
                 }
-                return optimizing ? { [unowned self] args in
-                    // Rewrite expression to skip custom evaluator
-                    pureSymbols[symbol] = customEvaluator(for: symbol, optimizing: false)
-                    impureSymbols.removeValue(forKey: symbol)
-                    self.root = self.root.optimized(
-                        withImpureSymbols: { impureSymbols[$0] },
-                        pureSymbols: { pureSymbols[$0] }
-                    )
-                    return try fn(args)
-                } : fn
+                return fn
             }()
             return { args in
                 // Try custom evaluator
@@ -372,8 +362,7 @@ public final class Expression: CustomStringConvertible {
         }
 
         // Resolve symbols and optimize expression
-        let deferredOptimize = !options.contains(.noOptimize) && !options.contains(.noDeferredOptimize)
-        for symbol in root.symbols {
+        for symbol in expression.symbols {
             if case let .variable(name) = symbol, let value = constants[name] {
                 pureSymbols[symbol] = { _ in value }
             } else if case let .array(name) = symbol, let array = arrays[name] {
@@ -391,7 +380,7 @@ public final class Expression: CustomStringConvertible {
                 } else {
                     impureSymbols[symbol] = fn
                 }
-            } else if let fn = customEvaluator(for: symbol, optimizing: deferredOptimize) {
+            } else if let fn = customEvaluator(for: symbol) {
                 impureSymbols[symbol] = fn
             } else {
                 pureSymbols[symbol] = defaultEvaluator(for: symbol) ?? errorHandler(for: symbol)
@@ -403,10 +392,7 @@ public final class Expression: CustomStringConvertible {
             }
             pureSymbols.removeAll()
         }
-        root = root.optimized(
-            withImpureSymbols: { impureSymbols[$0] },
-            pureSymbols: { pureSymbols[$0] }
-        )
+        self.init(expression, impureSymbols: { impureSymbols[$0] }, pureSymbols: { pureSymbols[$0] })
     }
 
     /// Alternative constructor for advanced usage
