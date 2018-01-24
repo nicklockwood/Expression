@@ -39,12 +39,6 @@ import Foundation
 public final class Expression: CustomStringConvertible {
     private let root: Subexpression
 
-    /// Function prototype for evaluating an expression
-    /// Return nil for an unrecognized symbol, or throw an error if the symbol is recognized
-    /// but there is some other problem (e.g. wrong number of arguments for a function)
-    @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
-    public typealias Evaluator = (_ symbol: Symbol, _ args: [Double]) throws -> Double?
-
     /// Evaluator for individual symbols
     public typealias SymbolEvaluator = (_ args: [Double]) throws -> Double
 
@@ -111,10 +105,6 @@ public final class Expression: CustomStringConvertible {
 
         /// A array of values accessed by index
         case array(String)
-
-        /// Evaluator for individual symbols
-        @available(*, deprecated, message: "Use SymbolEvaluator instead")
-        public typealias Evaluator = SymbolEvaluator
 
         /// The human-readable name of the symbol
         public var name: String {
@@ -250,10 +240,6 @@ public final class Expression: CustomStringConvertible {
         /// Disable optimizations such as constant substitution
         public static let noOptimize = Options(rawValue: 1 << 1)
 
-        /// Disable deferred optimizations
-        @available(*, deprecated, message: "No longer has any effect")
-        public static let noDeferredOptimize = Options(rawValue: 1 << 0)
-
         /// Enable standard boolean operators and constants
         public static let boolSymbols = Options(rawValue: 1 << 2)
 
@@ -340,44 +326,6 @@ public final class Expression: CustomStringConvertible {
     /// Alternative constructor with only pure symbols
     public convenience init(_ expression: ParsedExpression, pureSymbols: (Symbol) -> SymbolEvaluator?) {
         self.init(expression, impureSymbols: { _ in nil }, pureSymbols: pureSymbols)
-    }
-
-    @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
-    public convenience init(
-        _ expression: String,
-        options: Options = [],
-        constants: [String: Double] = [:],
-        arrays: [String: [Double]] = [:],
-        symbols: [Symbol: SymbolEvaluator] = [:],
-        evaluator: Evaluator?
-    ) {
-        self.init(
-            expression: Expression.parse(expression),
-            options: options,
-            constants: constants,
-            arrays: arrays,
-            symbols: symbols,
-            evaluator: evaluator
-        )
-    }
-
-    @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
-    public convenience init(
-        _ parsedExpression: ParsedExpression,
-        options: Options = [],
-        constants: [String: Double] = [:],
-        arrays: [String: [Double]] = [:],
-        symbols: [Symbol: SymbolEvaluator] = [:],
-        evaluator: Evaluator?
-    ) {
-        self.init(
-            expression: parsedExpression,
-            options: options,
-            constants: constants,
-            arrays: arrays,
-            symbols: symbols,
-            evaluator: evaluator
-        )
     }
 
     // Legacy initializer implementation

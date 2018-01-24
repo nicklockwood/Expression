@@ -38,12 +38,6 @@ public struct AnyExpression: CustomStringConvertible {
     private let expression: Expression
     private let evaluator: () throws -> Any
 
-    /// Function prototype for evaluating an expression
-    /// Return nil for an unrecognized symbol, or throw an error if the symbol is recognized
-    /// but there is some other problem (e.g. wrong number or type of arguments)
-    @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
-    public typealias Evaluator = (_ symbol: Symbol, _ args: [Any]) throws -> Any?
-
     /// Evaluator for individual symbols
     public typealias SymbolEvaluator = (_ args: [Any]) throws -> Any
 
@@ -341,40 +335,6 @@ public struct AnyExpression: CustomStringConvertible {
     /// Alternative constructor with only pure symbols
     public init(_ expression: ParsedExpression, pureSymbols: (Symbol) -> SymbolEvaluator?) {
         self.init(expression, impureSymbols: { _ in nil }, pureSymbols: pureSymbols)
-    }
-
-    @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
-    public init(
-        _ expression: String,
-        options: Options = .boolSymbols,
-        constants: [String: Any] = [:],
-        symbols: [Symbol: SymbolEvaluator] = [:],
-        evaluator: Evaluator?
-    ) {
-        self.init(
-            expression: Expression.parse(expression),
-            options: options,
-            constants: constants,
-            symbols: symbols,
-            evaluator: evaluator
-        )
-    }
-
-    @available(*, deprecated, message: "Use init(impureSymbols:pureSymbols) instead")
-    public init(
-        _ parsedExpression: ParsedExpression,
-        options: Options = .boolSymbols,
-        constants: [String: Any] = [:],
-        symbols: [Symbol: SymbolEvaluator] = [:],
-        evaluator: Evaluator?
-    ) {
-        self.init(
-            expression: parsedExpression,
-            options: options,
-            constants: constants,
-            symbols: symbols,
-            evaluator: evaluator
-        )
     }
 
     // Legacy initializer implementation

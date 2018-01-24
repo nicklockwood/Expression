@@ -931,15 +931,9 @@ class ExpressionTests: XCTestCase {
 
     func testCustomOverriddenFunction() {
         let expression = Expression("foo(3,3)", symbols: [
-            .function("foo", arity: 1): { $0[0] },
-        ]) { symbol, args in
-            switch symbol {
-            case .function("foo", arity: 2):
-                return args[0] + args[1]
-            default:
-                return nil
-            }
-        }
+            .function("foo", arity: 1): { args in args[0] },
+            .function("foo", arity: 2): { args in args[0] + args[1] },
+        ])
         XCTAssertEqual(try expression.evaluate(), 6)
     }
 
@@ -974,13 +968,6 @@ class ExpressionTests: XCTestCase {
                 XCTFail()
             }
         }
-    }
-
-    // MARK: Deprecated initializer
-
-    func testDeprecatedInitializer() {
-        let expression = Expression(Expression.parse("pi")) { _, _ in nil }
-        XCTAssertEqual(try expression.evaluate(), .pi)
     }
 
     // MARK: Arrays
@@ -1194,66 +1181,40 @@ class ExpressionTests: XCTestCase {
     // MARK: Postfix operator parsing
 
     func testPostfixOperatorBeforeComma() {
-        let expression = Expression("max(50%, 0.6)") { symbol, args in
-            switch symbol {
-            case .postfix("%"):
-                return args[0] / 100
-            default:
-                return nil
-            }
-        }
+        let expression = Expression("max(50%, 0.6)", symbols: [
+            .postfix("%"): { args in args[0] / 100 }
+        ])
         XCTAssertEqual(try expression.evaluate(), 0.6)
     }
 
     func testPostfixOperatorBeforeClosingParen() {
-        let expression = Expression("min(0.3, 50%)") { symbol, args in
-            switch symbol {
-            case .postfix("%"):
-                return args[0] / 100
-            default:
-                return nil
-            }
-        }
+        let expression = Expression("min(0.3, 50%)", symbols: [
+            .postfix("%"): { args in args[0] / 100 }
+        ])
         XCTAssertEqual(try expression.evaluate(), 0.3)
     }
 
     func testWronglySpacedPostfixOperator() {
-        let expression = Expression("50 % + 10%") { symbol, args in
-            switch symbol {
-            case .postfix("%"):
-                return args[0] / 100
-            default:
-                return nil
-            }
-        }
+        let expression = Expression("50 % + 10%", symbols: [
+            .postfix("%"): { args in args[0] / 100 }
+        ])
         XCTAssertEqual(try expression.evaluate(), 0.6)
     }
 
     // MARK: Alphanumeric operators
 
     func testPostfixAlphanumericOperator() {
-        let expression = Expression("10ms + 5s") { symbol, args in
-            switch symbol {
-            case .postfix("ms"):
-                return args[0] / 1000
-            case .postfix("s"):
-                return args[0]
-            default:
-                return nil
-            }
-        }
+        let expression = Expression("10ms + 5s", symbols: [
+            .postfix("ms"): { args in args[0] / 1000 },
+            .postfix("s"): { args in args[0] }
+        ])
         XCTAssertEqual(try expression.evaluate(), 5.01)
     }
 
     func testInfixAlphanumericOperator() {
-        let expression = Expression("true or false", options: .boolSymbols) { symbol, args in
-            switch symbol {
-            case .infix("or"):
-                return args[0] != 0 || args[1] != 0 ? 1 : 0
-            default:
-                return nil
-            }
-        }
+        let expression = Expression("true or false", options: .boolSymbols, symbols: [
+            .infix("or"): { args in args[0] != 0 || args[1] != 0 ? 1 : 0 }
+        ])
         XCTAssertEqual(try expression.evaluate(), 1)
     }
 
@@ -1367,17 +1328,6 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "min(5, 6) + a")
     }
 
-    func testPotentiallyImpureExpressionNotInlined2() {
-        let expression = Expression("min(5, 6) + a", evaluator: { symbol, args in
-            if case .function("min", 2) = symbol {
-                return min(args[0], args[1])
-            }
-            return nil
-        })
-        XCTAssertEqual(expression.symbols, [.function("min", arity: 2), .variable("a"), .infix("+")])
-        XCTAssertEqual(expression.description, "min(5, 6) + a")
-    }
-
     func testBooleanExpressionsInlined() {
         let expression = Expression("1 || 1 ? 3 * 5 : 2 * 3", options: .boolSymbols)
         XCTAssertEqual(expression.symbols, [])
@@ -1411,17 +1361,6 @@ class ExpressionTests: XCTestCase {
 
     func testOverriddenBuiltInConstantNotInlinedWithPureSymbols() {
         let expression = Expression("5 + pi", options: .pureSymbols, symbols: [.variable("pi"): { _ in 5 }])
-        XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
-        XCTAssertEqual(expression.description, "5 + pi")
-    }
-
-    func testOverriddenBuiltInConstantNotInlinedWithPureEvaluator() {
-        let expression = Expression("5 + pi", options: .pureSymbols) { symbol, _ in
-            if case .variable("pi") = symbol {
-                return 4
-            }
-            return nil
-        }
         XCTAssertEqual(expression.symbols, [.infix("+"), .variable("pi")])
         XCTAssertEqual(expression.description, "5 + pi")
     }
@@ -1508,21 +1447,6 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 6)
     }
 
-    func testUndefinedTernaryOperatorWithCustomEvaluator() {
-        let expression = Expression("1 - 1 ? 3 * 5 : 2 * 3") { symbol, args in
-            switch symbol {
-            case .infix("?"):
-                return args[0] != 0 ? args[1] : 0
-            case .infix(":"):
-                return args[0] != 0 ? args[0] : args[1]
-            default:
-                return nil
-            }
-        }
-        XCTAssertEqual(expression.description, "1 - 1 ? 3 * 5 : 2 * 3")
-        XCTAssertEqual(try expression.evaluate(), 6)
-    }
-
     func testTernaryWith2Arguments() {
         let expression1 = Expression("5 ?: 4", options: .boolSymbols)
         XCTAssertEqual(try expression1.evaluate(), 5)
@@ -1566,19 +1490,14 @@ class ExpressionTests: XCTestCase {
 
     func testAssignmentAssociativity() {
         var variables: [Double] = [0, 0]
-        let expression = Expression("a = b = 5") { symbol, args in
-            switch symbol {
-            case .infix("="):
+        let expression = Expression("a = b = 5", symbols: [
+            .infix("="): { args in
                 variables[Int(args[0])] = args[1]
                 return args[1]
-            case .variable("a"):
-                return 0
-            case .variable("b"):
-                return 1
-            default:
-                return nil
-            }
-        }
+            },
+            .variable("a"): { _ in 0 },
+            .variable("b"): { _ in 1 },
+        ])
         XCTAssertEqual(try expression.evaluate(), 5)
         XCTAssertEqual(variables[0], 5)
         XCTAssertEqual(variables[1], 5)
@@ -1769,24 +1688,6 @@ class ExpressionTests: XCTestCase {
             "foo[0]",
             arrays: ["foo": [5]],
             symbols: [.array("foo"): { _ in 6 }]
-        )
-        XCTAssertEqual(try expression.evaluate(), 5)
-    }
-
-    func testConstantTakesPrecedenceOverEvaluator() {
-        let expression = Expression(
-            "foo",
-            constants: ["foo": 5],
-            evaluator: { _, _ in 6 }
-        )
-        XCTAssertEqual(try expression.evaluate(), 5)
-    }
-
-    func testArrayConstantTakesPrecedenceOverEvaluator() {
-        let expression = Expression(
-            "foo[0]",
-            arrays: ["foo": [5]],
-            evaluator: { _, _ in 6 }
         )
         XCTAssertEqual(try expression.evaluate(), 5)
     }

@@ -71,13 +71,6 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "foo(bar)")
     }
 
-    // MARK: Deprecated initializer
-
-    func testDeprecatedInitializer() {
-        let expression = AnyExpression(Expression.parse("pi")) { _, _ in nil }
-        XCTAssertEqual(try expression.evaluate(), Double.pi)
-    }
-
     // MARK: Arrays
 
     func testLookUpArrayConstant() {
@@ -277,21 +270,6 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), "foobar")
     }
 
-    func testAddStringVariables2() {
-        let expression = AnyExpression("a + b") { symbol, _ in
-            switch symbol {
-            case .variable("a"):
-                return "foo"
-            case .variable("b"):
-                return "bar"
-            default:
-                return nil
-            }
-        }
-        XCTAssertEqual(expression.symbols, [.variable("a"), .variable("b"), .infix("+")])
-        XCTAssertEqual(try expression.evaluate(), "foobar")
-    }
-
     func testAddMixedConstantsAndVariables() {
         let expression = AnyExpression(
             "a + b + c",
@@ -480,27 +458,17 @@ class AnyExpressionTests: XCTestCase {
     }
 
     func testCustomEqualsOperatorWhenBooleansDisabled() {
-        let expression = AnyExpression("5 == 6", options: []) { symbol, _ in
-            switch symbol {
-            case .infix("=="):
-                return true
-            default:
-                return nil
-            }
-        }
+        let expression = AnyExpression("5 == 6", options: [], symbols: [
+            .infix("=="): { _ in true }
+        ])
         XCTAssertTrue(try expression.evaluate())
     }
 
-    func testCustomEqualsOperatorIgnoredWhenBooleansEnabled() {
-        let expression = AnyExpression("5 == 6") { symbol, _ in
-            switch symbol {
-            case .infix("=="):
-                return true
-            default:
-                return nil
-            }
-        }
-        XCTAssertFalse(try expression.evaluate())
+    func testCustomEqualsOperatorWhenBooleansEnabled() {
+        let expression = AnyExpression("5 == 6", symbols: [
+            .infix("=="): { _ in true }
+        ])
+        XCTAssertTrue(try expression.evaluate())
     }
 
     // MARK: Optionals
@@ -610,22 +578,8 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
-    func testUnknownOperatorWithEvaluator() {
-        let expression = AnyExpression("'foo' %% 'bar'") { _, _ in nil }
-        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("Undefined infix operator %%"))
-        }
-    }
-
     func testUnknownVariable() {
         let expression = AnyExpression("foo")
-        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("Undefined variable foo"))
-        }
-    }
-
-    func testUnknownVariableWithEvaluator() {
-        let expression = AnyExpression("foo") { _, _ in nil }
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssert("\(error)".contains("Undefined variable foo"))
         }
@@ -973,24 +927,6 @@ class AnyExpressionTests: XCTestCase {
             "foo[0]",
             constants: ["foo": ["foo"]],
             symbols: [.array("foo"): { _ in "bar" }]
-        )
-        XCTAssertEqual(try expression.evaluate(), "foo")
-    }
-
-    func testConstantTakesPrecedenceOverEvaluator() {
-        let expression = AnyExpression(
-            "foo",
-            constants: ["foo": "foo"],
-            evaluator: { _, _ in "bar" }
-        )
-        XCTAssertEqual(try expression.evaluate(), "foo")
-    }
-
-    func testArrayConstantTakesPrecedenceOverEvaluator() {
-        let expression = AnyExpression(
-            "foo[0]",
-            constants: ["foo": ["foo"]],
-            evaluator: { _, _ in "bar" }
         )
         XCTAssertEqual(try expression.evaluate(), "foo")
     }
