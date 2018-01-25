@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.12.0](https://github.com/nicklockwood/Expression/releases/tag/0.12.0) (2018-01-25)
+
+- An `AnyExpression` instance can now be evaluated concurrently on multiple threads (`Expression` instances were already thread-safe)
+- Using the AnyExpression == operator with unsupported types now throws an error instead of returning false
+- Significantly reduced initialization time for Expression and AnyExpression instances
+- The `boolSymbols` and `noOptimize` options now work correctly for AnyExpression
+- Removed all deprecated APIs and deprecation warnings
+
 ## [0.11.4](https://github.com/nicklockwood/Expression/releases/tag/0.11.4) (2018-01-24)
 
 - Improved AnyExpression == operator implementation, now supports equating tuples and dictionaries

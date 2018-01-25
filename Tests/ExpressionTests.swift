@@ -917,6 +917,22 @@ class ExpressionTests: XCTestCase {
         }
     }
 
+    // MARK: Symbol errors
+
+    func testUnknownSymbolError() {
+        let expression = Expression(Expression.parse("foo()"))
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.function("foo", arity: 0)))
+        }
+    }
+
+    func testUnknownSymbolWithAdvancedInitializer() {
+        let expression = Expression(Expression.parse("foo()"), pureSymbols: { _ in nil })
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.function("foo", arity: 0)))
+        }
+    }
+
     // MARK: Function overloading
 
     func testOverridePow() {
@@ -1182,21 +1198,21 @@ class ExpressionTests: XCTestCase {
 
     func testPostfixOperatorBeforeComma() {
         let expression = Expression("max(50%, 0.6)", symbols: [
-            .postfix("%"): { args in args[0] / 100 }
+            .postfix("%"): { args in args[0] / 100 },
         ])
         XCTAssertEqual(try expression.evaluate(), 0.6)
     }
 
     func testPostfixOperatorBeforeClosingParen() {
         let expression = Expression("min(0.3, 50%)", symbols: [
-            .postfix("%"): { args in args[0] / 100 }
+            .postfix("%"): { args in args[0] / 100 },
         ])
         XCTAssertEqual(try expression.evaluate(), 0.3)
     }
 
     func testWronglySpacedPostfixOperator() {
         let expression = Expression("50 % + 10%", symbols: [
-            .postfix("%"): { args in args[0] / 100 }
+            .postfix("%"): { args in args[0] / 100 },
         ])
         XCTAssertEqual(try expression.evaluate(), 0.6)
     }
@@ -1206,14 +1222,14 @@ class ExpressionTests: XCTestCase {
     func testPostfixAlphanumericOperator() {
         let expression = Expression("10ms + 5s", symbols: [
             .postfix("ms"): { args in args[0] / 1000 },
-            .postfix("s"): { args in args[0] }
+            .postfix("s"): { args in args[0] },
         ])
         XCTAssertEqual(try expression.evaluate(), 5.01)
     }
 
     func testInfixAlphanumericOperator() {
         let expression = Expression("true or false", options: .boolSymbols, symbols: [
-            .infix("or"): { args in args[0] != 0 || args[1] != 0 ? 1 : 0 }
+            .infix("or"): { args in args[0] != 0 || args[1] != 0 ? 1 : 0 },
         ])
         XCTAssertEqual(try expression.evaluate(), 1)
     }

@@ -92,13 +92,13 @@ You can use CocoaPods, Carthage, or Swift Package Manager. To install Expression
 You create an `Expression` instance by passing a string containing your expression, and (optionally) any or all of the following:
 
 * A set of configuration options - used to enabled or disable certain features
-* A dictionary of named constants - this is the simplest and most efficient way to specify predefined constants
-* A dictionary of named array constants - this is the simplest and most efficient way to specify predefined arrays of related values
-* A dictionary of symbols and `SymbolEvaluator` functions - this is the most efficient way to provide custom functions or operators
+* A dictionary of named constants - this is the simplest way to specify predefined constants
+* A dictionary of named array constants - this is the simplest way to specify predefined arrays of related values
+* A dictionary of symbols and `SymbolEvaluator` functions - this allows you to provide custom variables, functions or operators
 
 You can then calculate the result by calling the `evaluate()` method.
 
-By default, Expression already implements most standard math functions and operators, so you only need to provide a custom symbol dictionary or evaluator function if your app needs to support additional functions or variables. You can mix and match implementations, so if you have some custom constants or arrays and some custom functions or operators, you can provide separate constants and symbols dictionaries.
+By default, Expression already implements most standard math functions and operators, so you only need to provide a custom symbol dictionary if your app needs to support additional functions or variables. You can mix and match implementations, so if you have some custom constants or arrays and some custom functions or operators, you can provide separate constants and symbols dictionaries.
 
 Here are some examples:
 
@@ -314,7 +314,7 @@ On the other hand, if your expressions are being evaluated hundreds or thousands
 
 * Always pass constant values via the `constants` or `arrays` arguments instead of as a variable in the `symbols` dictionary. Constant values can be inlined, whereas variables must be re-computed each time the function is evaluated in case they have changed.
 
-* If your custom functions and operators are all *pure* - i.e. they have no side effects and always return the same output for a given set of argument values - then you should set the `pureSymbols` option for your expression. This option tells the optimizer that it's safe to inline any functions or operators in the `symbols` dictionary if all their arguments are constant. Note that the `pureSymbols` option does not affect variables or array symbols (which are never inlined), nor any symbols matched by the `evaluator` function.
+* If your custom functions and operators are all *pure* - i.e. they have no side effects and always return the same output for a given set of argument values - then you should set the `pureSymbols` option for your expression. This option tells the optimizer that it's safe to inline any functions or operators in the `symbols` dictionary if all their arguments are constant. Note that the `pureSymbols` option does not affect variables or array symbols, which are never inlined.
 
 * If your expressions may contain values which are constant, but where not all possible values can be computed in advance - e.g. encoded values such as in the hex colors example, or arbitrary key paths that must be looked up in a deep object graph - you can use the `init(pureSymbols:)` initializer to decode or look up just the specific values that are needed.
 
@@ -407,7 +407,7 @@ In addition to math, Expression also supports boolean logic, following the C con
 let expression = Expression("foo ? bar : baz", options: .boolSymbols, ...)
 ```
 
-As with the math symbols, all standard boolean operators can be individually overridden or disabled for a given expression using the `symbols` or `evaluator` constructor arguments.
+As with the math symbols, all standard boolean operators can be individually overridden or disabled for a given expression using the `symbols` initializer argument.
 
 Here are the currently supported boolean symbols:
 
@@ -450,7 +450,7 @@ false
 
 `AnyExpression` is used in almost the exact same way as the `Expression` class, with the following exceptions:
 
-* AnyExpression's `Evaluator` and `SymbolEvaluator` functions accept and return `Any` instead of `Double`
+* AnyExpression's `SymbolEvaluator` functions accept and return `Any` instead of `Double`
 * Boolean symbols and operators are enabled by default when you create an `AnyExpression`
 * There is no separate `arrays` argument for the AnyExpression constructor. If you wish to pass an array constant, you can add it to the `constants` dictionary
 

@@ -466,14 +466,14 @@ class AnyExpressionTests: XCTestCase {
 
     func testCustomEqualsOperatorWhenBooleansDisabled() {
         let expression = AnyExpression("5 == 6", options: [], symbols: [
-            .infix("=="): { _ in true }
+            .infix("=="): { _ in true },
         ])
         XCTAssertTrue(try expression.evaluate())
     }
 
     func testCustomEqualsOperatorWhenBooleansEnabled() {
         let expression = AnyExpression("5 == 6", symbols: [
-            .infix("=="): { _ in true }
+            .infix("=="): { _ in true },
         ])
         XCTAssertTrue(try expression.evaluate())
     }
@@ -921,6 +921,15 @@ class AnyExpressionTests: XCTestCase {
     func testOptimizerDisabled() {
         let expression = AnyExpression("3 * 5", options: .noOptimize)
         XCTAssertEqual(expression.symbols, [.infix("*")])
+        XCTAssertEqual(try expression.evaluate(), 15)
+    }
+
+    func testOptimizerDisabledWithPureSymbols() {
+        let expression = AnyExpression("foo(3 * 5)", options: [.noOptimize, .pureSymbols], symbols: [
+            .function("foo", arity: 1): { args in args[0] },
+        ])
+        XCTAssertEqual(expression.symbols, [.infix("*"), .function("foo", arity: 1)])
+        XCTAssertEqual(try expression.evaluate(), 15)
     }
 
     // MARK: Symbol precedence

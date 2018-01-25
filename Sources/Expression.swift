@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.11.4
+//  Version 0.12.0
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -328,7 +328,7 @@ public final class Expression: CustomStringConvertible {
                     return { args in
                         guard let index = Int(exactly: floor(args[0])),
                             array.indices.contains(index) else {
-                                throw Error.arrayBounds(symbol, args[0])
+                            throw Error.arrayBounds(symbol, args[0])
                         }
                         return array[index]
                     }
