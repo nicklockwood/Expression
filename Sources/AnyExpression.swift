@@ -36,6 +36,7 @@ import Foundation
 /// Wrapper for Expression that works with any type of value
 public struct AnyExpression: CustomStringConvertible {
     private let expression: Expression
+    private let describer: () -> String
     private let evaluator: () throws -> Any
 
     /// Evaluator for individual symbols
@@ -196,7 +197,7 @@ public struct AnyExpression: CustomStringConvertible {
         // Set description based on the parsed expression, prior to
         // performing optimizations. This avoids issues with inlined
         // constants and string literals being converted to `nan`
-        description = expression.description
+        describer = { expression.description }
 
         // Options
         let boolSymbols = options.contains(.boolSymbols) ? Expression.boolSymbols : [:]
@@ -350,13 +351,11 @@ public struct AnyExpression: CustomStringConvertible {
     }
 
     /// All symbols used in the expression
-    public var symbols: Set<Symbol> {
-        return expression.symbols
-    }
+    public var symbols: Set<Symbol> { return expression.symbols }
 
     /// Returns the optmized, pretty-printed expression if it was valid
     /// Otherwise, returns the original (invalid) expression string
-    public let description: String
+    public var description: String { return describer() }
 }
 
 // Private API
