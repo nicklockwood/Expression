@@ -144,12 +144,23 @@ public final class Expression: CustomStringConvertible {
 
         /// Equatable implementation
         public static func == (lhs: Symbol, rhs: Symbol) -> Bool {
-            if case let .function(_, lhsarity) = lhs,
-                case let .function(_, rhsarity) = rhs,
-                lhsarity != rhsarity {
+            switch (lhs, rhs) {
+            case let (.variable(lhs), .variable(rhs)),
+                 let (.infix(lhs), .infix(rhs)),
+                 let (.prefix(lhs), .prefix(rhs)),
+                 let (.postfix(lhs), .postfix(rhs)),
+                 let (.array(lhs), .array(rhs)):
+                return lhs == rhs
+            case let (.function(lhs), .function(rhs)):
+                 return lhs == rhs
+            case (.variable, _),
+                 (.infix, _),
+                 (.prefix, _),
+                 (.postfix, _),
+                 (.function, _),
+                 (.array, _):
                 return false
             }
-            return lhs.description == rhs.description
         }
     }
 
@@ -221,8 +232,8 @@ public final class Expression: CustomStringConvertible {
             case let (.undefinedSymbol(lhs), .undefinedSymbol(rhs)),
                  let (.arityMismatch(lhs), .arityMismatch(rhs)):
                 return lhs == rhs
-            case let (.arrayBounds(lsymbol, lindex), .arrayBounds(rsymbol, rindex)):
-                return lsymbol == rsymbol && lindex == rindex
+            case let (.arrayBounds(lhs), .arrayBounds(rhs)):
+                return lhs == rhs
             case (.message, _),
                  (.unexpectedToken, _),
                  (.missingDelimiter, _),
