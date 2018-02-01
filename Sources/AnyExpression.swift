@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.12.0
+//  Version 0.12.1
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -157,7 +157,7 @@ public struct AnyExpression: CustomStringConvertible {
             return box.loadIfStored(arg).map { ($0 as? NSNumber).map { Double(truncating: $0) } } ?? arg
         }
         func equalArgs(_ lhs: Double, _ rhs: Double) throws -> Bool {
-            switch (AnyExpression.safeUnwrap(box.load(lhs)), AnyExpression.safeUnwrap(box.load(rhs))) {
+            switch (AnyExpression.unwrap(box.load(lhs)), AnyExpression.unwrap(box.load(rhs))) {
             case (nil, nil):
                 return true
             case (nil, _), (_, nil):
@@ -211,16 +211,18 @@ public struct AnyExpression: CustomStringConvertible {
                     return { args in
                         switch (box.load(args[0]), box.load(args[1])) {
                         case let (lhs as String, rhs):
-                            return try box.store("\(lhs)\(AnyExpression.stringify(rhs))")
+                            let rhs = try AnyExpression.forceUnwrap(rhs)
+                            return box.store("\(lhs)\(AnyExpression.stringify(rhs))")
                         case let (lhs, rhs as String):
-                            return try box.store("\(AnyExpression.stringify(lhs))\(rhs)")
+                            let lhs = try AnyExpression.forceUnwrap(lhs)
+                            return box.store("\(AnyExpression.stringify(lhs))\(rhs)")
                         case let (lhs as Double, rhs as Double):
                             return lhs + rhs
                         case let (lhs as NSNumber, rhs as NSNumber):
                             return Double(truncating: lhs) + Double(truncating: rhs)
                         case let (lhs, rhs):
-                            _ = try AnyExpression.unwrap(lhs)
-                            _ = try AnyExpression.unwrap(rhs)
+                            _ = try AnyExpression.forceUnwrap(lhs)
+                            _ = try AnyExpression.forceUnwrap(rhs)
                             try AnyExpression.throwTypeMismatch(symbol, [lhs, rhs])
                         }
                     }
@@ -232,7 +234,7 @@ public struct AnyExpression: CustomStringConvertible {
                         // TODO: find alternative approach that doesn't lose precision
                         try fn(args.map {
                             guard let doubleValue = loadNumber($0) else {
-                                _ = try AnyExpression.unwrap(box.load($0))
+                                _ = try AnyExpression.forceUnwrap(box.load($0))
                                 try AnyExpression.throwTypeMismatch(symbol, args.map(box.load))
                             }
                             return doubleValue
@@ -264,7 +266,7 @@ public struct AnyExpression: CustomStringConvertible {
                         // TODO: find alternative approach that doesn't lose precision
                         try box.store(fn(args.map {
                             guard let doubleValue = loadNumber($0) else {
-                                _ = try AnyExpression.unwrap(box.load($0))
+                                _ = try AnyExpression.forceUnwrap(box.load($0))
                                 try AnyExpression.throwTypeMismatch(symbol, args.map(box.load))
                             }
                             return doubleValue
@@ -445,24 +447,6 @@ private extension AnyExpression {
         throw Error.message("\(symbol) cannot be used with arguments of type (\(args.map { "\(type(of: $0))" }.joined(separator: ", ")))")
     }
 
-    // Convert any object to a string
-    static func stringify(_ value: Any) throws -> String {
-        switch try unwrap(value) {
-        case let bool as Bool:
-            return bool ? "true" : "false"
-        case let number as NSNumber:
-            if let int = Int64(exactly: number) {
-                return "\(int)"
-            }
-            if let uint = UInt64(exactly: number) {
-                return "\(uint)"
-            }
-            return "\(number)"
-        case let value:
-            return "\(value)"
-        }
-    }
-
     // Cast a value
     static func cast<T>(_ anyValue: Any) throws -> T? {
         if let value = anyValue as? T {
@@ -482,7 +466,7 @@ private extension AnyExpression {
                 return (Double(truncating: value) != 0) as? T
             }
         case is String.Type:
-            return try stringify(anyValue) as? T
+            return try stringify(forceUnwrap(anyValue)) as? T
         default:
             break
         }
@@ -492,14 +476,32 @@ private extension AnyExpression {
         throw AnyExpression.Error.message("Return type mismatch: \(type(of: anyValue)) is not compatible with \(T.self)")
     }
 
+    // Convert any value to a printable string
+    static func stringify(_ value: Any) -> String {
+        switch value {
+        case let bool as Bool:
+            return bool ? "true" : "false"
+        case let number as NSNumber:
+            if let int = Int64(exactly: number) {
+                return "\(int)"
+            }
+            if let uint = UInt64(exactly: number) {
+                return "\(uint)"
+            }
+            return "\(number)"
+        case let value:
+            return "\(value)"
+        }
+    }
+
     // Unwraps a potentially optional value
-    static func safeUnwrap(_ value: Any) -> Any? {
+    static func unwrap(_ value: Any) -> Any? {
         switch value {
         case let optional as _Optional:
             guard let value = optional.value else {
                 fallthrough
             }
-            return safeUnwrap(value)
+            return unwrap(value)
         case is NSNull:
             return nil
         default:
@@ -508,8 +510,8 @@ private extension AnyExpression {
     }
 
     // Unwraps a potentially optional value or throws if nil
-    static func unwrap(_ value: Any) throws -> Any {
-        guard let value = safeUnwrap(value) else {
+    static func forceUnwrap(_ value: Any) throws -> Any {
+        guard let value = unwrap(value) else {
             throw AnyExpression.Error.message("Unexpected nil value")
         }
         return value

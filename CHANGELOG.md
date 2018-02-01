@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.12.1](https://github.com/nicklockwood/Expression/releases/tag/0.12.1) (2018-01-31)
+
+- Reduced initialization time for `Expression` and `AnyExpression` instances
+
 ## [0.12.0](https://github.com/nicklockwood/Expression/releases/tag/0.12.0) (2018-01-25)
 
 - An `AnyExpression` instance can now be evaluated concurrently on multiple threads (`Expression` instances were already thread-safe)
