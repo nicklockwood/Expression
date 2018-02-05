@@ -103,17 +103,10 @@ public struct AnyExpression: CustomStringConvertible {
                         return { _ in value }
                     }
                 case let .array(name):
-                    if let array = constants[name] as? [Any] {
-                        return { args in
-                            guard let number = args[0] as? NSNumber else {
-                                try AnyExpression.throwTypeMismatch(symbol, args)
-                            }
-                            guard let index = Int(exactly: number), array.indices.contains(index) else {
-                                throw Error.arrayBounds(symbol, Double(truncating: number))
-                            }
-                            return array[index]
-                        }
+                    guard let value = constants[name] else {
+                        return nil
                     }
+                    return AnyExpression.arrayEvaluator(for: symbol, value)
                 default:
                     return symbols[symbol]
                 }
@@ -186,12 +179,20 @@ public struct AnyExpression: CustomStringConvertible {
                 return lhs == rhs
             case let (lhs?, rhs?):
                 if type(of: lhs) == type(of: rhs) {
+                    let symbol = Symbol.infix("==").description
                     throw Error.message(
-                        "\(Symbol.infix("==")) can only be used with arguments that implement Hashable"
+                        String(symbol.first!).uppercased() +
+                        "\(symbol.dropFirst()) can only be used with arguments that implement Hashable"
                     )
                 }
-                try AnyExpression.throwTypeMismatch(.infix("=="), [lhs, rhs])
+                throw Error.typeMismatch(.infix("=="), [lhs, rhs])
             }
+        }
+        func unwrapString(_ name: String) -> String? {
+            guard name.count >= 2, "'\"".contains(name.first!) else {
+                return nil
+            }
+            return String(name.dropFirst().dropLast())
         }
 
         // Set description based on the parsed expression, prior to
@@ -210,20 +211,22 @@ public struct AnyExpression: CustomStringConvertible {
                 case .infix("+"):
                     return { args in
                         switch (box.load(args[0]), box.load(args[1])) {
-                        case let (lhs as String, rhs):
-                            let rhs = try AnyExpression.forceUnwrap(rhs)
+                        case let (lhs as String, any):
+                            guard let rhs = AnyExpression.unwrap(any) else {
+                                throw Error.typeMismatch(symbol, [lhs, any])
+                            }
                             return box.store("\(lhs)\(AnyExpression.stringify(rhs))")
-                        case let (lhs, rhs as String):
-                            let lhs = try AnyExpression.forceUnwrap(lhs)
+                        case let (any, rhs as String):
+                            guard let lhs = AnyExpression.unwrap(any) else {
+                                throw Error.typeMismatch(symbol, [any, rhs])
+                            }
                             return box.store("\(AnyExpression.stringify(lhs))\(rhs)")
                         case let (lhs as Double, rhs as Double):
                             return lhs + rhs
                         case let (lhs as NSNumber, rhs as NSNumber):
                             return Double(truncating: lhs) + Double(truncating: rhs)
                         case let (lhs, rhs):
-                            _ = try AnyExpression.forceUnwrap(lhs)
-                            _ = try AnyExpression.forceUnwrap(rhs)
-                            try AnyExpression.throwTypeMismatch(symbol, [lhs, rhs])
+                            throw Error.typeMismatch(symbol, [lhs, rhs])
                         }
                     }
                 case .variable, .function(_, arity: 0):
@@ -234,8 +237,7 @@ public struct AnyExpression: CustomStringConvertible {
                         // TODO: find alternative approach that doesn't lose precision
                         try fn(args.map {
                             guard let doubleValue = loadNumber($0) else {
-                                _ = try AnyExpression.forceUnwrap(box.load($0))
-                                try AnyExpression.throwTypeMismatch(symbol, args.map(box.load))
+                                throw Error.typeMismatch(symbol, args.map(box.load))
                             }
                             return doubleValue
                         })
@@ -259,15 +261,14 @@ public struct AnyExpression: CustomStringConvertible {
                         if let number = loadNumber(args[0]) {
                             return number != 0 ? args[1] : args[2]
                         }
-                        try AnyExpression.throwTypeMismatch(symbol, args.map(box.load))
+                        throw Error.typeMismatch(symbol, args.map(box.load))
                     }
                 default:
                     return { args in
                         // TODO: find alternative approach that doesn't lose precision
                         try box.store(fn(args.map {
                             guard let doubleValue = loadNumber($0) else {
-                                _ = try AnyExpression.forceUnwrap(box.load($0))
-                                try AnyExpression.throwTypeMismatch(symbol, args.map(box.load))
+                                throw Error.typeMismatch(symbol, args.map(box.load))
                             }
                             return doubleValue
                         }) != 0)
@@ -283,11 +284,17 @@ public struct AnyExpression: CustomStringConvertible {
                         return AnyExpression.isNil(lhs) ? args[1] : args[0]
                     }
                 case let .variable(name):
-                    guard name.count >= 2, "'\"".contains(name.first!) else {
+                    guard let string = unwrapString(name) else {
                         return { _ in throw Error.undefinedSymbol(symbol) }
                     }
-                    let stringRef = box.store(String(name.dropFirst().dropLast()))
+                    let stringRef = box.store(string)
                     return { _ in stringRef }
+                case let .array(name):
+                    guard let string = unwrapString(name) else {
+                        return { _ in throw Error.undefinedSymbol(symbol) }
+                    }
+                    // TODO: should indexing of strings be allowed?
+                    return { _ in throw Error.illegalSubscript(symbol, string) }
                 default:
                     return { _ in throw Error.undefinedSymbol(symbol) }
                 }
@@ -300,6 +307,11 @@ public struct AnyExpression: CustomStringConvertible {
             impureSymbols: { symbol in
                 if let fn = impureSymbols(symbol) {
                     return { try box.store(fn($0.map(box.load))) }
+                } else if case let .array(name) = symbol, let fn = impureSymbols(.variable(name)) {
+                    return { args in
+                        let fn = AnyExpression.arrayEvaluator(for: symbol, try fn([]))
+                        return try box.store(fn(args.map(box.load)))
+                    }
                 }
                 if !shouldOptimize {
                     if let fn = pureSymbols(symbol) {
@@ -322,6 +334,14 @@ public struct AnyExpression: CustomStringConvertible {
                     default:
                         return { try box.store(fn($0.map(box.load))) }
                     }
+                } else if case let .array(name) = symbol, let fn = pureSymbols(.variable(name)) {
+                    let evaluator: SymbolEvaluator
+                    do {
+                        evaluator = try AnyExpression.arrayEvaluator(for: symbol, fn([]))
+                    } catch {
+                        return { _ in throw error }
+                    }
+                    return { try box.store(evaluator($0.map(box.load))) }
                 }
                 return defaultEvaluator(for: symbol)
             }
@@ -346,8 +366,9 @@ public struct AnyExpression: CustomStringConvertible {
 
     /// Evaluate the expression
     public func evaluate<T>() throws -> T {
-        guard let value: T = try AnyExpression.cast(evaluator()) else {
-            throw Error.message("Unexpected nil return value")
+        let anyValue = try evaluator()
+        guard let value: T = AnyExpression.cast(anyValue) else {
+            throw Error.resultTypeMismatch(T.self, anyValue)
         }
         return value
     }
@@ -358,6 +379,36 @@ public struct AnyExpression: CustomStringConvertible {
     /// Returns the optmized, pretty-printed expression if it was valid
     /// Otherwise, returns the original (invalid) expression string
     public var description: String { return describer() }
+}
+
+// Internal API
+extension AnyExpression.Error {
+
+    /// Standard error message for mismatched argument types
+    static func typeMismatch(_ symbol: AnyExpression.Symbol, _ args: [Any]) -> AnyExpression.Error {
+        let types = args.map {
+             AnyExpression.stringify(AnyExpression.isNil($0) ? $0 : type(of: $0))
+        }
+        if types.count == 1 {
+            if case .array = symbol {
+                return .message("Attempted to subscript \(symbol.escapedName)[] with incompatible index type \(types[0])")
+            }
+            return .message("Argument of type \(types[0]) is not compatible with \(symbol)")
+        }
+        return .message("Arguments of type (\(types.joined(separator: ", "))) are not compatible with \(symbol)")
+    }
+
+    /// Standard error message for mismatched return type
+    static func resultTypeMismatch(_ type: Any.Type, _ value: Any) -> AnyExpression.Error {
+        let valueType = AnyExpression.unwrap(value).map { Swift.type(of: $0) } as Any
+        return .message("Result type \(AnyExpression.stringify(valueType)) is not compatible with expected type \(AnyExpression.stringify(type))")
+    }
+
+    /// Standard error message for subscripting a non-array value
+    static func illegalSubscript(_ symbol: AnyExpression.Symbol, _ value: Any) -> AnyExpression.Error {
+        let type = AnyExpression.unwrap(value).map { Swift.type(of: $0) } as Any
+        return .message("Attempted to subscript \(AnyExpression.stringify(type)) value \(symbol.escapedName)")
+    }
 }
 
 // Private API
@@ -442,13 +493,8 @@ private extension AnyExpression {
         }
     }
 
-    // Throw a type mismatch error
-    static func throwTypeMismatch(_ symbol: Symbol, _ args: [Any]) throws -> Never {
-        throw Error.message("\(symbol) cannot be used with arguments of type (\(args.map { "\(type(of: $0))" }.joined(separator: ", ")))")
-    }
-
-    // Cast a value
-    static func cast<T>(_ anyValue: Any) throws -> T? {
+    // Cast a value to the specified type
+    static func cast<T>(_ anyValue: Any) -> T? {
         if let value = anyValue as? T {
             return value
         }
@@ -465,15 +511,12 @@ private extension AnyExpression {
             if let value = anyValue as? NSNumber {
                 return (Double(truncating: value) != 0) as? T
             }
-        case is String.Type:
-            return try stringify(forceUnwrap(anyValue)) as? T
+        case is String.Type, is Optional<String>.Type:
+            return unwrap(anyValue).map { stringify($0) } as? T
         default:
             break
         }
-        if isNil(anyValue) {
-            return nil
-        }
-        throw AnyExpression.Error.message("Return type mismatch: \(type(of: anyValue)) is not compatible with \(T.self)")
+        return nil
     }
 
     // Convert any value to a printable string
@@ -489,8 +532,15 @@ private extension AnyExpression {
                 return "\(uint)"
             }
             return "\(number)"
+        case is Any.Type:
+            let typeName = "\(value)"
+            if typeName.hasPrefix("("), let range = typeName.range(of: " in") {
+                let range = typeName.index(after: typeName.startIndex) ..< range.lowerBound
+                return String(typeName[range])
+            }
+            return typeName
         case let value:
-            return "\(value)"
+            return unwrap(value).map { "\($0)" } ?? "nil"
         }
     }
 
@@ -509,12 +559,24 @@ private extension AnyExpression {
         }
     }
 
-    // Unwraps a potentially optional value or throws if nil
-    static func forceUnwrap(_ value: Any) throws -> Any {
-        guard let value = unwrap(value) else {
-            throw AnyExpression.Error.message("Unexpected nil value")
+    // Array evaluator
+    static func arrayEvaluator(for symbol: Symbol, _ value: Any) -> SymbolEvaluator {
+        switch value {
+        case let array as [Any]:
+            return { args in
+                guard let index = AnyExpression.cast(args[0]) as Int? else {
+                    throw Error.typeMismatch(symbol, args)
+                }
+                guard array.indices.contains(index) else {
+                    throw Error.arrayBounds(symbol, Double(index))
+                }
+                return array[index]
+            }
+        case let value:
+            return { _ in
+                throw Error.illegalSubscript(symbol, value)
+            }
         }
-        return value
     }
 
     // Test if a value is nil

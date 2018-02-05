@@ -73,7 +73,7 @@ class AnyExpressionTests: XCTestCase {
 
     // MARK: Arrays
 
-    func testLookUpArrayConstant() {
+    func testSubscriptArrayConstant() {
         let expression = AnyExpression("a[b]", constants: [
             "a": ["hello", "world"],
             "b": 1,
@@ -87,17 +87,17 @@ class AnyExpressionTests: XCTestCase {
             "array": ["hello", "world"],
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("bounds"))
+            XCTAssertEqual(error as? Expression.Error, .arrayBounds(.array("array"), 2))
         }
     }
 
-    func testLookUpArrayWithString() {
+    func testSubscriptArrayWithString() {
         let expression = AnyExpression("a[b]", constants: [
             "a": ["hello", "world"],
             "b": "oops",
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("String"))
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.array("a"), ["oops"]))
         }
     }
 
@@ -122,6 +122,65 @@ class AnyExpressionTests: XCTestCase {
             .array("a"): { args in args[0] },
         ])
         XCTAssertEqual(try expression.evaluate(), 100000000)
+    }
+
+    func testArrayAccessOfIntConstant() {
+        let expression = AnyExpression("foo[0]", constants: [
+            "foo": 5,
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .illegalSubscript(.array("foo"), 5))
+        }
+    }
+
+    func testArrayAccessOfIntVariable() {
+        let expression = AnyExpression("foo[0]", symbols: [
+            .variable("foo"): { _ in 5 },
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .illegalSubscript(.array("foo"), 5))
+        }
+    }
+
+    func testArrayAccessOfPureIntVariable() {
+        let expression = AnyExpression(Expression.parse("foo[0]"), pureSymbols: { symbol in
+            symbol == .variable("foo") ? { _ in 5 } : nil
+        })
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .illegalSubscript(.array("foo"), 5))
+        }
+    }
+
+    func testArrayAccessOfErrorThrowingVariable() {
+        let expression = AnyExpression(Expression.parse("foo[0]"), pureSymbols: { symbol in
+            symbol == .variable("foo") ? { _ in throw Expression.Error.message("Disabled") } : nil
+        })
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .message("Disabled"))
+        }
+    }
+
+    func testArrayAccessOfStringConstant() {
+        let expression = AnyExpression("foo[0]", constants: [
+            "foo": "bar",
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .illegalSubscript(.array("foo"), "bar"))
+        }
+    }
+
+    func testArrayAccessOfStringLiteral() {
+        let expression = AnyExpression("'foo'[0]")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .illegalSubscript(.array("'foo'"), "foo"))
+        }
+    }
+
+    func testArrayAccessOfNonexistentSymbol() {
+        let expression = AnyExpression("foo[0]")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.array("foo")))
+        }
     }
 
     // MARK: Numeric types
@@ -398,8 +457,10 @@ class AnyExpressionTests: XCTestCase {
             do {
                 let result: Bool = try expression2.evaluate()
                 XCTAssertFalse(result)
+            } catch let error as Expression.Error {
+                XCTAssertEqual(error, .typeMismatch(.infix("=="), [tuple, (1, 3)]))
             } catch {
-                XCTAssert("\(error)".contains("arguments of type"))
+                XCTFail()
             }
         }
     }
@@ -460,7 +521,7 @@ class AnyExpressionTests: XCTestCase {
     func testEqualsOperatorWhenBooleansDisabled() {
         let expression = AnyExpression("5 == 6", options: [])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("infix operator =="))
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.infix("==")))
         }
     }
 
@@ -484,7 +545,7 @@ class AnyExpressionTests: XCTestCase {
         let null: String? = nil
         let expression = AnyExpression("foo + 'bar'", constants: ["foo": null as Any])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("nil"))
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("+"), [nil as Any? as Any, "bar"]))
         }
     }
 
@@ -500,7 +561,7 @@ class AnyExpressionTests: XCTestCase {
         let null: String! = nil
         let expression = AnyExpression("foo + 'bar'", constants: ["foo": null as Any])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("nil"))
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("+"), [NSNull(), "bar"]))
         }
     }
 
@@ -508,7 +569,7 @@ class AnyExpressionTests: XCTestCase {
         let null: Optional<Optional<String>> = nil
         let expression = AnyExpression("foo + 'bar'", constants: ["foo": null as Any])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("nil"))
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("+"), [nil as Any? as Any, "bar"]))
         }
     }
 
@@ -576,33 +637,52 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertTrue(try expression.evaluate())
     }
 
+    func testEvaluateNilAsString() {
+        let expression = AnyExpression("nil")
+        XCTAssertThrowsError(try expression.evaluate() as String) { error in
+            XCTAssertEqual(error as? Expression.Error, .resultTypeMismatch(String.self, nil as Any? as Any))
+        }
+    }
+
+    func testEvaluateNilAsOptionalString() {
+        let expression = AnyExpression("nil")
+        XCTAssertNil(try expression.evaluate() as String?)
+    }
+
     // MARK: Errors
 
     func testUnknownOperator() {
         let expression = AnyExpression("'foo' %% 'bar'")
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("Undefined infix operator %%"))
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.infix("%%")))
         }
     }
 
     func testUnknownVariable() {
         let expression = AnyExpression("foo")
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("Undefined variable foo"))
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.variable("foo")))
         }
     }
 
     func testBinaryTernary() {
         let expression = AnyExpression("'foo' ?: 'bar'")
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("Undefined infix operator ?:"))
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.infix("?:")))
         }
     }
 
     func testTernaryWithNonBooleanArgument() {
         let expression = AnyExpression("'foo' ? 1 : 2")
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("arguments of type (String, Double, Double)"))
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("?:"), ["foo", 1.0, 2.0]))
+        }
+    }
+
+    func testNotOperatorWithNonBooleanArgument() {
+        let expression = AnyExpression("!'foo'")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.prefix("!"), ["foo"]))
         }
     }
 
@@ -612,7 +692,7 @@ class AnyExpressionTests: XCTestCase {
             "b": Date(),
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("arguments of type (Date, Date)"))
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("+"), [Date(), Date()]))
         }
     }
 
@@ -622,7 +702,7 @@ class AnyExpressionTests: XCTestCase {
             "b": NSObject(),
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("arguments of type (NSObject, NSObject)"))
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix(">"), [NSObject(), NSObject()]))
         }
     }
 
@@ -632,7 +712,7 @@ class AnyExpressionTests: XCTestCase {
             "b": nil as Any? as Any,
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("nil"))
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("+"), ["foo", nil as Any? as Any]))
         }
     }
 
@@ -642,7 +722,7 @@ class AnyExpressionTests: XCTestCase {
             "b": NSNull(),
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("nil"))
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("+"), ["foo", NSNull()]))
         }
     }
 
@@ -652,7 +732,7 @@ class AnyExpressionTests: XCTestCase {
             "b": nil as Any? as Any,
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("nil"))
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("+"), [5.0, nil as Any? as Any]))
         }
     }
 
@@ -662,42 +742,59 @@ class AnyExpressionTests: XCTestCase {
             "b": nil as Any? as Any,
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("nil"))
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("*"), [5.0, nil as Any? as Any]))
+        }
+    }
+
+    func testAndBoolAndNil() {
+        let expression = AnyExpression("a && b", constants: [
+            "a": true,
+            "b": nil as Any? as Any,
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("&&"), [true, nil as Any? as Any]))
         }
     }
 
     func testTypeMismatch() {
         let expression = AnyExpression("5 / 'foo'")
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("arguments of type (Double, String)"))
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("/"), [5.0, "foo"]))
         }
     }
 
     func testCastStringAsDouble() {
         let expression = AnyExpression("'foo' + 'bar'")
         XCTAssertThrowsError(try expression.evaluate() as Double) { error in
-            XCTAssert("\(error)".contains("Return type mismatch"))
+            XCTAssertEqual(error as? Expression.Error, .resultTypeMismatch(Double.self, "foobar"))
         }
     }
 
     func testCastDoubleAsDate() {
         let expression = AnyExpression("5.6")
         XCTAssertThrowsError(try expression.evaluate() as NSDate) { error in
-            XCTAssert("\(error)".contains("Return type mismatch"))
+            XCTAssertEqual(error as? Expression.Error, .resultTypeMismatch(NSDate.self, 5.6))
         }
     }
 
     func testCastNilAsDouble() {
         let expression = AnyExpression("nil")
         XCTAssertThrowsError(try expression.evaluate() as Double) { error in
-            XCTAssert("\(error)".contains("Unexpected nil"))
+            XCTAssertEqual(error as? Expression.Error, .resultTypeMismatch(Double.self, nil as Any? as Any))
+        }
+    }
+
+    func testCastDoubleAsStruct() {
+        let expression = AnyExpression("5")
+        XCTAssertThrowsError(try expression.evaluate() as HashableStruct) { error in
+            XCTAssertEqual(error as? Expression.Error, .resultTypeMismatch(HashableStruct.self, 5.0))
         }
     }
 
     func testCastNSNullAsDouble() {
         let expression = AnyExpression("null", constants: ["null": NSNull()])
         XCTAssertThrowsError(try expression.evaluate() as Double) { error in
-            XCTAssert("\(error)".contains("Unexpected nil"))
+            XCTAssertEqual(error as? Expression.Error, .resultTypeMismatch(Double.self, NSNull()))
         }
     }
 
@@ -706,7 +803,7 @@ class AnyExpressionTests: XCTestCase {
             .infix("??"): { _ in throw AnyExpression.Error.message("Disabled") },
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("Disabled"))
+            XCTAssertEqual(error as? Expression.Error, .message("Disabled"))
         }
     }
 
@@ -721,7 +818,7 @@ class AnyExpressionTests: XCTestCase {
             }
         )
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("Disabled"))
+            XCTAssertEqual(error as? Expression.Error, .message("Disabled"))
         }
     }
 
@@ -736,7 +833,7 @@ class AnyExpressionTests: XCTestCase {
             }
         )
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("Disabled"))
+            XCTAssertEqual(error as? Expression.Error, .message("Disabled"))
         }
     }
 
@@ -746,7 +843,7 @@ class AnyExpressionTests: XCTestCase {
             "b": "hello world",
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssert("\(error)".contains("arguments of type"))
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("=="), [["a"], "b"]))
         }
     }
 
@@ -772,19 +869,29 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 57)
     }
 
-    func testCastDoubleResultAsBool() {
+    func testCastNonzeroResultAsBool() {
         let expression = AnyExpression("0.6")
         XCTAssertEqual(try expression.evaluate(), true)
     }
 
-    func testCastDoubleResultAsBool2() {
+    func testCastZeroResultAsBool() {
         let expression = AnyExpression("0")
         XCTAssertEqual(try expression.evaluate(), false)
+    }
+
+    func testCastZeroResultAsOptionalBool() {
+        let expression = AnyExpression("0")
+        XCTAssertEqual(try expression.evaluate() as Bool?, false)
     }
 
     func testCastDoubleAsString() {
         let expression = AnyExpression("5.6")
         XCTAssertEqual(try expression.evaluate(), "5.6")
+    }
+
+    func testCastDoubleAsOptionalString() {
+        let expression = AnyExpression("5.6")
+        XCTAssertEqual(try expression.evaluate() as String?, "5.6")
     }
 
     func testCastDoubleResultAsOptionalDouble() {
