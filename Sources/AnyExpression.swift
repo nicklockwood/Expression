@@ -498,25 +498,18 @@ private extension AnyExpression {
         if let value = anyValue as? T {
             return value
         }
-        switch T.self {
-        case is Double.Type, is Optional<Double>.Type:
-            if let value = anyValue as? NSNumber {
-                return Double(truncating: value) as? T
-            }
-        case is Int.Type, is Optional<Int>.Type:
-            if let value = anyValue as? NSNumber {
-                return Int(truncating: value) as? T
-            }
-        case is Bool.Type, is Optional<Bool>.Type:
-            if let value = anyValue as? NSNumber {
-                return (Double(truncating: value) != 0) as? T
-            }
-        case is String.Type, is Optional<String>.Type:
+        var type: Any.Type = T.self
+        if let optionalType = type as? _Optional.Type {
+            type = optionalType.wrappedType
+        }
+        switch type {
+        case let type as _Numeric.Type:
+            return (anyValue as? NSNumber).map { type.init(truncating: $0) } as? T
+        case is String.Type:
             return unwrap(anyValue).map { stringify($0) } as? T
         default:
-            break
+            return nil
         }
-        return nil
     }
 
     // Convert any value to a printable string
@@ -591,15 +584,41 @@ private extension AnyExpression {
     }
 }
 
+// Used for casting numeric values
+private protocol _Numeric {
+    init(truncating: NSNumber)
+}
+
+extension Int: _Numeric {}
+extension Int8: _Numeric {}
+extension Int16: _Numeric {}
+extension Int32: _Numeric {}
+extension Int64: _Numeric {}
+
+extension UInt: _Numeric {}
+extension UInt8: _Numeric {}
+extension UInt16: _Numeric {}
+extension UInt32: _Numeric {}
+extension UInt64: _Numeric {}
+
+extension Double: _Numeric {}
+extension Float: _Numeric {}
+
+// TODO: should we treat Bool as numeric?
+extension Bool: _Numeric {}
+
 // Used to test if a value is Optional
 private protocol _Optional {
     var value: Any? { get }
+    static var wrappedType: Any.Type { get }
 }
 
 extension Optional: _Optional {
     fileprivate var value: Any? { return self }
+    fileprivate static var wrappedType: Any.Type { return Wrapped.self }
 }
 
 extension ImplicitlyUnwrappedOptional: _Optional {
     fileprivate var value: Any? { return self }
+    fileprivate static var wrappedType: Any.Type { return Wrapped.self }
 }

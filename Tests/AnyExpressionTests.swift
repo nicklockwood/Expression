@@ -869,6 +869,16 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 57)
     }
 
+    func testCastDoubleResultAsInt8() {
+        let expression = AnyExpression("57.5")
+        XCTAssertEqual(try expression.evaluate() as Int8, 57)
+    }
+
+    func testCastDoubleResultAsOptionalInt8() {
+        let expression = AnyExpression("57.5")
+        XCTAssertEqual(try expression.evaluate() as Int8?, 57)
+    }
+
     func testCastNonzeroResultAsBool() {
         let expression = AnyExpression("0.6")
         XCTAssertEqual(try expression.evaluate(), true)
@@ -898,6 +908,12 @@ class AnyExpressionTests: XCTestCase {
         let expression = AnyExpression("5 + 4")
         XCTAssertEqual(try expression.evaluate() as Double?, 9)
     }
+
+    func testCastInt8ResultAsDouble() {
+        let expression = AnyExpression("foo", constants: ["foo": Int8(5)])
+        XCTAssertEqual(try expression.evaluate() as Double, 5)
+    }
+
 
     func testCastNilResultAsOptionalDouble() {
         let expression = AnyExpression("nil")
