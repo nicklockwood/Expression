@@ -368,6 +368,20 @@ public struct AnyExpression: CustomStringConvertible {
     public func evaluate<T>() throws -> T {
         let anyValue = try evaluator()
         guard let value: T = AnyExpression.cast(anyValue) else {
+            if AnyExpression.isNil(anyValue) {
+                // Fall through
+            } else if T.self is String.Type || T.self is Optional<String>.Type {
+                // TODO: should we stringify any type like this?
+                return AnyExpression.stringify(anyValue) as! T
+            } else if T.self is Bool.Type || T.self is Optional<Bool>.Type,
+                let value = AnyExpression.cast(anyValue) as Double? {
+                // TODO: should we boolify numeric types like this?
+                return (value != 0) as! T
+            } else if let boolValue = anyValue as? Bool,
+                // TODO: should we numberify Bool values like this?
+                let value: T = AnyExpression.cast(boolValue ? 1 : 0) {
+                return value
+            }
             throw Error.resultTypeMismatch(T.self, anyValue)
         }
         return value
@@ -502,14 +516,11 @@ private extension AnyExpression {
         if let optionalType = type as? _Optional.Type {
             type = optionalType.wrappedType
         }
-        switch type {
-        case let type as _Numeric.Type:
-            return (anyValue as? NSNumber).map { type.init(truncating: $0) } as? T
-        case is String.Type:
-            return unwrap(anyValue).map { stringify($0) } as? T
-        default:
-            return nil
+        if let numericType = type as? _Numeric.Type {
+            if anyValue is Bool { return nil }
+            return (anyValue as? NSNumber).map { numericType.init(truncating: $0) } as? T
         }
+        return nil
     }
 
     // Convert any value to a printable string
@@ -555,15 +566,22 @@ private extension AnyExpression {
     // Array evaluator
     static func arrayEvaluator(for symbol: Symbol, _ value: Any) -> SymbolEvaluator {
         switch value {
-        case let array as [Any]:
+        case let array as _Array:
             return { args in
                 guard let index = AnyExpression.cast(args[0]) as Int? else {
                     throw Error.typeMismatch(symbol, args)
                 }
-                guard array.indices.contains(index) else {
+                guard let value = array.value(at: index) else {
                     throw Error.arrayBounds(symbol, Double(index))
                 }
-                return array[index]
+                return value
+            }
+        case let dictionary as _Dictionary:
+            return { args in
+                guard let value = dictionary.value(for: args[0]) else {
+                    throw Error.typeMismatch(symbol, args)
+                }
+                return value
             }
         case let value:
             return { _ in
@@ -604,8 +622,42 @@ extension UInt64: _Numeric {}
 extension Double: _Numeric {}
 extension Float: _Numeric {}
 
-// TODO: should we treat Bool as numeric?
-extension Bool: _Numeric {}
+// Used for subscripting array values
+private protocol _Array {
+    func value(at index: Int) -> Any?
+}
+
+extension Array: _Array {
+    func value(at index: Int) -> Any? {
+        guard indices.contains(index) else {
+            return nil // Out of bounds
+        }
+        return self[index]
+    }
+}
+
+extension ArraySlice: _Array {
+    func value(at index: Int) -> Any? {
+        guard indices.contains(index) else {
+            return nil // Out of bounds
+        }
+        return self[index]
+    }
+}
+
+// Used for subscripting dictionary values
+private protocol _Dictionary {
+    func value(for key: Any) -> Any?
+}
+
+extension Dictionary: _Dictionary {
+    func value(for key: Any) -> Any? {
+        guard let key = AnyExpression.cast(key) as Key? else {
+            return nil // Type mismatch
+        }
+        return self[key] as Any
+    }
+}
 
 // Used to test if a value is Optional
 private protocol _Optional {

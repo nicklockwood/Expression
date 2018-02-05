@@ -82,6 +82,15 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate() as String, "world")
     }
 
+    func testSubscriptArraySliceConstant() {
+        let expression = AnyExpression("a[b]", constants: [
+            "a": ArraySlice(["hello", "world"]),
+            "b": 1,
+        ])
+        XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(try expression.evaluate() as String, "world")
+    }
+
     func testArrayBounds() {
         let expression = AnyExpression("array[2]", constants: [
             "array": ["hello", "world"],
@@ -180,6 +189,53 @@ class AnyExpressionTests: XCTestCase {
         let expression = AnyExpression("foo[0]")
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.array("foo")))
+        }
+    }
+
+    // MARK: Dictionaries
+
+    func testSubscriptStringDictionaryConstant() {
+        let expression = AnyExpression("a[b]", constants: [
+            "a": ["hello": "world"],
+            "b": "hello",
+        ])
+        XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(try expression.evaluate() as String, "world")
+    }
+
+    func testSubscriptDoubleDictionaryConstant() {
+        let expression = AnyExpression("a[b]", constants: [
+            "a": [1.0: "world"],
+            "b": 1,
+        ])
+        XCTAssertEqual(try expression.evaluate(), "world")
+    }
+
+    func testSubscriptIntDictionaryConstantWithDouble() {
+        let expression = AnyExpression("a[b]", constants: [
+            "a": [1: "world"],
+            "b": 1.0,
+        ])
+        XCTAssertEqual(try expression.evaluate(), "world")
+    }
+
+    func testSubscriptStringDictionaryConstantWithInt() {
+        let expression = AnyExpression("a[b]", constants: [
+            "a": ["hello": "world"],
+            "b": 1,
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.array("a"), [1.0]))
+        }
+    }
+
+    func testSubscriptStringDictionaryConstantWithNonHashableType() {
+        let expression = AnyExpression("a[b]", constants: [
+            "a": ["hello": "world"],
+            "b": EquatableStruct(foo: 1),
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.array("a"), [EquatableStruct(foo: 1)]))
         }
     }
 
