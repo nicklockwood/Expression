@@ -970,7 +970,6 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate() as Double, 5)
     }
 
-
     func testCastNilResultAsOptionalDouble() {
         let expression = AnyExpression("nil")
         XCTAssertEqual(try expression.evaluate() as Double?, nil)

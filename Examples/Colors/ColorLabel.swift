@@ -9,7 +9,6 @@
 import UIKit
 
 class ColorLabel: UILabel {
-
     private func updateColor() {
         do {
             backgroundColor = .clear

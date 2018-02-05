@@ -32,7 +32,6 @@
 import UIKit
 
 class ViewController: UIViewController, UITextFieldDelegate {
-
     @IBOutlet private var leftField: UITextField!
     @IBOutlet private var topField: UITextField!
     @IBOutlet private var widthField: UITextField!

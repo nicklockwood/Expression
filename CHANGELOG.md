@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.12.2](https://github.com/nicklockwood/Expression/releases/tag/0.12.2) (2018-02-05)
+
+- AnyExpression now supports subscripting of `ArraySlice` and `Dictionary` values
+- AnyExpression's `evaluate()` type casting now supports almost all numeric types
+- Improved AnyExpression error messaging, especially array subscripting errors
+
 ## [0.12.1](https://github.com/nicklockwood/Expression/releases/tag/0.12.1) (2018-01-31)
 
 - Reduced initialization time for `Expression` and `AnyExpression` instances

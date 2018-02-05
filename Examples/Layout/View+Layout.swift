@@ -33,7 +33,6 @@ import Expression
 import UIKit
 
 fileprivate class LayoutData: NSObject {
-
     private weak var view: UIView!
     private var inProgress = Set<String>()
 
@@ -179,7 +178,6 @@ fileprivate class LayoutData: NSObject {
 
 @IBDesignable
 public extension UIView {
-
     fileprivate var layout: LayoutData? {
         return layout(create: false)
     }

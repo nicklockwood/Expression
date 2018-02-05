@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.12.1
+//  Version 0.12.2
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -87,7 +87,6 @@ public final class Expression: CustomStringConvertible {
 
     /// Symbols that make up an expression
     public enum Symbol: CustomStringConvertible, Hashable {
-
         /// A named variable
         case variable(String)
 
@@ -171,7 +170,6 @@ public final class Expression: CustomStringConvertible {
 
     /// Runtime error when parsing or evaluating an expression
     public enum Error: Swift.Error, CustomStringConvertible, Equatable {
-
         /// An application-specific error
         case message(String)
 
@@ -252,7 +250,6 @@ public final class Expression: CustomStringConvertible {
 
     /// Options for configuring an expression
     public struct Options: OptionSet {
-
         /// Disable optimizations such as constant substitution
         public static let noOptimize = Options(rawValue: 1 << 1)
 
@@ -445,7 +442,6 @@ public final class Expression: CustomStringConvertible {
     /// Returns an opaque struct that cannot be evaluated but can be queried
     /// for symbols or used to construct an executable Expression instance
     public static func parse(_ expression: String, usingCache: Bool = true) -> ParsedExpression {
-
         // Check cache
         if usingCache {
             var cachedExpression: Subexpression?
@@ -476,7 +472,6 @@ public final class Expression: CustomStringConvertible {
         _ input: inout Substring.UnicodeScalarView,
         upTo delimiters: String...
     ) -> ParsedExpression {
-
         var unicodeScalarView = UnicodeScalarView(input)
         let start = unicodeScalarView
         var subexpression: Subexpression
@@ -590,7 +585,6 @@ public final class Expression: CustomStringConvertible {
 
 // Private API
 private extension Expression {
-
     // Produce a printable number, without redundant decimal places
     static func stringify(_ number: Double) -> String {
         if let int = Int64(exactly: number) {
@@ -611,7 +605,6 @@ private extension Expression {
     ])
 
     static func `operator`(_ lhs: String, takesPrecedenceOver rhs: String) -> Bool {
-
         // https://github.com/apple/swift-evolution/blob/master/proposals/0077-operator-precedence.md
         func precedence(of op: String) -> Int {
             switch op {
@@ -901,7 +894,6 @@ private enum Subexpression: CustomStringConvertible {
         withImpureSymbols impureSymbols: (Expression.Symbol) -> Expression.SymbolEvaluator?,
         pureSymbols: (Expression.Symbol) -> Expression.SymbolEvaluator?
     ) -> Subexpression {
-
         guard case .symbol(let symbol, var args, _) = self else {
             return self
         }
@@ -1013,11 +1005,8 @@ private extension Substring.UnicodeScalarView {
 
 // Expression parsing logic
 private extension UnicodeScalarView {
-
     // Placeholder evaluator function
-    private func placeholder(_: [Double]) throws -> Double {
-        preconditionFailure()
-    }
+    private func placeholder(_: [Double]) throws -> Double { preconditionFailure() }
 
     mutating func scanCharacters(_ matching: (UnicodeScalar) -> Bool) -> String? {
         var index = startIndex
@@ -1088,7 +1077,6 @@ private extension UnicodeScalarView {
     }
 
     mutating func parseNumericLiteral() -> Subexpression? {
-
         func scanInteger() -> String? {
             return scanCharacters {
                 if case "0" ... "9" = $0 {
@@ -1382,7 +1370,6 @@ private extension UnicodeScalarView {
             parseIdentifier() ??
             parseOperator() ??
             parseEscapedIdentifier() {
-
             // Prepare for next iteration
             var followedByWhitespace = skipWhitespace() || isEmpty
 

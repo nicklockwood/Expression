@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.12.1
+//  Version 0.12.2
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -182,7 +182,7 @@ public struct AnyExpression: CustomStringConvertible {
                     let symbol = Symbol.infix("==").description
                     throw Error.message(
                         String(symbol.first!).uppercased() +
-                        "\(symbol.dropFirst()) can only be used with arguments that implement Hashable"
+                            "\(symbol.dropFirst()) can only be used with arguments that implement Hashable"
                     )
                 }
                 throw Error.typeMismatch(.infix("=="), [lhs, rhs])
@@ -397,11 +397,10 @@ public struct AnyExpression: CustomStringConvertible {
 
 // Internal API
 extension AnyExpression.Error {
-
     /// Standard error message for mismatched argument types
     static func typeMismatch(_ symbol: AnyExpression.Symbol, _ args: [Any]) -> AnyExpression.Error {
         let types = args.map {
-             AnyExpression.stringify(AnyExpression.isNil($0) ? $0 : type(of: $0))
+            AnyExpression.stringify(AnyExpression.isNil($0) ? $0 : type(of: $0))
         }
         if types.count == 1 {
             if case .array = symbol {
@@ -427,7 +426,6 @@ extension AnyExpression.Error {
 
 // Private API
 private extension AnyExpression {
-
     // Value storage
     final class NanBox {
         private static let mask = (-Double.nan).bitPattern
