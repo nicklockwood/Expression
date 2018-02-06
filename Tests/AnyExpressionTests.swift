@@ -100,6 +100,15 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
+    func testArraySliceBounds() {
+        let expression = AnyExpression("array[2]", constants: [
+            "array": ArraySlice(["hello", "world"]),
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .arrayBounds(.array("array"), 2))
+        }
+    }
+
     func testSubscriptArrayWithString() {
         let expression = AnyExpression("a[b]", constants: [
             "a": ["hello", "world"],
@@ -236,6 +245,25 @@ class AnyExpressionTests: XCTestCase {
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .typeMismatch(.array("a"), [EquatableStruct(foo: 1)]))
+        }
+    }
+
+    func testUndefinedTupleSubscript() {
+        let expression = AnyExpression("foo[(2,3)]", symbols: [
+            .array("foo"): { _ in 0 },
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken(","))
+        }
+    }
+
+    func testTupleSubscript() {
+        let expression = AnyExpression("foo[(2,3)]", symbols: [
+            .variable("foo"): { _ in [5] },
+            .infix(","): { $0 },
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.array("foo"), [[Any]()]))
         }
     }
 
@@ -910,6 +938,50 @@ class AnyExpressionTests: XCTestCase {
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssert("\(error)".contains("Hashable"))
+        }
+    }
+
+    func testTooFewArguments() {
+        let expression = AnyExpression("pow(4)")
+        XCTAssertThrowsError(try expression.evaluate() as Double) { error in
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("pow", arity: 2)))
+        }
+    }
+
+    func testTooFewArgumentsForCustomFunction() {
+        let expression = AnyExpression("foo(4)", symbols: [
+            .function("foo", arity: 2): { $0 }
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("foo", arity: 2)))
+        }
+    }
+
+    func testTooFewArgumentsWithAdvancedInitializer() {
+        let expression = AnyExpression(Expression.parse("pow(4)"), pureSymbols: { _ in nil })
+        XCTAssertThrowsError(try expression.evaluate() as Double) { error in
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("pow", arity: 2)))
+        }
+    }
+
+    func testTooFewArgumentsForCustomFunctionWithAdvancedInitializer() {
+        let expression = AnyExpression(Expression.parse("foo(4)"), pureSymbols: { symbol in
+            switch symbol {
+            case .function("foo", arity: 2):
+                return { $0 }
+            default:
+                return nil
+            }
+        })
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("foo", arity: 2)))
+        }
+    }
+
+    func testTooManyArguments() {
+        let expression = AnyExpression("pow(4,5,6)")
+        XCTAssertThrowsError(try expression.evaluate() as Double) { error in
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("pow", arity: 2)))
         }
     }
 

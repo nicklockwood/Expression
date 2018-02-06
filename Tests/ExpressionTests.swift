@@ -229,7 +229,7 @@ class ExpressionTests: XCTestCase {
     }
 
     func testEmptyExpressionErrorDescription() {
-        let error = Expression.Error.unexpectedToken("")
+        let error = Expression.Error.emptyExpression
         XCTAssertEqual(error.description, "Empty expression")
     }
 
@@ -643,10 +643,7 @@ class ExpressionTests: XCTestCase {
         characters.removeFirst() // Remove opening {
         let expression = Expression.parse(&characters, upTo: "}")
         XCTAssertEqual(characters.first, "}")
-        guard expression.error == .unexpectedToken("") else {
-            XCTFail()
-            return
-        }
+        XCTAssertEqual(expression.error, .emptyExpression)
     }
 
     func testAllWhitespaceBracedExpression() {
@@ -655,10 +652,8 @@ class ExpressionTests: XCTestCase {
         characters.removeFirst() // Remove opening {
         let expression = Expression.parse(&characters, upTo: "}")
         XCTAssertEqual(characters.first, "}")
-        guard expression.error == .unexpectedToken("") else {
-            XCTFail()
-            return
-        }
+        XCTAssertEqual(expression.error, .emptyExpression)
+
     }
 
     // MARK: Syntax errors
@@ -677,10 +672,10 @@ class ExpressionTests: XCTestCase {
         }
     }
 
-    func testEmptyParens() {
+    func testMissingClosingFunctionParen() {
         let expression = Expression("foo(")
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            XCTAssertEqual(error as? Expression.Error, .unexpectedToken(""))
+            XCTAssertEqual(error as? Expression.Error, .missingDelimiter(")"))
         }
     }
 
@@ -722,8 +717,8 @@ class ExpressionTests: XCTestCase {
     func testEmptyExpression() {
         let expression = Expression("")
         XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .emptyExpression)
             XCTAssertEqual(error as? Expression.Error, .unexpectedToken(""))
-            XCTAssertTrue("\(error)".lowercased().contains("empty"))
         }
     }
 
@@ -807,7 +802,7 @@ class ExpressionTests: XCTestCase {
     func testEmptyBrackets() {
         let expression = Expression("foo[]", arrays: ["foo": []])
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("]"))
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.array("foo")))
         }
     }
 
@@ -889,10 +884,33 @@ class ExpressionTests: XCTestCase {
         }
     }
 
+    func testTooFewArgumentsForCustomFunction() {
+        let expression = Expression("foo(4)", symbols: [
+            .function("foo", arity: 2): { $0[0] + $0[1] }
+        ])
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("foo", arity: 2)))
+        }
+    }
+
     func testTooFewArgumentsWithAdvancedInitializer() {
         let expression = Expression(Expression.parse("pow(4)"), pureSymbols: { _ in nil })
         XCTAssertThrowsError(try expression.evaluate()) { error in
             XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("pow", arity: 2)))
+        }
+    }
+
+    func testTooFewArgumentsForCustomFunctionWithAdvancedInitializer() {
+        let expression = Expression(Expression.parse("foo(4)"), pureSymbols: { symbol in
+            switch symbol {
+            case .function("foo", arity: 2):
+                return { $0[0] + $0[1] }
+            default:
+                return nil
+            }
+        })
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("foo", arity: 2)))
         }
     }
 
@@ -916,6 +934,7 @@ class ExpressionTests: XCTestCase {
             XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("min", arity: .atLeast(2))))
         }
     }
+    
 
     // MARK: Symbol errors
 
@@ -961,13 +980,7 @@ class ExpressionTests: XCTestCase {
             throw Expression.Error.undefinedSymbol(symbol)
         }])
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case Expression.Error.undefinedSymbol(.function("pow", arity: 2)):
-                break
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
+            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.function("pow", arity: 2)))
         }
     }
 
@@ -976,13 +989,7 @@ class ExpressionTests: XCTestCase {
     func testCallResultOfFunction() {
         let expression = Expression("pow(1,2)(3)")
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case Expression.Error.unexpectedToken("("):
-                break
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("("))
         }
     }
 
@@ -996,13 +1003,7 @@ class ExpressionTests: XCTestCase {
     func testArrayBoundsError() {
         let expression = Expression("foo[3]", arrays: ["foo": [1, 2, 3]])
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case Expression.Error.arrayBounds(.array("foo"), 3):
-                break
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
+            XCTAssertEqual(error as? Expression.Error, .arrayBounds(.array("foo"), 3))
         }
     }
 
@@ -1018,54 +1019,37 @@ class ExpressionTests: XCTestCase {
             .array("foo"): { _ in 0 },
         ])
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case Expression.Error.arityMismatch(.array("foo")):
-                break
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.array("foo")))
         }
     }
 
-    func testTupleSubscript() {
+    func testUndefinedTupleSubscript() {
         let expression = Expression("foo[(2,3)]", symbols: [
             .array("foo"): { _ in 0 },
         ])
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case Expression.Error.undefinedSymbol(.infix(",")):
-                break
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken(","))
         }
     }
 
     func testSubscriptResultOfSubscript() {
         let expression = Expression("foo[2][3]", symbols: [.array("foo"): { _ in 0 }])
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case Expression.Error.unexpectedToken("["):
-                break
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("["))
         }
     }
 
     func testSubscriptResultOfFunction() {
         let expression = Expression("pow()[2]")
         XCTAssertThrowsError(try expression.evaluate()) { error in
-            switch error {
-            case Expression.Error.unexpectedToken("["):
-                break
-            default:
-                print("error: \(error)")
-                XCTFail()
-            }
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("["))
+        }
+    }
+
+    func testUndefinedArrayLiteral() {
+        let expression = Expression("[1,2,3]")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("["))
         }
     }
 

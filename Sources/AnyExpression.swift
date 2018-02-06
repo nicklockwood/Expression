@@ -180,10 +180,7 @@ public struct AnyExpression: CustomStringConvertible {
             case let (lhs?, rhs?):
                 if type(of: lhs) == type(of: rhs) {
                     let symbol = Symbol.infix("==").description
-                    throw Error.message(
-                        String(symbol.first!).uppercased() +
-                            "\(symbol.dropFirst()) can only be used with arguments that implement Hashable"
-                    )
+                    throw Error.message("Arguments for \(symbol) must conform to the Hashable protocol")
                 }
                 throw Error.typeMismatch(.infix("=="), [lhs, rhs])
             }
@@ -205,7 +202,7 @@ public struct AnyExpression: CustomStringConvertible {
         let shouldOptimize = !options.contains(.noOptimize)
 
         // Evaluators
-        func defaultEvaluator(for symbol: Symbol) -> Expression.SymbolEvaluator {
+        func defaultEvaluator(for symbol: Symbol) -> Expression.SymbolEvaluator? {
             if let fn = Expression.mathSymbols[symbol] {
                 switch symbol {
                 case .infix("+"):
@@ -296,7 +293,7 @@ public struct AnyExpression: CustomStringConvertible {
                     // TODO: should indexing of strings be allowed?
                     return { _ in throw Error.illegalSubscript(symbol, string) }
                 default:
-                    return { _ in throw Error.undefinedSymbol(symbol) }
+                    return nil
                 }
             }
         }
@@ -343,7 +340,18 @@ public struct AnyExpression: CustomStringConvertible {
                     }
                     return { try box.store(evaluator($0.map(box.load))) }
                 }
-                return defaultEvaluator(for: symbol)
+                guard let fn = defaultEvaluator(for: symbol) else {
+                    if case let .function(name, _) = symbol {
+                        for i in 0 ... 10 {
+                            let symbol = Symbol.function(name, arity: .exactly(i))
+                            if impureSymbols(symbol) ?? pureSymbols(symbol) != nil {
+                                return { _ in throw Error.arityMismatch(symbol) }
+                            }
+                        }
+                    }
+                    return Expression.errorEvaluator(for: symbol)
+                }
+                return fn
             }
         )
 
@@ -413,8 +421,8 @@ extension AnyExpression.Error {
 
     /// Standard error message for mismatched return type
     static func resultTypeMismatch(_ type: Any.Type, _ value: Any) -> AnyExpression.Error {
-        let valueType = AnyExpression.unwrap(value).map { Swift.type(of: $0) } as Any
-        return .message("Result type \(AnyExpression.stringify(valueType)) is not compatible with expected type \(AnyExpression.stringify(type))")
+        let valueType = AnyExpression.stringify(AnyExpression.unwrap(value).map { Swift.type(of: $0) } as Any)
+        return .message("Result type \(valueType) is not compatible with expected type \(AnyExpression.stringify(type))")
     }
 
     /// Standard error message for subscripting a non-array value

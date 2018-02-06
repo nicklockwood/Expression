@@ -52,6 +52,9 @@ public final class Expression: CustomStringConvertible {
         /// A minimum number of arguments
         case atLeast(Int)
 
+        /// Any number of arguments
+        public static let any = Arity.atLeast(0)
+
         /// ExpressibleByIntegerLiteral constructor
         public init(integerLiteral value: Int) {
             self = .exactly(value)
@@ -188,12 +191,15 @@ public final class Expression: CustomStringConvertible {
         /// An array was accessed with an index outside the valid range
         case arrayBounds(Symbol, Double)
 
+        /// Empty expression
+        public static let emptyExpression = unexpectedToken("")
+
         /// The human-readable description of the error
         public var description: String {
             switch self {
             case let .message(message):
                 return message
-            case .unexpectedToken(""):
+            case .emptyExpression:
                 return "Empty expression"
             case let .unexpectedToken(string):
                 return "Unexpected token `\(string)`"
@@ -218,8 +224,7 @@ public final class Expression: CustomStringConvertible {
                     arity = 1
                 }
                 let description = symbol.description
-                return String(description.first!).uppercased() +
-                    "\(description.dropFirst()) expects \(arity)"
+                return "\(description.prefix(1).uppercased())\(description.dropFirst()) expects \(arity)"
             case let .arrayBounds(symbol, index):
                 return "Index \(stringify(index)) out of bounds for \(symbol)"
             }
@@ -311,26 +316,12 @@ public final class Expression: CustomStringConvertible {
                 return fn
             } else if boolSymbols.isEmpty, case .infix("?:") = symbol,
                 let lhs = symbols[.infix("?")], let rhs = symbols[.infix(":")] {
+                // TODO: get rid of this special case - it's unlikey that it's used by anyone
                 return { args in try rhs([lhs([args[0], args[1]]), args[2]]) }
             }
             return nil
         }
-        func defaultEvaluator(for symbol: Symbol) -> SymbolEvaluator {
-            // Check default symbols
-            if let fn = Expression.mathSymbols[symbol] ?? boolSymbols[symbol] {
-                return fn
-            }
-            // Check for arity mismatch
-            if case let .function(called, arity) = symbol {
-                let keys = Set(Expression.mathSymbols.keys).union(boolSymbols.keys).union(symbols.keys)
-                for case let .function(name, expected) in keys where name == called && arity != expected {
-                    return { _ in throw Error.arityMismatch(.function(called, arity: expected)) }
-                }
-            }
-            // Not found
-            return { _ in throw Error.undefinedSymbol(symbol) }
-        }
-        func pureEvaluator(for symbol: Symbol) -> SymbolEvaluator {
+        func pureEvaluator(for symbol: Symbol) -> SymbolEvaluator? {
             switch symbol {
             case let .variable(name):
                 if let constant = constants[name] {
@@ -351,7 +342,15 @@ public final class Expression: CustomStringConvertible {
                     return fn
                 }
             }
-            return defaultEvaluator(for: symbol)
+            guard let fn = Expression.mathSymbols[symbol] ?? boolSymbols[symbol] else {
+                if case let .function(name, _) = symbol {
+                    for case let .function(_name, arity) in symbols.keys where name == _name {
+                        return { _ in throw Error.arityMismatch(.function(name, arity: arity)) }
+                    }
+                }
+                return Expression.errorEvaluator(for: symbol)
+            }
+            return fn
         }
 
         self.init(
@@ -392,14 +391,15 @@ public final class Expression: CustomStringConvertible {
                 if let fn = pureSymbols($0) ?? Expression.mathSymbols[$0] ?? Expression.boolSymbols[$0] {
                     return fn
                 }
-                // Check for arity mismatch
-                if case let .function(called, arity) = $0 {
-                    let keys = Set(Expression.mathSymbols.keys).union(Expression.boolSymbols.keys)
-                    for case let .function(name, expected) in keys where name == called && arity != expected {
-                        return { _ in throw Error.arityMismatch(.function(called, arity: expected)) }
+                if case let .function(name, _) = $0 {
+                    for i in 0 ... 10 {
+                        let symbol = Symbol.function(name, arity: .exactly(i))
+                        if impureSymbols(symbol) ?? pureSymbols(symbol) != nil {
+                            return { _ in throw Error.arityMismatch(symbol) }
+                        }
                     }
                 }
-                return nil
+                return Expression.errorEvaluator(for: $0)
             }
         )
     }
@@ -581,6 +581,25 @@ public final class Expression: CustomStringConvertible {
 
         return symbols
     }()
+}
+
+// Internal API
+extension Expression {
+    // Fallback evaluator for when symbol is not found
+    static func errorEvaluator(for symbol: Symbol) -> SymbolEvaluator {
+        switch symbol {
+        case .infix(","):
+            return { _ in throw Error.unexpectedToken(",") }
+        case let .function(called, arity):
+            let keys = Set(mathSymbols.keys).union(boolSymbols.keys)
+            for case let .function(name, expected) in keys where name == called && arity != expected {
+                return { _ in throw Error.arityMismatch(.function(called, arity: expected)) }
+            }
+            fallthrough
+        default:
+            return { _ in throw Error.undefinedSymbol(symbol) }
+        }
+    }
 }
 
 // Private API
@@ -892,7 +911,7 @@ private enum Subexpression: CustomStringConvertible {
 
     func optimized(
         withImpureSymbols impureSymbols: (Expression.Symbol) -> Expression.SymbolEvaluator?,
-        pureSymbols: (Expression.Symbol) -> Expression.SymbolEvaluator?
+        pureSymbols: (Expression.Symbol) -> Expression.SymbolEvaluator
     ) -> Subexpression {
         guard case .symbol(let symbol, var args, _) = self else {
             return self
@@ -903,11 +922,7 @@ private enum Subexpression: CustomStringConvertible {
         if let fn = impureSymbols(symbol) {
             return .symbol(symbol, args, fn)
         }
-        guard let fn = pureSymbols(symbol) else {
-            return .symbol(symbol, args, { _ in
-                throw Expression.Error.undefinedSymbol(symbol)
-            })
-        }
+        let fn = pureSymbols(symbol)
         var argValues = [Double]()
         for arg in args {
             guard case let .literal(value) = arg else {
@@ -1385,7 +1400,9 @@ private extension UnicodeScalarView {
                                 do {
                                     try args.append(parseSubexpression(upTo: [",", ")"]))
                                 } catch Expression.Error.unexpectedToken("") {
-                                    throw Expression.Error.unexpectedToken(scanCharacter() ?? "")
+                                    if let token = scanCharacter() {
+                                        throw Expression.Error.unexpectedToken(token)
+                                    }
                                 }
                             } while scanCharacter(",")
                         }
@@ -1427,7 +1444,7 @@ private extension UnicodeScalarView {
                         guard scanCharacter("]") else {
                             throw Expression.Error.missingDelimiter("]")
                         }
-                        throw Expression.Error.unexpectedToken("]")
+                        throw Expression.Error.arityMismatch(.array(name))
                     }
                 default:
                     operandPosition = true
@@ -1466,8 +1483,8 @@ private extension UnicodeScalarView {
                 return result
             }
             throw Expression.Error.unexpectedToken(result.description)
-        case nil: // Empty expression
-            throw Expression.Error.unexpectedToken("")
+        case nil:
+            throw Expression.Error.emptyExpression
         }
     }
 }
