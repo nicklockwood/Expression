@@ -280,6 +280,8 @@ public struct AnyExpression: CustomStringConvertible {
                         let lhs = box.load(args[0])
                         return AnyExpression.isNil(lhs) ? args[1] : args[0]
                     }
+                case .function("[]", _):
+                    return { box.store($0.map(box.load)) }
                 case let .variable(name):
                     guard let string = unwrapString(name) else {
                         return { _ in throw Error.undefinedSymbol(symbol) }
@@ -522,11 +524,30 @@ private extension AnyExpression {
         if let optionalType = type as? _Optional.Type {
             type = optionalType.wrappedType
         }
-        if let numericType = type as? _Numeric.Type {
+        switch type {
+        case let numericType as _Numeric.Type:
             if anyValue is Bool { return nil }
             return (anyValue as? NSNumber).map { numericType.init(truncating: $0) } as? T
+        case let arrayType as _Array.Type:
+            return arrayType.cast(anyValue) as? T
+        default:
+            return nil
         }
-        return nil
+    }
+
+    // Cast an array
+    static func arrayCast<T>(_ anyValue: Any) -> [T]? {
+        guard let array = anyValue as? [Any] else {
+            return nil
+        }
+        var value = [T]()
+        for element in array {
+            guard let element: T = cast(element) else {
+                return nil
+            }
+            value.append(element)
+        }
+        return value
     }
 
     // Convert any value to a printable string
@@ -631,6 +652,7 @@ extension Float: _Numeric {}
 // Used for subscripting array values
 private protocol _Array {
     func value(at index: Int) -> Any?
+    static func cast(_ value: Any) -> Any?
 }
 
 extension Array: _Array {
@@ -640,6 +662,9 @@ extension Array: _Array {
         }
         return self[index]
     }
+    static func cast(_ value: Any) -> Any? {
+        return AnyExpression.arrayCast(value) as [Element]?
+    }
 }
 
 extension ArraySlice: _Array {
@@ -648,6 +673,9 @@ extension ArraySlice: _Array {
             return nil // Out of bounds
         }
         return self[index]
+    }
+    static func cast(_ value: Any) -> Any? {
+        return (AnyExpression.arrayCast(value) as [Element]?).map(self.init)
     }
 }
 

@@ -201,6 +201,26 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
+    func testStringArrayLiteral() {
+        let expression = AnyExpression("['a','b','c']")
+        XCTAssertEqual(try expression.evaluate(), ["a", "b", "c"])
+    }
+
+    func testDoubleArrayLiteral() {
+        let expression = AnyExpression("[1.5, 2.5, 3.5]")
+        XCTAssertEqual(try expression.evaluate(), [1.5, 2.5, 3.5])
+    }
+
+    func testIntArrayLiteral() {
+        let expression = AnyExpression("[1,2,3]")
+        XCTAssertEqual(try expression.evaluate(), [1, 2, 3])
+    }
+
+    func testIntArraySliceLiteral() {
+        let expression = AnyExpression("[1,2,3]")
+        XCTAssertEqual(try expression.evaluate(), ArraySlice([1, 2, 3]))
+    }
+
     // MARK: Dictionaries
 
     func testSubscriptStringDictionaryConstant() {
@@ -879,6 +899,20 @@ class AnyExpressionTests: XCTestCase {
         let expression = AnyExpression("null", constants: ["null": NSNull()])
         XCTAssertThrowsError(try expression.evaluate() as Double) { error in
             XCTAssertEqual(error as? Expression.Error, .resultTypeMismatch(Double.self, NSNull()))
+        }
+    }
+
+    func testCastStringAsArray() {
+        let expression = AnyExpression("'foo'")
+        XCTAssertThrowsError(try expression.evaluate() as [Any]) { error in
+            XCTAssertEqual(error as? Expression.Error, .resultTypeMismatch([Any].self, "foo"))
+        }
+    }
+
+    func testCastStringArrayAsIntArray() {
+        let expression = AnyExpression("['foo']")
+        XCTAssertThrowsError(try expression.evaluate() as [Int]) { error in
+            XCTAssertEqual(error as? Expression.Error, .resultTypeMismatch([Int].self, [Any]()))
         }
     }
 

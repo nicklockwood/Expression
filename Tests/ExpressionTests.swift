@@ -1053,6 +1053,13 @@ class ExpressionTests: XCTestCase {
         }
     }
 
+    func testArrayLiteral() {
+        let expression = Expression("[1,2,3]", symbols: [
+            .function("[]", arity: .any): { $0.reduce(0) { $0 + $1 } }
+        ])
+        XCTAssertEqual(try expression.evaluate(), 6)
+    }
+
     // MARK: Evaluation
 
     func testLiteral() {

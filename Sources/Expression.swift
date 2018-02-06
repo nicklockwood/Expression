@@ -588,8 +588,8 @@ extension Expression {
     // Fallback evaluator for when symbol is not found
     static func errorEvaluator(for symbol: Symbol) -> SymbolEvaluator {
         switch symbol {
-        case .infix(","):
-            return { _ in throw Error.unexpectedToken(",") }
+        case .infix(","), .function("[]", _):
+            return { _ in throw Error.unexpectedToken(String(symbol.name.prefix(1))) }
         case let .function(called, arity):
             let keys = Set(mathSymbols.keys).union(boolSymbols.keys)
             for case let .function(name, expected) in keys where name == called && arity != expected {
@@ -1377,6 +1377,26 @@ private extension UnicodeScalarView {
             }
         }
 
+        func scanArguments(upTo delimiter: Unicode.Scalar) throws -> [Subexpression] {
+            var args = [Subexpression]()
+            if first != delimiter {
+                let delimiters = [",", String(delimiter)]
+                repeat {
+                    do {
+                        try args.append(parseSubexpression(upTo: delimiters))
+                    } catch Expression.Error.unexpectedToken("") {
+                        if let token = scanCharacter() {
+                            throw Expression.Error.unexpectedToken(token)
+                        }
+                    }
+                } while scanCharacter(",")
+            }
+            guard scanCharacter(delimiter) else {
+                throw Expression.Error.missingDelimiter(String(delimiter))
+            }
+            return args
+        }
+
         _ = skipWhitespace()
         var operandPosition = true
         var precededByWhitespace = true
@@ -1394,28 +1414,17 @@ private extension UnicodeScalarView {
                 case "(":
                     switch stack.last {
                     case let .symbol(.variable(name), _, _)?:
-                        var args = [Subexpression]()
-                        if first != ")" {
-                            repeat {
-                                do {
-                                    try args.append(parseSubexpression(upTo: [",", ")"]))
-                                } catch Expression.Error.unexpectedToken("") {
-                                    if let token = scanCharacter() {
-                                        throw Expression.Error.unexpectedToken(token)
-                                    }
-                                }
-                            } while scanCharacter(",")
-                        }
-                        stack[stack.count - 1] = .symbol(
-                            .function(name, arity: .exactly(args.count)), args, placeholder
-                        )
+                        let args = try scanArguments(upTo: ")")
+                        stack[stack.count - 1] =
+                            .symbol(.function(name, arity: .exactly(args.count)), args, placeholder)
                     case let last? where last.isOperand:
                         throw Expression.Error.unexpectedToken("(")
                     default:
+                        // TODO: if we make `,` a multifix operator, we can use `scanArguments()` here instead
                         try stack.append(parseSubexpression(upTo: [")"]))
-                    }
-                    guard scanCharacter(")") else {
-                        throw Expression.Error.missingDelimiter(")")
+                        guard scanCharacter(")") else {
+                            throw Expression.Error.missingDelimiter(")")
+                        }
                     }
                     operandPosition = false
                     followedByWhitespace = skipWhitespace()
@@ -1426,26 +1435,24 @@ private extension UnicodeScalarView {
                         stack[stack.count - 1] = .symbol(.postfix(op), [], placeholder)
                     }
                     stack.append(expression)
-                case "[":
-                    guard case let .symbol(.variable(name), _, _)? = stack.last else {
-                        throw Expression.Error.unexpectedToken("[")
-                    }
                     operandPosition = true
-                    do {
-                        let index = try parseSubexpression(upTo: [",", "]"])
-                        guard scanCharacter("]") else {
-                            if scanCharacter(",") {
-                                throw Expression.Error.arityMismatch(.array(name))
-                            }
-                            throw Expression.Error.missingDelimiter("]")
+                    followedByWhitespace = skipWhitespace()
+                case "[":
+                    switch stack.last {
+                    case let .symbol(.variable(name), _, _)?:
+                        let args = try scanArguments(upTo: "]")
+                        guard args.count == 1 else {
+                            throw Expression.Error.arityMismatch(.array(name))
                         }
-                        stack[stack.count - 1] = .symbol(.array(name), [index], placeholder)
-                    } catch Expression.Error.unexpectedToken("") {
-                        guard scanCharacter("]") else {
-                            throw Expression.Error.missingDelimiter("]")
-                        }
-                        throw Expression.Error.arityMismatch(.array(name))
+                        stack[stack.count - 1] = .symbol(.array(name), [args[0]], placeholder)
+                    case let last? where last.isOperand:
+                        throw Expression.Error.unexpectedToken("[")
+                    default:
+                        let args = try scanArguments(upTo: "]")
+                        stack.append(.symbol(.function("[]", arity: .exactly(args.count)), args, placeholder))
                     }
+                    operandPosition = false
+                    followedByWhitespace = skipWhitespace()
                 default:
                     operandPosition = true
                     switch (precededByWhitespace, followedByWhitespace) {
