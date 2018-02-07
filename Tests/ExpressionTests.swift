@@ -221,6 +221,11 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "foo[(5, 6)]")
     }
 
+    func testArrayLiteralDescription() {
+        let expression = Expression.parse("[1,2,3]")
+        XCTAssertEqual(expression.description, "[1, 2, 3]")
+    }
+
     // MARK: Error description
 
     func testCustomErrorDescription() {
@@ -304,6 +309,7 @@ class ExpressionTests: XCTestCase {
     }
 
     func testEmptySymbolArityErrorDescription() {
+        // TODO: is this the correct behavior?
         let error = Expression.Error.arityMismatch(.variable(""))
         XCTAssertEqual(error.description, "Variable  expects 0 arguments")
     }
@@ -653,7 +659,6 @@ class ExpressionTests: XCTestCase {
         let expression = Expression.parse(&characters, upTo: "}")
         XCTAssertEqual(characters.first, "}")
         XCTAssertEqual(expression.error, .emptyExpression)
-
     }
 
     // MARK: Syntax errors
@@ -886,7 +891,7 @@ class ExpressionTests: XCTestCase {
 
     func testTooFewArgumentsForCustomFunction() {
         let expression = Expression("foo(4)", symbols: [
-            .function("foo", arity: 2): { $0[0] + $0[1] }
+            .function("foo", arity: 2): { $0[0] + $0[1] },
         ])
         XCTAssertThrowsError(try expression.evaluate()) { error in
             XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("foo", arity: 2)))
@@ -934,7 +939,6 @@ class ExpressionTests: XCTestCase {
             XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("min", arity: .atLeast(2))))
         }
     }
-    
 
     // MARK: Symbol errors
 
@@ -988,6 +992,20 @@ class ExpressionTests: XCTestCase {
 
     func testCallResultOfFunction() {
         let expression = Expression("pow(1,2)(3)")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("("))
+        }
+    }
+
+    func testCallResultOfArray() {
+        let expression = Expression("foo[1](3)")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("("))
+        }
+    }
+
+    func testCallArrayLiteral() {
+        let expression = Expression("[1,2](3)")
         XCTAssertThrowsError(try expression.evaluate()) { error in
             XCTAssertEqual(error as? Expression.Error, .unexpectedToken("("))
         }
@@ -1055,9 +1073,16 @@ class ExpressionTests: XCTestCase {
 
     func testArrayLiteral() {
         let expression = Expression("[1,2,3]", symbols: [
-            .function("[]", arity: .any): { $0.reduce(0) { $0 + $1 } }
+            .function("[]", arity: .any): { $0.reduce(0) { $0 + $1 } },
         ])
         XCTAssertEqual(try expression.evaluate(), 6)
+    }
+
+    func testSubscriptArrayLiteral() {
+        let expression = Expression("[1,2][3]")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("["))
+        }
     }
 
     // MARK: Evaluation

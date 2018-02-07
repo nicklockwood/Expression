@@ -27,6 +27,7 @@
 - [AnyExpression](#anyexpression)
     - [Usage](#usage-1)
     - [Symbols](#symbols-1)
+    - [Literals](#literals)
 - [Example Projects](#example-projects)
 	- [Calculator](#calculator)
 	- [Colors](#colors)
@@ -84,7 +85,7 @@ If you prefer, there's a framework for Mac and iOS that you can import which inc
 
 You can use CocoaPods, Carthage, or Swift Package Manager. To install Expression using CocoaPods, add the following to your Podfile:
 
-	pod 'Expression', '~> 0.11.0'
+	pod 'Expression', '~> 0.12'
 
 
 ## Integration
@@ -262,6 +263,8 @@ Functions are called in an expression by using their name followed by a comma-de
 ```
 
 Array symbols represent a sequence of values that can be accessed by index. Array symbols are referenced in an expression by using their name followed by an index argument in square brackets.
+
+Expression cannot work with non-numeric types, so there is no support for specifying array literals inside an expression. Array literals *are* supported by [AnyExpression](#anyexpression), however.
 
 
 # Performance
@@ -452,7 +455,7 @@ false
 
 * AnyExpression's `SymbolEvaluator` functions accept and return `Any` instead of `Double`
 * Boolean symbols and operators are enabled by default when you create an `AnyExpression`
-* There is no separate `arrays` argument for the AnyExpression constructor. If you wish to pass an array constant, you can add it to the `constants` dictionary
+* There is no separate `arrays` argument for the AnyExpression constructor. If you wish to pass an array or dictionary constant, you can simply add it to the `constants` dictionary like any other value type
 
 You can create and evaluate an `AnyExpression` instance as follows:
 
@@ -474,9 +477,10 @@ The `evaluate` function has a certain amount of built-in leniency with respect t
 The currently supported automatic conversions are:
 
 * T -> Optional<T>
-* Int, Float, Bool, etc -> Double
-* Double, Float, Bool, etc -> Int
-* Int, Double, Float, etc -> Bool
+* Numeric -> Numeric
+* Array<Numeric> -> Array<Numeric>
+* Numeric -> Bool
+* Bool -> Numeric
 * Any -> String
 
 ## Symbols
@@ -489,6 +493,14 @@ In addition to adding support for string literals, AnyExpression extends Express
 Optional unwrapping is automatic, so there is currently no need for the postfix `?` or `!` operators. `nil` (aka `Optional.none`) and `NSNull` are both treated the same way to avoid confusion when working with JSON or Objective-C API data.
 
 Comparison operators like `==` and !=` are also extended to work with any `Hashable` type, and `+` can be used for string concatenation, as in the example above.
+
+For `array` symbols, AnyExpression can use any `Hashable` type as the index. This means that AnyExpression can work with `Dictionary` values as well as `Array`s and `ArraySlice`s.
+
+## Literals
+
+As mentioned above, AnyExpression supports the use of quoted string literals, delimited with either single quotes (') or double quotes ("). Special characters inside the string can be escaped using a backlash (\).
+
+AnyExpression also supports array literals defined in square brackets, e.g. `[1, 2, 3]` or `['foo', 'bar', 'baz']`. Array literals can contain a mixture of value types and/or sub-expressions.
 
 
 # Example Projects

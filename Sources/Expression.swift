@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.12.2
+//  Version 0.12.3
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -35,7 +35,7 @@ import Foundation
 
 /// Immutable wrapper for a parsed expression
 /// Reusing the same Expression instance for multiple evaluations is more efficient
-/// than creating a new one each time you wish to evaluate an expression string.
+/// than creating a new one each time you wish to evaluate an expression string
 public final class Expression: CustomStringConvertible {
     private let root: Subexpression
 
@@ -53,7 +53,7 @@ public final class Expression: CustomStringConvertible {
         case atLeast(Int)
 
         /// Any number of arguments
-        public static let any = Arity.atLeast(0)
+        public static let any = atLeast(0)
 
         /// ExpressibleByIntegerLiteral constructor
         public init(integerLiteral value: Int) {
@@ -71,19 +71,17 @@ public final class Expression: CustomStringConvertible {
         }
 
         /// Equatable implementation
-        /// Note: this works more like a contains() function if the
-        /// lhs is a range and the rhs is an exact value. This allows
-        /// foo(x) to match foo(...) in a symbols dictionary
+        /// Note: this works more like a contains() function if
+        /// one side a range and the other is an exact value
+        /// This allows foo(x) to match foo(...) in a symbols dictionary
         public static func == (lhs: Arity, rhs: Arity) -> Bool {
             switch (lhs, rhs) {
             case let (.exactly(lhs), .exactly(rhs)),
                  let (.atLeast(lhs), .atLeast(rhs)):
                 return lhs == rhs
-            case let (.atLeast(min), .exactly(rhs)):
-                return rhs >= min
-            case (.exactly, _),
-                 (.atLeast, _):
-                return false
+            case let (.atLeast(min), .exactly(value)),
+                 let (.exactly(value), .atLeast(min)):
+                return value >= min
             }
         }
     }
@@ -226,7 +224,7 @@ public final class Expression: CustomStringConvertible {
                 let description = symbol.description
                 return "\(description.prefix(1).uppercased())\(description.dropFirst()) expects \(arity)"
             case let .arrayBounds(symbol, index):
-                return "Index \(stringify(index)) out of bounds for \(symbol)"
+                return "Index \(Expression.stringify(index)) out of bounds for \(symbol)"
             }
         }
 
@@ -316,7 +314,7 @@ public final class Expression: CustomStringConvertible {
                 return fn
             } else if boolSymbols.isEmpty, case .infix("?:") = symbol,
                 let lhs = symbols[.infix("?")], let rhs = symbols[.infix(":")] {
-                // TODO: get rid of this special case - it's unlikey that it's used by anyone
+                // TODO: get rid of this special case - it's unlikely that it's used by anyone
                 return { args in try rhs([lhs([args[0], args[1]]), args[2]]) }
             }
             return nil
@@ -583,7 +581,8 @@ public final class Expression: CustomStringConvertible {
     }()
 }
 
-// Internal API
+// MARK: Internal API
+
 extension Expression {
     // Fallback evaluator for when symbol is not found
     static func errorEvaluator(for symbol: Symbol) -> SymbolEvaluator {
@@ -602,7 +601,8 @@ extension Expression {
     }
 }
 
-// Private API
+// MARK: Private API
+
 private extension Expression {
     // Produce a printable number, without redundant decimal places
     static func stringify(_ number: Double) -> String {
@@ -886,6 +886,8 @@ private enum Subexpression: CustomStringConvertible {
                 return "\(lhsDescription) \(symbol.escapedName) \(rhsDescription)"
             case .variable:
                 return symbol.escapedName
+            case .function("[]", _):
+                return "[\(arguments(args))]"
             case .function:
                 return "\(symbol.escapedName)(\(arguments(args)))"
             case .array:
@@ -937,8 +939,9 @@ private enum Subexpression: CustomStringConvertible {
     }
 }
 
-// Workaround for horribly slow Substring.UnicodeScalarView perf
+// MARK: Expression parsing
 
+// Workaround for horribly slow Substring.UnicodeScalarView perf
 private struct UnicodeScalarView {
     public typealias Index = String.UnicodeScalarView.Index
 
@@ -1018,7 +1021,6 @@ private extension Substring.UnicodeScalarView {
     }
 }
 
-// Expression parsing logic
 private extension UnicodeScalarView {
     // Placeholder evaluator function
     private func placeholder(_: [Double]) throws -> Double { preconditionFailure() }

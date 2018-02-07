@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.12.3](https://github.com/nicklockwood/Expression/releases/tag/0.12.3) (2018-02-06)
+
+- AnyExpression now supports array literals like `[1,2,3]` and `["hello", "world"]`
+- AnyExpression can now uatomatically cast between numeric arrays of different types
+- Improved messaging for function arity errors and some types of syntax error
+- Fixed Swift 3.2 compatibility issues
+
 ## [0.12.2](https://github.com/nicklockwood/Expression/releases/tag/0.12.2) (2018-02-05)
 
 - AnyExpression now supports subscripting of `ArraySlice` and `Dictionary` values

@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.12.2
+//  Version 0.12.3
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -262,13 +262,12 @@ public struct AnyExpression: CustomStringConvertible {
                     }
                 default:
                     return { args in
-                        // TODO: find alternative approach that doesn't lose precision
-                        try box.store(fn(args.map {
+                        try fn(args.map {
                             guard let doubleValue = loadNumber($0) else {
                                 throw Error.typeMismatch(symbol, args.map(box.load))
                             }
                             return doubleValue
-                        }) != 0)
+                        }) == 0 ? NanBox.falseValue : NanBox.trueValue
                     }
                 }
             } else {
@@ -362,6 +361,7 @@ public struct AnyExpression: CustomStringConvertible {
         let literals = box.values
 
         // Evaluation isn't thread-safe due to shared values
+        // so we use objc_sync_enter/exit to prevent re-entrancy
         evaluator = {
             objc_sync_enter(box)
             defer {
@@ -405,7 +405,8 @@ public struct AnyExpression: CustomStringConvertible {
     public var description: String { return describer() }
 }
 
-// Internal API
+// MARK: Internal API
+
 extension AnyExpression.Error {
     /// Standard error message for mismatched argument types
     static func typeMismatch(_ symbol: AnyExpression.Symbol, _ args: [Any]) -> AnyExpression.Error {
@@ -434,7 +435,81 @@ extension AnyExpression.Error {
     }
 }
 
-// Private API
+extension AnyExpression {
+    // Cast a value to the specified type
+    static func cast<T>(_ anyValue: Any) -> T? {
+        if let value = anyValue as? T {
+            return value
+        }
+        var type: Any.Type = T.self
+        if let optionalType = type as? _Optional.Type {
+            type = optionalType.wrappedType
+        }
+        switch type {
+        case let numericType as _Numeric.Type:
+            if anyValue is Bool { return nil }
+            return (anyValue as? NSNumber).map { numericType.init(truncating: $0) } as? T
+        case let arrayType as _Array.Type:
+            return arrayType.cast(anyValue) as? T
+        default:
+            return nil
+        }
+    }
+
+    // Convert any value to a printable string
+    static func stringify(_ value: Any) -> String {
+        switch value {
+        case let bool as Bool:
+            return bool ? "true" : "false"
+        case let number as NSNumber:
+            if let int = Int64(exactly: number) {
+                return "\(int)"
+            }
+            if let uint = UInt64(exactly: number) {
+                return "\(uint)"
+            }
+            return "\(number)"
+        case is Any.Type:
+            let typeName = "\(value)"
+            if typeName.hasPrefix("("), let range = typeName.range(of: " in") {
+                let range = typeName.index(after: typeName.startIndex) ..< range.lowerBound
+                return String(typeName[range])
+            }
+            return typeName
+        case let value:
+            return unwrap(value).map { "\($0)" } ?? "nil"
+        }
+    }
+
+    // Unwraps a potentially optional value
+    static func unwrap(_ value: Any) -> Any? {
+        switch value {
+        case let optional as _Optional:
+            guard let value = optional.value else {
+                fallthrough
+            }
+            return unwrap(value)
+        case is NSNull:
+            return nil
+        default:
+            return value
+        }
+    }
+
+    // Test if a value is nil
+    static func isNil(_ value: Any) -> Bool {
+        if let optional = value as? _Optional {
+            guard let value = optional.value else {
+                return true
+            }
+            return isNil(value)
+        }
+        return value is NSNull
+    }
+}
+
+// MARK: Private API
+
 private extension AnyExpression {
     // Value storage
     final class NanBox {
@@ -482,7 +557,7 @@ private extension AnyExpression {
                     break
                 }
                 return Double(truncating: numberValue)
-            case _ where isNil(value):
+            case _ where AnyExpression.isNil(value):
                 return NanBox.nilValue
             default:
                 break
@@ -515,81 +590,6 @@ private extension AnyExpression {
         }
     }
 
-    // Cast a value to the specified type
-    static func cast<T>(_ anyValue: Any) -> T? {
-        if let value = anyValue as? T {
-            return value
-        }
-        var type: Any.Type = T.self
-        if let optionalType = type as? _Optional.Type {
-            type = optionalType.wrappedType
-        }
-        switch type {
-        case let numericType as _Numeric.Type:
-            if anyValue is Bool { return nil }
-            return (anyValue as? NSNumber).map { numericType.init(truncating: $0) } as? T
-        case let arrayType as _Array.Type:
-            return arrayType.cast(anyValue) as? T
-        default:
-            return nil
-        }
-    }
-
-    // Cast an array
-    static func arrayCast<T>(_ anyValue: Any) -> [T]? {
-        guard let array = anyValue as? [Any] else {
-            return nil
-        }
-        var value = [T]()
-        for element in array {
-            guard let element: T = cast(element) else {
-                return nil
-            }
-            value.append(element)
-        }
-        return value
-    }
-
-    // Convert any value to a printable string
-    static func stringify(_ value: Any) -> String {
-        switch value {
-        case let bool as Bool:
-            return bool ? "true" : "false"
-        case let number as NSNumber:
-            if let int = Int64(exactly: number) {
-                return "\(int)"
-            }
-            if let uint = UInt64(exactly: number) {
-                return "\(uint)"
-            }
-            return "\(number)"
-        case is Any.Type:
-            let typeName = "\(value)"
-            if typeName.hasPrefix("("), let range = typeName.range(of: " in") {
-                let range = typeName.index(after: typeName.startIndex) ..< range.lowerBound
-                return String(typeName[range])
-            }
-            return typeName
-        case let value:
-            return unwrap(value).map { "\($0)" } ?? "nil"
-        }
-    }
-
-    // Unwraps a potentially optional value
-    static func unwrap(_ value: Any) -> Any? {
-        switch value {
-        case let optional as _Optional:
-            guard let value = optional.value else {
-                fallthrough
-            }
-            return unwrap(value)
-        case is NSNull:
-            return nil
-        default:
-            return value
-        }
-    }
-
     // Array evaluator
     static func arrayEvaluator(for symbol: Symbol, _ value: Any) -> SymbolEvaluator {
         switch value {
@@ -617,15 +617,19 @@ private extension AnyExpression {
         }
     }
 
-    // Test if a value is nil
-    static func isNil(_ value: Any) -> Bool {
-        if let optional = value as? _Optional {
-            guard let value = optional.value else {
-                return true
-            }
-            return isNil(value)
+    // Cast an array
+    static func arrayCast<T>(_ anyValue: Any) -> [T]? {
+        guard let array = anyValue as? [Any] else {
+            return nil
         }
-        return value is NSNull
+        var value = [T]()
+        for element in array {
+            guard let element: T = cast(element) else {
+                return nil
+            }
+            value.append(element)
+        }
+        return value
     }
 }
 
@@ -662,6 +666,7 @@ extension Array: _Array {
         }
         return self[index]
     }
+
     static func cast(_ value: Any) -> Any? {
         return AnyExpression.arrayCast(value) as [Element]?
     }
@@ -674,6 +679,7 @@ extension ArraySlice: _Array {
         }
         return self[index]
     }
+
     static func cast(_ value: Any) -> Any? {
         return (AnyExpression.arrayCast(value) as [Element]?).map(self.init)
     }

@@ -67,7 +67,6 @@ class AnyExpressionTests: XCTestCase {
 
     func testStringConstantDescriptionNotMangled() {
         let expression = AnyExpression("foo(bar)", constants: ["bar": "bar"])
-        // TODO: would be nice if value could still be inlined, as with Expression
         XCTAssertEqual(expression.description, "foo(bar)")
     }
 
@@ -364,11 +363,15 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(result as? Double, 10)
     }
 
-    func testFontWeightTypePreserved() throws {
-        let expression = AnyExpression("foo", constants: ["foo": NSFont.Weight(5)])
-        let result: Any = try expression.evaluate()
-        XCTAssertEqual("\(type(of: result))", "Weight")
-    }
+    #if swift(>=4)
+
+        func testFontWeightTypePreserved() throws {
+            let expression = AnyExpression("foo", constants: ["foo": NSFont.Weight(5)])
+            let result: Any = try expression.evaluate()
+            XCTAssertEqual("\(type(of: result))", "Weight")
+        }
+
+    #endif
 
     // MARK: String concatenation
 
@@ -984,7 +987,7 @@ class AnyExpressionTests: XCTestCase {
 
     func testTooFewArgumentsForCustomFunction() {
         let expression = AnyExpression("foo(4)", symbols: [
-            .function("foo", arity: 2): { $0 }
+            .function("foo", arity: 2): { $0 },
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .arityMismatch(.function("foo", arity: 2)))
