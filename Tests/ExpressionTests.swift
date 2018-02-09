@@ -226,6 +226,16 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.description, "[1, 2, 3]")
     }
 
+    func testArrayOperatorDescription() {
+        let expression = Expression.parse("3 * 3[4] + 2")
+        XCTAssertEqual(expression.description, "3 * 3[4] + 2")
+    }
+
+    func testArrayOperatorDescription2() {
+        let expression = Expression.parse("3 * 3[4 * 2] + 3")
+        XCTAssertEqual(expression.description, "3 * 3[4 * 2] + 3")
+    }
+
     // MARK: Error description
 
     func testCustomErrorDescription() {
@@ -290,7 +300,12 @@ class ExpressionTests: XCTestCase {
 
     func testTernaryOperatorArityMismatchErrorDescription() {
         let error = Expression.Error.arityMismatch(.infix("?:"))
-        XCTAssertEqual(error.description, "Infix operator ?: expects 3 arguments")
+        XCTAssertEqual(error.description, "Ternary operator ?: expects 3 arguments")
+    }
+
+    func testSubscriptOperatorArityMismatchErrorDescription() {
+        let error = Expression.Error.arityMismatch(.infix("[]"))
+        XCTAssertEqual(error.description, "Subscript operator [] expects 1 argument")
     }
 
     func testPostfixOperatorArityMismatchErrorDescription() {
@@ -1058,7 +1073,7 @@ class ExpressionTests: XCTestCase {
     }
 
     func testSubscriptResultOfFunction() {
-        let expression = Expression("pow()[2]")
+        let expression = Expression("pow(2,3)[2]")
         XCTAssertThrowsError(try expression.evaluate()) { error in
             XCTAssertEqual(error as? Expression.Error, .unexpectedToken("["))
         }
@@ -1078,10 +1093,57 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 6)
     }
 
+    func testAddArrayLiteral() {
+        let expression = Expression("[1,2,3] + [4,5,6]", symbols: [
+            .function("[]", arity: .any): { $0.reduce(0) { $0 + $1 } },
+        ])
+        XCTAssertEqual(try expression.evaluate(), 21)
+    }
+
     func testSubscriptArrayLiteral() {
-        let expression = Expression("[1,2][3]")
+        let expression = Expression("[1,2][3]", symbols: [
+            .function("[]", arity: .any): { $0.reduce(0) { $0 + $1 } },
+        ])
         XCTAssertThrowsError(try expression.evaluate()) { error in
             XCTAssertEqual(error as? Expression.Error, .unexpectedToken("["))
+        }
+    }
+
+    func testSubscriptArrayLiteralWithCustomSubscriptOperator() {
+        let expression = Expression("[1,2][0]", symbols: [
+            .function("[]", arity: .any): { $0.reduce(0) { $0 + $1 } },
+            .infix("[]"): { args in
+                let digits = Array(String(Int(args[0])))
+                let index = Int(args[1])
+                if index >= digits.count {
+                    return .nan
+                }
+                return Double(String(digits[index])) ?? 0
+            }
+            ])
+        XCTAssertEqual(try expression.evaluate(), 3)
+    }
+
+    func testSubscriptNumericLiteralWithCustomSubscriptOperator() {
+        let expression = Expression("534[2]", symbols: [
+            .infix("[]"): { args in
+                let digits = Array(String(Int(args[0])))
+                let index = Int(args[1])
+                if index >= digits.count {
+                    return .nan
+                }
+                return Double(String(digits[index])) ?? 0
+            }
+        ])
+        XCTAssertEqual(try expression.evaluate(), 4)
+    }
+
+    func testSubscriptNumericLiteralWithCustomSubscriptOperatorWithMultipleArguments() {
+        let expression = Expression("534[2,4]", symbols: [
+            .infix("[]"): { _ in 5 }
+        ])
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .arityMismatch(.infix("[]")))
         }
     }
 
@@ -1702,6 +1764,16 @@ class ExpressionTests: XCTestCase {
     func testEverythingTakesPrecedenceOverComma() {
         let expression = Expression("3 * 2, 2 * 3", symbols: [.infix(","): { $0[0] + $0[1] }])
         XCTAssertEqual(try expression.evaluate(), 12)
+    }
+
+    func testSubscriptTakesPrecedenceOverMultiplications() {
+        let expression = Expression("2 * 3[3] * 4", symbols: [.infix("[]"): { $0[0] + $0[1] }])
+        XCTAssertEqual(try expression.evaluate(), 48)
+    }
+
+    func testSubscriptArgumentTakesPrecedence() {
+        let expression = Expression("3[3 + 2] * 4", symbols: [.infix("[]"): { $0[0] + $0[1] }])
+        XCTAssertEqual(try expression.evaluate(), 32)
     }
 
     // MARK: Symbol precedence

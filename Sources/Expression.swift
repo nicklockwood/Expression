@@ -129,6 +129,10 @@ public final class Expression: CustomStringConvertible {
             switch self {
             case .variable:
                 return "variable \(escapedName)"
+            case .infix("?:"):
+                return "ternary operator \(escapedName)"
+            case .infix("[]"):
+                return "subscript operator \(escapedName)"
             case .infix:
                 return "infix operator \(escapedName)"
             case .prefix:
@@ -208,18 +212,18 @@ public final class Expression: CustomStringConvertible {
             case let .arityMismatch(symbol):
                 let arity: Arity
                 switch symbol {
-                case .variable:
-                    arity = 0
+                case let .function(_, requiredArity):
+                    arity = requiredArity
+                case .array, .infix("[]"):
+                    arity = 1
                 case .infix("?:"):
                     arity = 3
                 case .infix:
                     arity = 2
                 case .postfix, .prefix:
                     arity = 1
-                case let .function(_, requiredArity):
-                    arity = requiredArity
-                case .array:
-                    arity = 1
+                case .variable:
+                    arity = 0
                 }
                 let description = symbol.description
                 return "\(description.prefix(1).uppercased())\(description.dropFirst()) expects \(arity)"
@@ -314,7 +318,7 @@ public final class Expression: CustomStringConvertible {
                 return fn
             } else if boolSymbols.isEmpty, case .infix("?:") = symbol,
                 let lhs = symbols[.infix("?")], let rhs = symbols[.infix(":")] {
-                // TODO: get rid of this special case - it's unlikely that it's used by anyone
+                // TODO: get rid of this special case? - it's unlikely that it's used by anyone
                 return { args in try rhs([lhs([args[0], args[1]]), args[2]]) }
             }
             return nil
@@ -587,7 +591,7 @@ extension Expression {
     // Fallback evaluator for when symbol is not found
     static func errorEvaluator(for symbol: Symbol) -> SymbolEvaluator {
         switch symbol {
-        case .infix(","), .function("[]", _):
+        case .infix(","), .infix("[]"), .function("[]", _):
             return { _ in throw Error.unexpectedToken(String(symbol.name.prefix(1))) }
         case let .function(called, arity):
             let keys = Set(mathSymbols.keys).union(boolSymbols.keys)
@@ -627,6 +631,8 @@ private extension Expression {
         // https://github.com/apple/swift-evolution/blob/master/proposals/0077-operator-precedence.md
         func precedence(of op: String) -> Int {
             switch op {
+            case "[]":
+                return 100
             case "<<", ">>", ">>>": // bitshift
                 return 2
             case "*", "/", "%", "&": // multiplication
@@ -864,6 +870,8 @@ private enum Subexpression: CustomStringConvertible {
                 return "\(args[0]), \(args[1])"
             case .infix("?:") where args.count == 3:
                 return "\(args[0]) ? \(args[1]) : \(args[2])"
+            case .infix("[]"):
+                return "\(args[0])[\(args[1])]"
             case let .infix(name):
                 let lhs = args[0]
                 let lhsDescription: String
@@ -1440,23 +1448,24 @@ private extension UnicodeScalarView {
                     operandPosition = true
                     followedByWhitespace = skipWhitespace()
                 case "[":
+                    let args = try scanArguments(upTo: "]")
                     switch stack.last {
                     case let .symbol(.variable(name), _, _)?:
-                        let args = try scanArguments(upTo: "]")
                         guard args.count == 1 else {
                             throw Expression.Error.arityMismatch(.array(name))
                         }
                         stack[stack.count - 1] = .symbol(.array(name), [args[0]], placeholder)
                     case let last? where last.isOperand:
-                        throw Expression.Error.unexpectedToken("[")
+                        guard args.count == 1 else {
+                            throw Expression.Error.arityMismatch(.infix("[]"))
+                        }
+                        stack[stack.count - 1] = .symbol(.infix("[]"), [last, args[0]], placeholder)
                     default:
-                        let args = try scanArguments(upTo: "]")
                         stack.append(.symbol(.function("[]", arity: .exactly(args.count)), args, placeholder))
                     }
                     operandPosition = false
                     followedByWhitespace = skipWhitespace()
                 default:
-                    operandPosition = true
                     switch (precededByWhitespace, followedByWhitespace) {
                     case (true, true), (false, false):
                         stack.append(expression)
@@ -1465,6 +1474,7 @@ private extension UnicodeScalarView {
                     case (false, true):
                         stack.append(.symbol(.postfix(name), [], placeholder))
                     }
+                    operandPosition = true
                 }
             case let .symbol(.variable(name), _, _) where !operandPosition:
                 operandPosition = true
