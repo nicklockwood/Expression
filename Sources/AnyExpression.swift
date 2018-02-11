@@ -86,6 +86,7 @@ public struct AnyExpression: CustomStringConvertible {
             impureSymbols: { symbol in
                 switch symbol {
                 case let .variable(name), let .array(name):
+                    // TODO: should an unmatched array lookup fall back to variable?
                     if constants[name] == nil, let fn = symbols[symbol] {
                         return fn
                     }
@@ -279,6 +280,11 @@ public struct AnyExpression: CustomStringConvertible {
                         let lhs = box.load(args[0])
                         return AnyExpression.isNil(lhs) ? args[1] : args[0]
                     }
+                case .infix("[]"):
+                    return { args in
+                        let fn = AnyExpression.arrayEvaluator(for: symbol, box.load(args[0]))
+                        return try box.store(fn([box.load(args[1])]))
+                    }
                 case .function("[]", _):
                     return { box.store($0.map(box.load)) }
                 case let .variable(name):
@@ -413,13 +419,16 @@ extension AnyExpression.Error {
         let types = args.map {
             AnyExpression.stringify(AnyExpression.isNil($0) ? $0 : type(of: $0))
         }
-        if types.count == 1 {
-            if case .array = symbol {
-                return .message("Attempted to subscript \(symbol.escapedName)[] with incompatible index type \(types[0])")
-            }
+        switch symbol {
+        case .infix("[]") where types.count == 2:
+            return .message("Attempted to subscript \(types[0]) with incompatible index type \(types[1])")
+        case .array where types.count == 1:
+            return .message("Attempted to subscript \(symbol.escapedName)[] with incompatible index type \(types[0])")
+        case _ where types.count == 1:
             return .message("Argument of type \(types[0]) is not compatible with \(symbol)")
+        default:
+            return .message("Arguments of type (\(types.joined(separator: ", "))) are not compatible with \(symbol)")
         }
-        return .message("Arguments of type (\(types.joined(separator: ", "))) are not compatible with \(symbol)")
     }
 
     /// Standard error message for mismatched return type
@@ -430,8 +439,9 @@ extension AnyExpression.Error {
 
     /// Standard error message for subscripting a non-array value
     static func illegalSubscript(_ symbol: AnyExpression.Symbol, _ value: Any) -> AnyExpression.Error {
-        let type = AnyExpression.unwrap(value).map { Swift.type(of: $0) } as Any
-        return .message("Attempted to subscript \(AnyExpression.stringify(type)) value \(symbol.escapedName)")
+        let type = AnyExpression.stringify(AnyExpression.unwrap(value).map { Swift.type(of: $0) } as Any)
+        let value = symbol == .infix("[]") ? AnyExpression.stringify(value) : symbol.escapedName
+        return .message("Attempted to subscript \(type) value \(value)")
     }
 }
 
@@ -596,7 +606,9 @@ private extension AnyExpression {
         case let array as _Array:
             return { args in
                 guard let index = AnyExpression.cast(args[0]) as Int? else {
-                    throw Error.typeMismatch(symbol, args)
+                    throw symbol == .infix("[]") ?
+                        Error.typeMismatch(symbol, [array, args[0]]) :
+                        Error.typeMismatch(symbol, args)
                 }
                 guard let value = array.value(at: index) else {
                     throw Error.arrayBounds(symbol, Double(index))
@@ -606,7 +618,9 @@ private extension AnyExpression {
         case let dictionary as _Dictionary:
             return { args in
                 guard let value = dictionary.value(for: args[0]) else {
-                    throw Error.typeMismatch(symbol, args)
+                    throw symbol == .infix("[]") ?
+                        Error.typeMismatch(symbol, [dictionary, args[0]]) :
+                        Error.typeMismatch(symbol, args)
                 }
                 return value
             }

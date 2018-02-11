@@ -193,6 +193,20 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
+    func testArrayAccessOfIntLiteral() {
+        let expression = AnyExpression("5[1]")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .illegalSubscript(.infix("[]"), 5.0))
+        }
+    }
+
+    func testArrayAccessOfIntExpressionLiteral() {
+        let expression = AnyExpression("(2 + 3)[1]")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .illegalSubscript(.infix("[]"), 5.0))
+        }
+    }
+
     func testArrayAccessOfNonexistentSymbol() {
         let expression = AnyExpression("foo[0]")
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
@@ -218,6 +232,39 @@ class AnyExpressionTests: XCTestCase {
     func testIntArraySliceLiteral() {
         let expression = AnyExpression("[1,2,3]")
         XCTAssertEqual(try expression.evaluate(), ArraySlice([1, 2, 3]))
+    }
+
+    func testSubscriptIntArrayLiteral() {
+        let expression = AnyExpression("[1,2,3][1]")
+        XCTAssertEqual(try expression.evaluate(), 2)
+    }
+
+    func testSubscriptStringArrayLiteral() {
+        let expression = AnyExpression("['a','b','c'][1]")
+        XCTAssertEqual(try expression.evaluate(), "b")
+    }
+
+    func testSubscriptStringArrayLiteralWithString() {
+        let expression = AnyExpression("['a','b','c']['foo']")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("[]"), [[Any](), "foo"]))
+        }
+    }
+
+    func testSubscriptStringDictionaryWithInt() {
+        let expression = AnyExpression("foo()[2]", symbols: [
+            .function("foo", arity: 0): { _ in ["bar": "baz"] }
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("[]"), [[String: String](), 2.0]))
+        }
+    }
+
+    func testSubscriptStringArrayLiteralOutOfBounds() {
+        let expression = AnyExpression("['a','b','c'][3]")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .arrayBounds(.infix("[]"), 3))
+        }
     }
 
     // MARK: Dictionaries
