@@ -209,6 +209,8 @@ public struct AnyExpression: CustomStringConvertible {
                 case .infix("+"):
                     return { args in
                         switch (box.load(args[0]), box.load(args[1])) {
+                        case let (lhs as Double, rhs as Double):
+                            return lhs + rhs
                         case let (lhs as String, any):
                             guard let rhs = AnyExpression.unwrap(any) else {
                                 throw Error.typeMismatch(symbol, [lhs, any])
@@ -219,8 +221,8 @@ public struct AnyExpression: CustomStringConvertible {
                                 throw Error.typeMismatch(symbol, [any, rhs])
                             }
                             return box.store("\(AnyExpression.stringify(lhs))\(rhs)")
-                        case let (lhs as Double, rhs as Double):
-                            return lhs + rhs
+                        case let (lhs as _Array, rhs as _Array):
+                            return box.store(lhs.values + rhs.values)
                         case let (lhs as NSNumber, rhs as NSNumber):
                             return Double(truncating: lhs) + Double(truncating: rhs)
                         case let (lhs, rhs):
@@ -669,11 +671,16 @@ extension Float: _Numeric {}
 
 // Used for subscripting array values
 private protocol _Array {
+    var values: [Any] { get }
     func value(at index: Int) -> Any?
     static func cast(_ value: Any) -> Any?
 }
 
 extension Array: _Array {
+    var values: [Any] {
+        return self
+    }
+
     func value(at index: Int) -> Any? {
         guard indices.contains(index) else {
             return nil // Out of bounds
@@ -687,6 +694,10 @@ extension Array: _Array {
 }
 
 extension ArraySlice: _Array {
+    var values: [Any] {
+        return Array(self)
+    }
+
     func value(at index: Int) -> Any? {
         guard indices.contains(index) else {
             return nil // Out of bounds

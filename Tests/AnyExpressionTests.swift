@@ -253,7 +253,7 @@ class AnyExpressionTests: XCTestCase {
 
     func testSubscriptStringDictionaryWithInt() {
         let expression = AnyExpression("foo()[2]", symbols: [
-            .function("foo", arity: 0): { _ in ["bar": "baz"] }
+            .function("foo", arity: 0): { _ in ["bar": "baz"] },
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("[]"), [[String: String](), 2.0]))
@@ -265,6 +265,24 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .arrayBounds(.infix("[]"), 3))
         }
+    }
+
+    func testConcatIntArrays() {
+        let expression = AnyExpression("[1,2] + [3,4]")
+        XCTAssertEqual(try expression.evaluate(), [1, 2, 3, 4])
+    }
+
+    func testConcatIntArraySlices() {
+        let expression = AnyExpression("a + b", constants: [
+            "a": ArraySlice([1, 2]),
+            "b": ArraySlice([3, 4]),
+        ])
+        XCTAssertEqual(try expression.evaluate(), [1, 2, 3, 4])
+    }
+
+    func testConcatMixedArrays() {
+        let expression = AnyExpression("[1,2] + ['a', 'b']")
+        XCTAssertEqual(try expression.evaluate() as [AnyHashable], [1.0, 2.0, "a", "b"])
     }
 
     // MARK: Dictionaries
