@@ -608,7 +608,6 @@ extension Expression {
 // MARK: Private API
 
 private extension Expression {
-    // Produce a printable number, without redundant decimal places
     static func stringify(_ number: Double) -> String {
         if let int = Int64(exactly: number) {
             return "\(int)"
@@ -616,58 +615,46 @@ private extension Expression {
         return "\(number)"
     }
 
-    static let assignmentOperators = Set([
-        "=", "*=", "/=", "%=", "+=", "-=",
-        "<<=", ">>=", "&=", "^=", "|=", ":=",
-    ])
-
-    static let comparisonOperators = Set([
-        "<", "<=", ">=", ">",
-        "==", "!=", "<>", "===", "!==",
-        "lt", "le", "lte", "gt", "ge", "gte", "eq", "ne",
-    ])
+    // https://github.com/apple/swift-evolution/blob/master/proposals/0077-operator-precedence.md
+    static let operatorPrecedence: [String: (precedence: Int, isRightAssociative: Bool)] = {
+        var precedences = [
+            "[]": 100,
+            "<<": 2, ">>": 2, ">>>": 2, // bitshift
+            "*": 1, "/": 1, "%": 1, "&": 1, // multiplication
+            // +, -, |, ^, etc: 0 (also the default)
+            "..": -1, "...": -1, "..<": -1, // range formation
+            "is": -2, "as": -2, "isa": -2, // casting
+            "??": -3, "?:": -3, // null-coalescing
+            // comparison: -4
+            "&&": -5, "and": -5, // and
+            "||": -6, "or": -6, // or
+            "?": -7, ":": -7, // ternary
+            // assignment: -8
+            ",": -100,
+        ].mapValues { ($0, false) }
+        let comparisonOperators = [
+            "<", "<=", ">=", ">",
+            "==", "!=", "<>", "===", "!==",
+            "lt", "le", "lte", "gt", "ge", "gte", "eq", "ne",
+        ]
+        for op in comparisonOperators {
+            precedences[op] = (-4, true)
+        }
+        let assignmentOperators = [
+            "=", "*=", "/=", "%=", "+=", "-=",
+            "<<=", ">>=", "&=", "^=", "|=", ":=",
+        ]
+        for op in assignmentOperators {
+            precedences[op] = (-8, true)
+        }
+        return precedences
+    }()
 
     static func `operator`(_ lhs: String, takesPrecedenceOver rhs: String) -> Bool {
-        // https://github.com/apple/swift-evolution/blob/master/proposals/0077-operator-precedence.md
-        func precedence(of op: String) -> Int {
-            switch op {
-            case "[]":
-                return 100
-            case "<<", ">>", ">>>": // bitshift
-                return 2
-            case "*", "/", "%", "&": // multiplication
-                return 1
-            case "..", "...", "..<": // range formation
-                return -1
-            case "is", "as", "isa": // casting
-                return -2
-            case "??", "?:": // null-coalescing
-                return -3
-            case _ where comparisonOperators.contains(op): // comparison
-                return -4
-            case "&&", "and": // and
-                return -5
-            case "||", "or": // or
-                return -6
-            case "?", ":": // ternary
-                return -7
-            case _ where assignmentOperators.contains(op): // assignment
-                return -8
-            case ",":
-                return -100
-            default: // +, -, |, ^, etc
-                return 0
-            }
-        }
-
-        func isRightAssociative(_ op: String) -> Bool {
-            return comparisonOperators.contains(op) || assignmentOperators.contains(op)
-        }
-
-        let p1 = precedence(of: lhs)
-        let p2 = precedence(of: rhs)
+        let (p1, rightAssociative) = operatorPrecedence[lhs] ?? (0, false)
+        let (p2, _) = operatorPrecedence[rhs] ?? (0, false)
         if p1 == p2 {
-            return !isRightAssociative(lhs)
+            return !rightAssociative
         }
         return p1 > p2
     }
