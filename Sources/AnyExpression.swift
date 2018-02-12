@@ -278,14 +278,39 @@ public struct AnyExpression: CustomStringConvertible {
                 case .variable("nil"):
                     return { _ in NanBox.nilValue }
                 case .infix("??"):
-                    return { args in
-                        let lhs = box.load(args[0])
-                        return AnyExpression.isNil(lhs) ? args[1] : args[0]
-                    }
+                    return { AnyExpression.isNil(box.load($0[0])) ? $0[1] : $0[0] }
                 case .infix("[]"):
                     return { args in
                         let fn = AnyExpression.arrayEvaluator(for: symbol, box.load(args[0]))
                         return try box.store(fn([box.load(args[1])]))
+                    }
+                case .infix("..."):
+                    return { args in
+                        switch (box.load(args[0]), box.load(args[1])) {
+                        case let (lhs as NSNumber, rhs as NSNumber):
+                            let lhs = Int(truncating: lhs), rhs = Int(truncating: rhs)
+                            guard lhs <= rhs else { throw Error.invalidRange(lhs, rhs) }
+                            return box.store(lhs ... rhs)
+                        case let (lhs as String.Index, rhs as String.Index):
+                            guard lhs <= rhs else { throw Error.invalidRange(lhs, rhs) }
+                            return box.store(lhs ... rhs)
+                        case let (lhs, rhs):
+                            throw Error.typeMismatch(symbol, [lhs, rhs])
+                        }
+                    }
+                case .infix("..<"):
+                    return { args in
+                        switch (box.load(args[0]), box.load(args[1])) {
+                        case let (lhs as NSNumber, rhs as NSNumber):
+                            let lhs = Int(truncating: lhs), rhs = Int(truncating: rhs)
+                            guard lhs < rhs else { throw Error.invalidRange(lhs, rhs) }
+                            return box.store(lhs ..< rhs)
+                        case let (lhs as String.Index, rhs as String.Index):
+                            guard lhs < rhs else { throw Error.invalidRange(lhs, rhs) }
+                            return box.store(lhs ..< rhs)
+                        case let (lhs, rhs):
+                            throw Error.typeMismatch(symbol, [lhs, rhs])
+                        }
                     }
                 case .function("[]", _):
                     return { box.store($0.map(box.load)) }
@@ -299,7 +324,7 @@ public struct AnyExpression: CustomStringConvertible {
                     guard let string = unwrapString(name) else {
                         return { _ in throw Error.undefinedSymbol(symbol) }
                     }
-                    // TODO: should indexing of strings be allowed?
+                    // TODO: should subscripting of strings be allowed?
                     return { _ in throw Error.illegalSubscript(symbol, string) }
                 default:
                     return nil
@@ -431,6 +456,11 @@ extension AnyExpression.Error {
         default:
             return .message("Arguments of type (\(types.joined(separator: ", "))) are not compatible with \(symbol)")
         }
+    }
+
+    /// Standard error message for invalid range
+    static func invalidRange<T: Comparable>(_ lhs: T, _ rhs: T) -> AnyExpression.Error {
+        return .message("Cannot form range with upperBound \(lhs > rhs ? "<" : "<=") lowerBound")
     }
 
     /// Standard error message for mismatched return type
@@ -607,15 +637,19 @@ private extension AnyExpression {
         switch value {
         case let array as _Array:
             return { args in
-                guard let index = AnyExpression.cast(args[0]) as Int? else {
+                switch args[0] {
+                case let index as NSNumber:
+                    guard let value = array.value(at: Int(truncating: index)) else {
+                        throw Error.arrayBounds(symbol, Double(truncating: index))
+                    }
+                    return value
+                case let range as _Range:
+                    return try range.slice(of: array, for: symbol)
+                case let index:
                     throw symbol == .infix("[]") ?
-                        Error.typeMismatch(symbol, [array, args[0]]) :
+                        Error.typeMismatch(symbol, [array, index]) :
                         Error.typeMismatch(symbol, args)
                 }
-                guard let value = array.value(at: index) else {
-                    throw Error.arrayBounds(symbol, Double(index))
-                }
-                return value
             }
         case let dictionary as _Dictionary:
             return { args in
@@ -635,7 +669,7 @@ private extension AnyExpression {
 
     // Cast an array
     static func arrayCast<T>(_ anyValue: Any) -> [T]? {
-        guard let array = anyValue as? [Any] else {
+        guard let array = (anyValue as? _Array).map({ $0.values }) else {
             return nil
         }
         var value = [T]()
@@ -669,7 +703,37 @@ extension UInt64: _Numeric {}
 extension Double: _Numeric {}
 extension Float: _Numeric {}
 
-// Used for subscripting array values
+// Used for subcripting
+private protocol _Range {
+    func slice(of: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any>
+}
+
+extension CountableClosedRange: _Range {
+    fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
+        guard let range = self as? CountableClosedRange<Int> else {
+            throw AnyExpression.Error.typeMismatch(symbol, [self])
+        }
+        let values = array.values
+        guard values.indices.contains(range.lowerBound) else {
+            throw AnyExpression.Error.arrayBounds(symbol, Double(range.lowerBound))
+        }
+        guard values.indices.contains(range.upperBound) else {
+            throw AnyExpression.Error.arrayBounds(symbol, Double(range.upperBound))
+        }
+        return array.values[range]
+    }
+}
+
+extension CountableRange: _Range {
+    fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
+        guard let range = self as? CountableRange<Int> else {
+            throw AnyExpression.Error.typeMismatch(symbol, [self])
+        }
+        return try (range.lowerBound ... range.upperBound - 1).slice(of: array, for: symbol)
+    }
+}
+
+// Used for array values
 private protocol _Array {
     var values: [Any] { get }
     func value(at index: Int) -> Any?
@@ -677,28 +741,28 @@ private protocol _Array {
 }
 
 extension Array: _Array {
-    var values: [Any] {
+    fileprivate var values: [Any] {
         return self
     }
 
-    func value(at index: Int) -> Any? {
+    fileprivate func value(at index: Int) -> Any? {
         guard indices.contains(index) else {
             return nil // Out of bounds
         }
         return self[index]
     }
 
-    static func cast(_ value: Any) -> Any? {
+    fileprivate static func cast(_ value: Any) -> Any? {
         return AnyExpression.arrayCast(value) as [Element]?
     }
 }
 
 extension ArraySlice: _Array {
-    var values: [Any] {
+    fileprivate var values: [Any] {
         return Array(self)
     }
 
-    func value(at index: Int) -> Any? {
+    fileprivate func value(at index: Int) -> Any? {
         guard indices.contains(index) else {
             return nil // Out of bounds
         }
@@ -710,7 +774,7 @@ extension ArraySlice: _Array {
     }
 }
 
-// Used for subscripting dictionary values
+// Used for dictionary values
 private protocol _Dictionary {
     func value(for key: Any) -> Any?
 }

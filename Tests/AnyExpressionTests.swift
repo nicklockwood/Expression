@@ -351,6 +351,114 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
+    // MARK: Ranges
+
+    func testClosedIntRange() {
+        let expression = AnyExpression("1 ... 3")
+        XCTAssertEqual(try expression.evaluate(), 1 ... 3)
+    }
+
+    func testHalfOpenIntRange() {
+        let expression = AnyExpression("1 ..< 3")
+        XCTAssertEqual(try expression.evaluate(), 1 ..< 3)
+    }
+
+    func testClosedStringIndexRange() {
+        let string = "foo"
+        let expression = AnyExpression("start ... end", constants: [
+            "start": string.startIndex,
+            "end": string.endIndex,
+        ])
+        XCTAssertEqual(try expression.evaluate(), string.startIndex ... string.endIndex)
+    }
+
+    func testHalfOpenStringIndexRange() {
+        let string = "foo"
+        let expression = AnyExpression("start ..< end", constants: [
+            "start": string.startIndex,
+            "end": string.endIndex,
+        ])
+        XCTAssertEqual(try expression.evaluate(), string.startIndex ..< string.endIndex)
+    }
+
+    func testMixedTypeClosedRange() {
+        let expression = AnyExpression("1 ... 'foo'")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("..."), [1.0, "foo"]))
+        }
+    }
+
+    func testMixedTypeHalfOpenRange() {
+        let expression = AnyExpression("1 ..< 'foo'")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("..<"), [1.0, "foo"]))
+        }
+    }
+
+    func testInvalidClosedRange() {
+        let expression = AnyExpression("1 ... -1")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .invalidRange(1, -1))
+        }
+    }
+
+    func testInvalidClosedStringRange() {
+        let range = "foo".startIndex ... "foo".endIndex
+        let expression = AnyExpression("end ... start", constants: [
+            "start": range.lowerBound,
+            "end": range.upperBound,
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .invalidRange(range.upperBound, range.lowerBound))
+        }
+    }
+
+    func testInvalidHalfOpenRange() {
+        let expression = AnyExpression("1 ..< 1")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .invalidRange(1, 1))
+        }
+    }
+
+    func testInvalidHalfOpenStringRange() {
+        let index = "foo".startIndex
+        let expression = AnyExpression("start ..< start", constants: [
+            "start": index,
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .invalidRange(index, index))
+        }
+    }
+
+    func testSubscriptArrayWithRange() {
+        let expression = AnyExpression("[1,2,3,4][1...2]")
+        XCTAssertEqual(try expression.evaluate(), [2,3])
+    }
+
+    func testSubscriptArrayWithWrongRangeType() {
+        let range = "foo".startIndex ... "foo".endIndex
+        let expression = AnyExpression("[1,2,3,4][range]", constants: [
+            "range": range
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("[]"), [[Any](), range]))
+        }
+    }
+
+    func testSubscriptArrayWithLowerBoundOutOfRange() {
+        let expression = AnyExpression("[1,2,3,4][-2...4]")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .arrayBounds(.infix("[]"), -2))
+        }
+    }
+
+    func testSubscriptArrayWithUpperBoundOutOfRange() {
+        let expression = AnyExpression("[1,2,3,4][3...4]")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .arrayBounds(.infix("[]"), 4))
+        }
+    }
+
     // MARK: Numeric types
 
     func testAddNumbers() {
