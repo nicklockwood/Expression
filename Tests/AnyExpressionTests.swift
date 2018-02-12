@@ -177,22 +177,6 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
-    func testArrayAccessOfStringConstant() {
-        let expression = AnyExpression("foo[0]", constants: [
-            "foo": "bar",
-        ])
-        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssertEqual(error as? Expression.Error, .illegalSubscript(.array("foo"), "bar"))
-        }
-    }
-
-    func testArrayAccessOfStringLiteral() {
-        let expression = AnyExpression("'foo'[0]")
-        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssertEqual(error as? Expression.Error, .illegalSubscript(.array("'foo'"), "foo"))
-        }
-    }
-
     func testArrayAccessOfIntLiteral() {
         let expression = AnyExpression("5[1]")
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
@@ -430,12 +414,33 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
-    func testSubscriptArrayWithRange() {
+    // MARK: Array range subscripting
+
+    func testSubscriptArrayWithCountableClosedRange() {
         let expression = AnyExpression("[1,2,3,4][1...2]")
         XCTAssertEqual(try expression.evaluate(), [2,3])
     }
 
-    func testSubscriptArrayWithWrongRangeType() {
+    func testSubscriptArrayWithClosedRange() {
+        let expression = AnyExpression("[1,2,3,4][range]", constants: [
+            "range": ClosedRange(1...2),
+        ])
+        XCTAssertEqual(try expression.evaluate(), [2,3])
+    }
+
+    func testSubscriptArrayWithCountableHalfOpenRange() {
+        let expression = AnyExpression("[1,2,3,4][1..<3]")
+        XCTAssertEqual(try expression.evaluate(), [2,3])
+    }
+
+    func testSubscriptArrayWithHalfOpenRange() {
+        let expression = AnyExpression("[1,2,3,4][range]", constants: [
+            "range": Range(1..<3),
+        ])
+        XCTAssertEqual(try expression.evaluate(), [2,3])
+    }
+
+    func testSubscriptArrayWithWrongClosedRangeType() {
         let range = "foo".startIndex ... "foo".endIndex
         let expression = AnyExpression("[1,2,3,4][range]", constants: [
             "range": range
@@ -445,17 +450,332 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
-    func testSubscriptArrayWithLowerBoundOutOfRange() {
+    func testSubscriptArrayWithWrongHalfOpenRangeType() {
+        let range = "foo".startIndex ..< "foo".endIndex
+        let expression = AnyExpression("[1,2,3,4][range]", constants: [
+            "range": range
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("[]"), [[Any](), range]))
+        }
+    }
+
+    func testSubscriptArrayWithCountableClosedLowerBoundOutOfRange() {
         let expression = AnyExpression("[1,2,3,4][-2...4]")
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .arrayBounds(.infix("[]"), -2))
         }
     }
 
-    func testSubscriptArrayWithUpperBoundOutOfRange() {
+    func testSubscriptArrayWithClosedLowerBoundOutOfRange() {
+        let expression = AnyExpression("[1,2,3,4][range]", constants: [
+            "range": ClosedRange(-2...4),
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .arrayBounds(.infix("[]"), -2))
+        }
+    }
+
+    func testSubscriptArrayWithCountableHalfOpenLowerBoundOutOfRange() {
+        let expression = AnyExpression("[1,2,3,4][-2..<4]")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .arrayBounds(.infix("[]"), -2))
+        }
+    }
+
+    func testSubscriptArrayWithHalfOpenLowerBoundOutOfRange() {
+        let expression = AnyExpression("[1,2,3,4][range]", constants: [
+            "range": Range(-2..<4),
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .arrayBounds(.infix("[]"), -2))
+        }
+    }
+
+    func testSubscriptArrayWithCountableClosedUpperBoundOutOfRange() {
         let expression = AnyExpression("[1,2,3,4][3...4]")
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .arrayBounds(.infix("[]"), 4))
+        }
+    }
+
+    func testSubscriptArrayWithClosedUpperBoundOutOfRange() {
+        let expression = AnyExpression("[1,2,3,4][range]", constants: [
+            "range": ClosedRange(1...4),
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .arrayBounds(.infix("[]"), 4))
+        }
+    }
+
+    func testSubscriptArrayWithCountableHalfOpenUpperBoundOutOfRange() {
+        let expression = AnyExpression("[1,2,3,4][3..<5]")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .arrayBounds(.infix("[]"), 4))
+        }
+    }
+
+    func testSubscriptArrayWithHalfOpenUpperBoundOutOfRange() {
+        let expression = AnyExpression("[1,2,3,4][range]", constants: [
+            "range": Range(1..<5),
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .arrayBounds(.infix("[]"), 4))
+        }
+    }
+
+    // MARK: String subscripting
+
+    func testSubscriptStringWithIndex() {
+        let expression = AnyExpression("'foo'[index]", constants: [
+            "index": "foo".startIndex
+        ])
+        XCTAssertEqual(try expression.evaluate() as Character, "f")
+    }
+
+    func testSubscriptSubstringWithIndex() {
+        let expression = AnyExpression("foo[index]", constants: [
+            "foo": Substring("foo"),
+            "index": "foo".startIndex
+        ])
+        XCTAssertEqual(try expression.evaluate() as Character, "f")
+    }
+
+    func testSubscriptNSStringWithIndex() {
+        let expression = AnyExpression("foo[index]", constants: [
+            "foo": "foo" as NSString,
+            "index": "foo".startIndex
+        ])
+        XCTAssertEqual(try expression.evaluate() as Character, "f")
+    }
+
+    func testSubscriptStringWithOutOfRangeIndex() {
+        let index = "food".endIndex
+        let expression = AnyExpression("'foo'[index]", constants: [
+            "index": index
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", index))
+        }
+    }
+
+    func testSubscriptSubstringWithOutOfRangeIndex() {
+        let index = "foobar".endIndex
+        let expression = AnyExpression("foo[index]", constants: [
+            "foo": Substring("foo"),
+            "index": index
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", index))
+        }
+    }
+
+    func testSubscriptNSStringWithOutOfRangeIndex() {
+        let index = "foobarbaz".endIndex
+        let expression = AnyExpression("foo[index]", constants: [
+            "foo": "foo" as NSString,
+            "index": index
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", index))
+        }
+    }
+
+    func testSubscriptStringWithInt() {
+        let expression = AnyExpression("'foo'[2]")
+        XCTAssertEqual(try expression.evaluate() as Character, "o")
+    }
+
+    func testSubscriptSubstringWithInt() {
+        let expression = AnyExpression("foo[2]", constants: [
+            "foo": Substring("foo"),
+        ])
+        XCTAssertEqual(try expression.evaluate() as Character, "o")
+    }
+
+    func testSubscriptNSStringWithInt() {
+        let expression = AnyExpression("foo[2]", constants: [
+            "foo": "foo" as NSString,
+        ])
+        XCTAssertEqual(try expression.evaluate() as Character, "o")
+    }
+
+    func testSubscriptStringWithOutOfRangeInt() {
+        let expression = AnyExpression("'foo'[5]")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 5))
+        }
+    }
+
+    func testSubscriptSubstringWithOutOfRangeInt() {
+        let expression = AnyExpression("foo[4]", constants: [
+            "foo": Substring("foo"),
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 4))
+        }
+    }
+
+    func testSubscriptNSStringWithOutOfRangeInt() {
+        let expression = AnyExpression("foo[9]", constants: [
+            "foo": "foo" as NSString,
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 9))
+        }
+    }
+
+    func testSubscriptStringWithHalfOpenIndexRange() {
+        let expression = AnyExpression("'foo'[range]", constants: [
+            "range": "foo".range(of: "fo")!
+        ])
+        XCTAssertEqual(try expression.evaluate(), "fo")
+    }
+
+    func testSubscriptStringWithClosedIndexRange() {
+        let expression = AnyExpression("'foo'[range]", constants: [
+            "range": "foo".startIndex ... "foo".index(after: "foo".startIndex)
+        ])
+        XCTAssertEqual(try expression.evaluate(), "fo")
+    }
+
+    func testSubscriptSubstringWithHalfOpenIndexRange() {
+        let expression = AnyExpression("foo[range]", constants: [
+            "foo": Substring("foo"),
+            "range": "foo".range(of: "fo")!
+        ])
+        XCTAssertEqual(try expression.evaluate(), "fo")
+    }
+
+    func testSubscriptNSStringWithHalfOpenIndexRange() {
+        let expression = AnyExpression("foo[range]", constants: [
+            "foo": "foo" as NSString,
+            "range": "foo".range(of: "fo")!
+        ])
+        XCTAssertEqual(try expression.evaluate(), "fo")
+    }
+
+    func testSubscriptStringWithInvalidHalfOpenIndexRange() {
+        let expression = AnyExpression("'foo'[range]", constants: [
+            "range": "foobar".range(of: "bar")!
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 3))
+        }
+    }
+
+    func testSubscriptStringWithInvalidClosedIndexRange() {
+        let expression = AnyExpression("'foo'[range]", constants: [
+            "range": "foobar".range(of: "bar")!.lowerBound ... "foobar".endIndex
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 3))
+        }
+    }
+
+    func testSubscriptSubstringWithInvalidHalfOpenIndexRange() {
+        let expression = AnyExpression("foo[range]", constants: [
+            "foo": "barfoo".suffix(3),
+            "range": "barfoo".range(of: "bar")!
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -3))
+        }
+    }
+
+    func testSubscriptNSStringWithInvalidHalfOpenIndexRangeLowerBound() {
+        let expression = AnyExpression("foo[range]", constants: [
+            "foo": "foo" as NSString,
+            "range": "foobarbaz".range(of: "baz")!
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 6))
+        }
+    }
+
+    func testSubscriptNSStringWithInvalidHalfOpenIndexRangeUpperBound() {
+        let expression = AnyExpression("foo[range]", constants: [
+            "foo": "foo" as NSString,
+            "range": "foobar".range(of: "obar")!
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 6))
+        }
+    }
+
+    func testSubscriptNSStringWithInvalidClosedIndexRangeLowerBound() {
+        let expression = AnyExpression("foo[range]", constants: [
+            "foo": "foo" as NSString,
+            "range": "foobarbaz".range(of: "baz")!.lowerBound ... "foobarbaz".endIndex
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 6))
+        }
+    }
+
+    func testSubscriptNSStringWithInvalidClosedIndexRangeUpperBound() {
+        let expression = AnyExpression("foo[range]", constants: [
+            "foo": "foo" as NSString,
+            "range": "foobar".range(of: "obar")!.lowerBound ... "foobar".endIndex
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 6))
+        }
+    }
+
+    func testSubscriptStringWithIntRange() {
+        let expression = AnyExpression("'foo'[1..<3]")
+        XCTAssertEqual(try expression.evaluate(), "oo")
+    }
+
+    func testSubscriptSubstringWithIntRange() {
+        let expression = AnyExpression("foo[1..<3]", constants: [
+            "foo": Substring("foo"),
+        ])
+        XCTAssertEqual(try expression.evaluate(), "oo")
+    }
+
+    func testSubscriptNSStringWithIntRange() {
+        let expression = AnyExpression("foo[1..<3]", constants: [
+            "foo": "foo" as NSString,
+        ])
+        XCTAssertEqual(try expression.evaluate(), "oo")
+    }
+
+    func testSubscriptStringWithClosedIntRange() {
+        let expression = AnyExpression("'foo'[1...2]")
+        XCTAssertEqual(try expression.evaluate(), "oo")
+    }
+
+    func testSubscriptSubstringWithClosedIntRange() {
+        let expression = AnyExpression("foo[1...2]", constants: [
+            "foo": Substring("foo"),
+        ])
+        XCTAssertEqual(try expression.evaluate(), "oo")
+    }
+
+    func testSubscriptNSStringWithClosedIntRange() {
+        let expression = AnyExpression("foo[1...2]", constants: [
+            "foo": "foo" as NSString,
+        ])
+        XCTAssertEqual(try expression.evaluate(), "oo")
+    }
+
+    func testSubscriptStringLiteralWithInvalidIndexType() {
+        let expression = AnyExpression("'foo'[index]", constants: [
+            "index": NSObject()
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.array("'foo'"), [NSObject()]))
+        }
+    }
+
+    func testSubscriptStringExpressionWithInvalidIndexType() {
+        let expression = AnyExpression("('foo' + 'bar')[index]", constants: [
+            "index": NSObject()
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("[]"), ["foobar", NSObject()]))
         }
     }
 
@@ -1237,9 +1557,19 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), "5.6")
     }
 
+    func testCastDoubleAsSubstring() {
+        let expression = AnyExpression("5.6")
+        XCTAssertEqual(try expression.evaluate(), Substring("5.6"))
+    }
+
     func testCastDoubleAsOptionalString() {
         let expression = AnyExpression("5.6")
         XCTAssertEqual(try expression.evaluate() as String?, "5.6")
+    }
+
+    func testCastDoubleAsOptionalSubstring() {
+        let expression = AnyExpression("5.6")
+        XCTAssertEqual(try expression.evaluate() as Substring?, "5.6")
     }
 
     func testCastDoubleResultAsOptionalDouble() {
