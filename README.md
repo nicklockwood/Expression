@@ -44,7 +44,7 @@ The Expression library is split into two parts:
 
 1. The `Expression` class, which is similar to Foundation's built-in `NSExpression` class, but with better support for custom operators, a more Swift-friendly API, and a focus on performance.
 
-2. `AnyExpression`, an extension of Expression that handles arbitrary types and provides additional built-in support for common tasks such as string concatenation and dealing with Optionals.
+2. `AnyExpression`, an extension of Expression that handles arbitrary types and provides additional built-in support for common types such as `String`, `Dictionary`, `Array` and `Optional`.
 
 
 ## Why?
@@ -63,7 +63,7 @@ But there are other possible applications, e.g.
 
 (If you find any other use cases, let me know and I'll add them)
 
-Normally these kind of calculations would involve embedding a heavyweight interpreted language such as JavaScript or Lua into your app. Expression avoids that overhead, and is also more secure, as it reduces the risk of arbitrary code injection or crashes due to infinite loops, buffer overflows, etc.
+Normally these kind of calculations would involve embedding a heavyweight interpreted language such as JavaScript or Lua into your app. Expression avoids that overhead, and is also more secure as it reduces the risk of arbitrary code injection or crashes due to infinite loops, buffer overflows, etc.
 
 Expression is fast, lightweight, well-tested, and written entirely in Swift.
 
@@ -81,12 +81,19 @@ Although `Expression` only works with `Double` values, `AnyExpression` uses a te
 
 The Expression API is encapsulated in a single file, and everything public is prefixed or name-spaced, so you can simply drag the `Expression.swift` file into your project to use it. If you wish to use the AnyExpression extension then include `AnyExpression.swift` as well.
 
-If you prefer, there's a framework for Mac and iOS that you can import which includes both the `Expression` and `AnyExpression` classes.
+If you prefer, there's a framework for Mac and iOS that you can import which includes both the `Expression` and `AnyExpression` classes. You can install this manually, or by using CocoaPods, Carthage, or Swift Package Manager.
 
-You can use CocoaPods, Carthage, or Swift Package Manager. To install Expression using CocoaPods, add the following to your Podfile:
+To install Expression using CocoaPods, add the following to your Podfile:
 
-	pod 'Expression', '~> 0.12'
+```ruby
+pod 'Expression', '~> 0.12'
+```
 
+To install using Carthage, add this to your Cartfile:
+
+```
+github "nicklockwood/Expression" ~> 0.12
+```
 
 ## Integration
 
@@ -252,7 +259,9 @@ Standard boolean operators are supported, and follow the normal precedence rules
 .function(String, arity: Arity)
 ```
 
-A function symbol is defined with a name and an "arity", which is the number of arguments that it expects. The `Arity` type is an enum that can be set to either `exactly(Int)` or `atLeast(Int)` for variadic functions. A given function name can be overloaded multiple times with different arities.
+A function symbol is defined with a name and an `Arity`, which is the number of arguments that it expects. The `Arity` type is an enum that can be set to either `exactly(Int)` or `atLeast(Int)` for variadic functions. A given function name can be overloaded multiple times with different arities.
+
+**Note:** `Arity` conforms to `ExpressibleByIntegerLiteral`, so for fixed-arity functions you can just write `.function("foo", arity: 2)` instead of `.function("foo", arity: .exactly(2))`
 
 Functions are called in an expression by using their name followed by a comma-delimited sequence of arguments in parentheses. If the argument count does not match any of the specified arity variants, an `arityError` will be thrown.
 
@@ -264,7 +273,11 @@ Functions are called in an expression by using their name followed by a comma-de
 
 Array symbols represent a sequence of values that can be accessed by index. Array symbols are referenced in an expression by using their name followed by an index argument in square brackets.
 
-Expression cannot work with non-numeric types, so there is no support for specifying array literals inside an expression. Array literals *are* supported by [AnyExpression](#anyexpression), however.
+The simplest way to use arrays with Expression is to pass in a constant array value via the `arrays` initializer argument. For variable arrays, you can return an `.array()` symbol implementation via the `symbols` argument.
+ 
+Expression also supports Swift-style array literal syntax like `[1, 2, 3]` and subscripting of arbitrary expressions like `(a + b)[c]`. Array literals map to the array literal constructor symbol `.function("[]", arity: .any)` and subscripting maps to the array subscripting operator `.infix("[]")`.
+
+Because Expression cannot work with non-numeric types, neither the array literal constructor nor the array subscripting operator have default implementations in Expression, however both of these *are* implemented in [AnyExpression](#anyexpression)'s standard symbol library.
 
 
 # Performance
@@ -455,7 +468,7 @@ false
 
 * AnyExpression's `SymbolEvaluator` functions accept and return `Any` instead of `Double`
 * Boolean symbols and operators are enabled by default when you create an `AnyExpression`
-* There is no separate `arrays` argument for the AnyExpression constructor. If you wish to pass an array or dictionary constant, you can simply add it to the `constants` dictionary like any other value type
+* There is no separate `arrays` argument for the AnyExpression constructor. If you wish to pass an array or dictionary constant, you can add it to the `constants` dictionary like any other value type
 
 You can create and evaluate an `AnyExpression` instance as follows:
 
@@ -500,7 +513,9 @@ For `array` symbols, AnyExpression can use any `Hashable` type as the index. Thi
 
 As mentioned above, AnyExpression supports the use of quoted string literals, delimited with either single quotes (') or double quotes ("). Special characters inside the string can be escaped using a backlash (\).
 
-AnyExpression also supports array literals defined in square brackets, e.g. `[1, 2, 3]` or `['foo', 'bar', 'baz']`. Array literals can contain a mixture of value types and/or sub-expressions.
+AnyExpression supports array literals defined in square brackets, e.g. `[1, 2, 3]` or `['foo', 'bar', 'baz']`. Array literals can contain a mixture of value types and/or sub-expressions.
+
+You can also create `Range` or `ClosedRange` literals using the `..<` and `...` syntax. Ranges currently work with either `Int` or `String.Index` values. Ranges can be used in conjunction with subscripting syntax for slicing arrays and strings.
 
 
 # Example Projects

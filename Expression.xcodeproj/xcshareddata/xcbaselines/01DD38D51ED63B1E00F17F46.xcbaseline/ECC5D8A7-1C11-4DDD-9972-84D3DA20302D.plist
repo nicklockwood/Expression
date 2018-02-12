@@ -11,9 +11,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.036692</real>
+					<real>0.036202</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEquateArrays()</key>
@@ -21,9 +21,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.079548</real>
+					<real>0.077265</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEquateBools()</key>
@@ -31,9 +31,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.022447</real>
+					<real>0.020916</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEquateDoubles()</key>
@@ -41,9 +41,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.017365</real>
+					<real>0.019355</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEquateEquatables()</key>
@@ -61,9 +61,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.033315</real>
+					<real>0.031407</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEquateNSObjects()</key>
@@ -71,9 +71,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.059533</real>
+					<real>0.059379</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEquateStrings()</key>
@@ -81,9 +81,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.048783</real>
+					<real>0.047449</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEquateTuples()</key>
@@ -101,9 +101,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.036063</real>
+					<real>0.040414</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEvaluatingBooleanAnyExpressionsWithEmptyEvaluator()</key>
@@ -121,9 +121,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.0066109</real>
+					<real>0.0068702</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEvaluatingBooleanExpressionsWithEmptyEvaluator()</key>
@@ -141,9 +141,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.048048</real>
+					<real>0.054136</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEvaluatingLongAnyExpressionsWithEmptyEvaluator()</key>
@@ -161,9 +161,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.0057594</real>
+					<real>0.0060506</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEvaluatingLongExpressionsWithEmptyEvaluator()</key>
@@ -181,9 +181,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.049644</real>
+					<real>0.052502</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEvaluatingMediumAnyExpressionsWithEmptyEvaluator()</key>
@@ -201,9 +201,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.0057318</real>
+					<real>0.0060471</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEvaluatingMediumExpressionsWithEmptyEvaluator()</key>
@@ -221,9 +221,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.042329</real>
+					<real>0.047062</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEvaluatingReallyLongAnyExpressionWithEmptyEvaluator()</key>
@@ -241,9 +241,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.0043578</real>
+					<real>0.0044824</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEvaluatingReallyLongExpressionWithEmptyEvaluator()</key>
@@ -261,9 +261,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.020006</real>
+					<real>0.022455</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEvaluatingShortAnyExpressionsWithEmptyEvaluator()</key>
@@ -281,9 +281,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.0015968</real>
+					<real>0.0014761</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testEvaluatingShortExpressionsWithEmptyEvaluator()</key>
@@ -301,9 +301,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.058076</real>
+					<real>0.061924</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingBooleanAnyExpressions()</key>
@@ -311,9 +311,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.025662</real>
+					<real>0.027324</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingBooleanAnyExpressionsWithNewInitializer()</key>
@@ -321,9 +321,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.026408</real>
+					<real>0.026488</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingBooleanExpressions()</key>
@@ -331,9 +331,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.017926</real>
+					<real>0.016401</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingBooleanExpressionsWithNewInitializer()</key>
@@ -341,9 +341,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.0090914</real>
+					<real>0.0094576</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingLongAnyExpressions()</key>
@@ -351,9 +351,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.031562</real>
+					<real>0.033718</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingLongAnyExpressionsWithNewInitializer()</key>
@@ -361,9 +361,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.036821</real>
+					<real>0.04044</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingLongExpressions()</key>
@@ -371,9 +371,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.022423</real>
+					<real>0.025775</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingLongExpressionsWithNewInitializer()</key>
@@ -381,9 +381,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.015566</real>
+					<real>0.016535</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingMediumAnyExpressions()</key>
@@ -391,9 +391,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.0167</real>
+					<real>0.01845</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingMediumAnyExpressionsWithNewInitializer()</key>
@@ -401,9 +401,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.019988</real>
+					<real>0.021118</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingMediumExpressions()</key>
@@ -411,9 +411,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.011357</real>
+					<real>0.010777</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingMediumExpressionsWithNewInitializer()</key>
@@ -421,9 +421,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.0065739</real>
+					<real>0.0070956</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingReallyLongAnyExpression()</key>
@@ -431,9 +431,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.10099</real>
+					<real>0.11083</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingReallyLongAnyExpressionWithNewInitializer()</key>
@@ -441,9 +441,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.10544</real>
+					<real>0.11553</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingReallyLongAnyExpressions()</key>
@@ -461,9 +461,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.089006</real>
+					<real>0.089858</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingReallyLongExpressions()</key>
@@ -481,9 +481,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.0084273</real>
+					<real>0.0089775</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingShortAnyExpressionsWithNewInitializer()</key>
@@ -491,9 +491,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.0083846</real>
+					<real>0.0090101</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingShortExpressions()</key>
@@ -501,9 +501,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.0053192</real>
+					<real>0.0050322</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testOptimizingShortExpressionsWithNewInitializer()</key>
@@ -511,9 +511,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.0020945</real>
+					<real>0.0023328</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testParsingBooleanExpressions()</key>
@@ -521,9 +521,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.044616</real>
+					<real>0.053218</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testParsingLongExpressions()</key>
@@ -531,9 +531,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.08438</real>
+					<real>0.099321</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testParsingMediumExpressions()</key>
@@ -541,9 +541,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.034585</real>
+					<real>0.037925</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testParsingReallyLongExpressions()</key>
@@ -551,9 +551,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.26158</real>
+					<real>0.28022</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 			<key>testParsingShortExpressions()</key>
@@ -561,9 +561,9 @@
 				<key>com.apple.XCTPerformanceMetric_WallClockTime</key>
 				<dict>
 					<key>baselineAverage</key>
-					<real>0.012793</real>
+					<real>0.013577</real>
 					<key>baselineIntegrationDisplayName</key>
-					<string>30 Jan 2018, 18:18:24</string>
+					<string>12 Feb 2018 at 20:57:07</string>
 				</dict>
 			</dict>
 		</dict>

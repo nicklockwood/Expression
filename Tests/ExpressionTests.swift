@@ -1119,8 +1119,8 @@ class ExpressionTests: XCTestCase {
                     return .nan
                 }
                 return Double(String(digits[index])) ?? 0
-            }
-            ])
+            },
+        ])
         XCTAssertEqual(try expression.evaluate(), 3)
     }
 
@@ -1133,14 +1133,14 @@ class ExpressionTests: XCTestCase {
                     return .nan
                 }
                 return Double(String(digits[index])) ?? 0
-            }
+            },
         ])
         XCTAssertEqual(try expression.evaluate(), 4)
     }
 
     func testSubscriptNumericLiteralWithCustomSubscriptOperatorWithMultipleArguments() {
         let expression = Expression("534[2,4]", symbols: [
-            .infix("[]"): { _ in 5 }
+            .infix("[]"): { _ in 5 },
         ])
         XCTAssertThrowsError(try expression.evaluate()) { error in
             XCTAssertEqual(error as? Expression.Error, .arityMismatch(.infix("[]")))

@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.12.3
+//  Version 0.12.4
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -200,7 +200,9 @@ public struct AnyExpression: CustomStringConvertible {
 
         // Evaluators
         func defaultEvaluator(for symbol: Symbol) -> Expression.SymbolEvaluator? {
-            if let fn = Expression.mathSymbols[symbol] {
+            if let fn = AnyExpression.standardSymbols[symbol] {
+                return fn
+            } else if let fn = Expression.mathSymbols[symbol] {
                 switch symbol {
                 case .infix("+"):
                     return { args in
@@ -225,8 +227,6 @@ public struct AnyExpression: CustomStringConvertible {
                             throw Error.typeMismatch(symbol, [lhs, rhs])
                         }
                     }
-                case .variable, .function(_, arity: 0):
-                    return fn
                 default:
                     return { args in
                         // We potentially lose precision by converting all numbers to doubles
@@ -241,10 +241,6 @@ public struct AnyExpression: CustomStringConvertible {
                 }
             } else if let fn = boolSymbols[symbol] {
                 switch symbol {
-                case .variable("false"):
-                    return { _ in NanBox.falseValue }
-                case .variable("true"):
-                    return { _ in NanBox.trueValue }
                 case .infix("=="):
                     return { try equalArgs($0[0], $0[1]) ? NanBox.trueValue : NanBox.falseValue }
                 case .infix("!="):
@@ -271,10 +267,6 @@ public struct AnyExpression: CustomStringConvertible {
                 }
             } else {
                 switch symbol {
-                case .variable("nil"):
-                    return { _ in NanBox.nilValue }
-                case .infix("??"):
-                    return { AnyExpression.isNil(box.load($0[0])) ? $0[1] : $0[0] }
                 case .infix("[]"):
                     return { args in
                         let fn = AnyExpression.arrayEvaluator(for: symbol, box.load(args[0]))
@@ -536,10 +528,13 @@ extension AnyExpression {
             return "\(number)"
         case is Any.Type:
             let typeName = "\(value)"
-            if typeName.hasPrefix("("), let range = typeName.range(of: " in") {
-                let range = typeName.index(after: typeName.startIndex) ..< range.lowerBound
-                return String(typeName[range])
-            }
+            #if !swift(>=3.3) || (swift(>=4) && !swift(>=4.1))
+                // Fix mangled private class names on Swift 4 and earlier
+                if typeName.hasPrefix("("), let range = typeName.range(of: " in") {
+                    let range = typeName.index(after: typeName.startIndex) ..< range.lowerBound
+                    return String(typeName[range])
+                }
+            #endif
             return typeName
         case let value:
             return unwrap(value).map { "\($0)" } ?? "nil"
@@ -654,6 +649,18 @@ private extension AnyExpression {
             return loadIfStored(arg) ?? arg
         }
     }
+
+    // Standard symbols
+    static let standardSymbols: [Symbol: Expression.SymbolEvaluator] = [
+        // Math symbols
+        .variable("pi"): { _ in .pi },
+        // Boolean symbols
+        .variable("true"): { _ in NanBox.trueValue },
+        .variable("false"): { _ in NanBox.falseValue },
+        // Optionals
+        .variable("nil"): { _ in NanBox.nilValue },
+        .infix("??"): { $0[0].bitPattern == NanBox.nilValue.bitPattern ? $0[1] : $0[0] },
+    ]
 
     // Array evaluator
     static func arrayEvaluator(for symbol: Symbol, _ value: Any) -> SymbolEvaluator {
