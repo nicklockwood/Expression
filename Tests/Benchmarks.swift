@@ -6,9 +6,9 @@
 //  Copyright © 2018 Nick Lockwood. All rights reserved.
 //
 
-import XCTest
 import Expression
 import JavaScriptCore
+import XCTest
 
 let parseRepetitions = 50
 let evalRepetitions = 500

@@ -6,9 +6,9 @@
 //  Copyright © 2018 Nick Lockwood. All rights reserved.
 //
 
-import UIKit
 import Expression
 import JavaScriptCore
+import UIKit
 
 let parseRepetitions = 50
 let evalRepetitions = 50
@@ -34,7 +34,6 @@ let formatter: NumberFormatter = {
 }()
 
 class ViewController: UITableViewController {
-
     var results: [(String, [[(String, Double)]])] = []
 
     @objc func update() {
@@ -125,7 +124,7 @@ class ViewController: UITableViewController {
                     ("Long JS Expressions", time {
                         _ = buildJSExpressions(longExpressions)
                     }),
-                ]
+                ],
             ]),
             ("Evaluation (x\(evalRepetitions))", [
                 [
@@ -196,19 +195,19 @@ class ViewController: UITableViewController {
         update()
     }
 
-    override func numberOfSections(in tableView: UITableView) -> Int {
+    override func numberOfSections(in _: UITableView) -> Int {
         return results.count
     }
 
-    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    override func tableView(_: UITableView, numberOfRowsInSection section: Int) -> Int {
         return results[section].1.flatMap { $0 }.count
     }
 
-    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+    override func tableView(_: UITableView, titleForHeaderInSection section: Int) -> String? {
         return results[section].0
     }
 
-    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    override func tableView(_: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let subsections = results[indexPath.section].1
         let row = subsections.flatMap { $0 }[indexPath.row]
         let cell = UITableViewCell(style: .value1, reuseIdentifier: "cell")

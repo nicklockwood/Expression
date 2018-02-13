@@ -1,13 +1,19 @@
 # Change Log
 
+## [0.12.5](https://github.com/nicklockwood/Expression/releases/tag/0.12.5) (2018-02-13)
+
+- Added Benchmark app for comparing Expression performance against NSExpression and JavaScriptCore
+- Added support for partial ranges (e.g. `array[startIndex...]`, `string[...upperBound]`, etc)
+- Fixed crash when accessing string with an out-of-bounds range
+
 ## [0.12.4](https://github.com/nicklockwood/Expression/releases/tag/0.12.4) (2018-02-12)
 
 - Array subscripting operator can now be used with array literals and the result of expressions
 - Added support for subscripting strings using either `String.Index` or `Int` character offsets
 - AnyExpression now supports range literals using the `...` and `..<` operators
 - You can now create substrings or sub-arrays using subscript syntax with range values
-- Added automatic casting between String and Substring within expressions
-- AnyExpression + operator can now concatenate arrays as well as strings
+- Added automatic casting between `String` and `Substring` within expressions
+- AnyExpression's + operator can now concatenate arrays as well as strings
 
 ## [0.12.3](https://github.com/nicklockwood/Expression/releases/tag/0.12.3) (2018-02-06)
 

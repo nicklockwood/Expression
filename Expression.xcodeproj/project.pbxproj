@@ -349,10 +349,10 @@
 		01CC9F071EE2DC82001941BC /* Examples */ = {
 			isa = PBXGroup;
 			children = (
+				01A342062033043600F769A6 /* Benchmark */,
 				01CC9F081EE2DCC2001941BC /* Calculator */,
 				01CC9F341EE2E11B001941BC /* Colors */,
 				01CC9F611EE2E1B0001941BC /* Layout */,
-				01A342062033043600F769A6 /* Benchmark */,
 			);
 			name = Examples;
 			sourceTree = "<group>";

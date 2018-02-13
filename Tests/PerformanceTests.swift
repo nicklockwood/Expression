@@ -33,7 +33,6 @@ import Expression
 import XCTest
 
 class PerformanceTests: XCTestCase {
-
     private let parseRepetitions = 500
     private let evalRepetitions = 5000
 

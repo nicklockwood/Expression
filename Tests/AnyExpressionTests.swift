@@ -398,7 +398,7 @@ class AnyExpressionTests: XCTestCase {
 
     func testMixedTypeClosedRange() {
         let expression = AnyExpression("1 ... index", constants: [
-            "index": "foo".startIndex
+            "index": "foo".startIndex,
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("..."), [1.0, "foo".startIndex]))
@@ -414,7 +414,7 @@ class AnyExpressionTests: XCTestCase {
 
     func testMixedTypeHalfOpenRange() {
         let expression = AnyExpression("1 ..< index", constants: [
-            "index": "foo".startIndex
+            "index": "foo".startIndex,
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("..<"), [1.0, "foo".startIndex]))
@@ -1011,14 +1011,14 @@ class AnyExpressionTests: XCTestCase {
 
     func testSubscriptStringFromIndexRange() {
         let expression = AnyExpression("'foo'[index...]", constants: [
-            "index": "foo".index(of: "o")!
+            "index": "foo".index(of: "o")!,
         ])
         XCTAssertEqual(try expression.evaluate(), "oo")
     }
 
     func testSubscriptStringFromInvalidIndexRange() {
         let expression = AnyExpression("'foo'[index...]", constants: [
-            "index": "food".index(of: "d")!
+            "index": "food".index(of: "d")!,
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 3))
@@ -1028,7 +1028,7 @@ class AnyExpressionTests: XCTestCase {
     func testSubscriptStringFromInvalidIndexRange2() {
         let expression = AnyExpression("foo[index...]", constants: [
             "foo": "afoo"["afoo".range(of: "foo")!],
-            "index": "afoo".startIndex
+            "index": "afoo".startIndex,
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))
@@ -1037,14 +1037,14 @@ class AnyExpressionTests: XCTestCase {
 
     func testSubscriptStringUpToIndexRange() {
         let expression = AnyExpression("'foo'[..<index]", constants: [
-            "index": "foo".index(before: "foo".endIndex)
+            "index": "foo".index(before: "foo".endIndex),
         ])
         XCTAssertEqual(try expression.evaluate(), "fo")
     }
 
     func testSubscriptStringUpToInvalidIndexRange() {
         let expression = AnyExpression("'foo'[..<index]", constants: [
-            "index": "food".index(after: "foo".endIndex)
+            "index": "food".index(after: "foo".endIndex),
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 4))
@@ -1053,7 +1053,7 @@ class AnyExpressionTests: XCTestCase {
 
     func testSubscriptStringUpToInvalidIndexRange2() {
         let expression = AnyExpression("'foo'[..<index]", constants: [
-            "index": "foo".startIndex
+            "index": "foo".startIndex,
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 0))
@@ -1062,21 +1062,21 @@ class AnyExpressionTests: XCTestCase {
 
     func testSubscriptStringThroughIndexRange() {
         let expression = AnyExpression("'foo'[...index]", constants: [
-            "index": "food".index(before: "foo".endIndex)
+            "index": "food".index(before: "foo".endIndex),
         ])
         XCTAssertEqual(try expression.evaluate(), "foo")
     }
 
     func testSubscriptStringThroughIndexRangeEdgeCase() {
         let expression = AnyExpression("'foo'[...index]", constants: [
-            "index": "food".startIndex
+            "index": "food".startIndex,
         ])
         XCTAssertEqual(try expression.evaluate(), "f")
     }
 
     func testSubscriptStringThroughInvalidIndexRange() {
         let expression = AnyExpression("'foo'[...index]", constants: [
-            "index": "foo".endIndex
+            "index": "foo".endIndex,
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 3))
@@ -1086,7 +1086,7 @@ class AnyExpressionTests: XCTestCase {
     func testSubscriptStringThroughInvalidIndexRange2() {
         let expression = AnyExpression("foo[...index]", constants: [
             "foo": "afoo"["afoo".range(of: "foo")!],
-            "index": "afoo".startIndex
+            "index": "afoo".startIndex,
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))

@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.12.4
+//  Version 0.12.5
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -288,10 +288,10 @@ public struct AnyExpression: CustomStringConvertible {
                     }
                 case .postfix("..."):
                     return { args in
-                        switch (box.load(args[0])) {
-                        case let (index as NSNumber):
+                        switch box.load(args[0]) {
+                        case let index as NSNumber:
                             return box.store(Int(truncating: index)...)
-                        case let (index as String.Index):
+                        case let index as String.Index:
                             return box.store(index...)
                         case let index:
                             throw Error.typeMismatch(symbol, [index])
@@ -299,10 +299,10 @@ public struct AnyExpression: CustomStringConvertible {
                     }
                 case .prefix("..."):
                     return { args in
-                        switch (box.load(args[0])) {
-                        case let (index as NSNumber):
+                        switch box.load(args[0]) {
+                        case let index as NSNumber:
                             return box.store(...Int(truncating: index))
-                        case let (index as String.Index):
+                        case let index as String.Index:
                             return box.store(...index)
                         case let index:
                             throw Error.typeMismatch(symbol, [index])
@@ -324,10 +324,10 @@ public struct AnyExpression: CustomStringConvertible {
                     }
                 case .prefix("..<"):
                     return { args in
-                        switch (box.load(args[0])) {
-                        case let (index as NSNumber):
+                        switch box.load(args[0]) {
+                        case let index as NSNumber:
                             return box.store(..<Int(truncating: index))
-                        case let (index as String.Index):
+                        case let index as String.Index:
                             return box.store(..<index)
                         case let index:
                             throw Error.typeMismatch(symbol, [index])

@@ -29,6 +29,7 @@
     - [Symbols](#symbols-1)
     - [Literals](#literals)
 - [Example Projects](#example-projects)
+    - [Benchmark](#benchmark)
 	- [Calculator](#calculator)
 	- [Colors](#colors)
     - [Layout](#layout)
@@ -42,7 +43,7 @@ Expression is a library for Mac and iOS for evaluating expressions at runtime.
 
 The Expression library is split into two parts:
 
-1. The `Expression` class, which is similar to Foundation's built-in `NSExpression` class, but with better support for custom operators, a more Swift-friendly API, and a focus on performance.
+1. The `Expression` class, which is similar to Foundation's built-in `NSExpression` class, but with better support for custom operators, a more Swift-friendly API, and superior performance.
 
 2. `AnyExpression`, an extension of Expression that handles arbitrary types and provides additional built-in support for common types such as `String`, `Dictionary`, `Array` and `Optional`.
 
@@ -65,8 +66,7 @@ But there are other possible applications, e.g.
 
 Normally these kind of calculations would involve embedding a heavyweight interpreted language such as JavaScript or Lua into your app. Expression avoids that overhead, and is also more secure as it reduces the risk of arbitrary code injection or crashes due to infinite loops, buffer overflows, etc.
 
-Expression is fast, lightweight, well-tested, and written entirely in Swift.
-
+Expression is fast, lightweight, well-tested, and written entirely in Swift. It is substantially faster than using JavaScriptCore for evaluating simple expressions (see the [Benchmark](#benchmark) app for a scientific comparison.
 
 ## How?
 
@@ -515,10 +515,21 @@ As mentioned above, AnyExpression supports the use of quoted string literals, de
 
 AnyExpression supports array literals defined in square brackets, e.g. `[1, 2, 3]` or `['foo', 'bar', 'baz']`. Array literals can contain a mixture of value types and/or sub-expressions.
 
-You can also create `Range` or `ClosedRange` literals using the `..<` and `...` syntax. Ranges currently work with either `Int` or `String.Index` values. Ranges can be used in conjunction with subscripting syntax for slicing arrays and strings.
+You can also create range literals using the `..<` and `...` syntaxes. Closed, half-open and partial ranges are supported. Ranges work with either `Int` or `String.Index` values, and can be used in conjunction with subscripting syntax for slicing arrays and strings. 
 
 
 # Example Projects
+
+## Benchmark
+
+The Benchmark app runs a set of test expressions using `Expression`, `AnyExpression`, `NSExpression` and JavaScriptCore's `JSContext` respectively. It then times how long it takes to parse and evaluate the expressions, and displays the result in a table.
+
+Times are shown in either microseconds (µs) or milliseconds. The fastest result in each category is displayed in green, and the slowest in red.
+
+For accurate results, the Benchmark app should be run in release mode on a real device. You can pull down on the table to refresh the test results. Tests are run on the main thread, so don't be surprised if the display locks up briefly while refreshing.
+
+In my own tests, Expression was consistently the fastest implementation, and JavaScriptCore was consistently the slowest, both for initial setup and for evaluation once the context has been initialized.
+
 
 ## Calculator
 
@@ -527,9 +538,7 @@ Not much to say about this. It's a calculator. You can type mathematical express
 
 ## Colors
 
-The Colors example demonstrates how to use AnyExpression to create a (mostly) CSS-compliant color parser. It takes a string containing a named color, hex color or `rgb()` function call, and returns a UIColor object.
-
-**Note:** An earlier version of the Colors demo relied on a hack of storing the color as `UInt32` inside a `Double`. This was a neat trick, but it allowed you to write illogical things like `#ffffff / purple * pi` because colors were treated as numbers within an expression. By using AnyExpression instead, we are able to treat colors as a distinct type, and reject basic type violations.
+The Colors example demonstrates how to use `AnyExpression` to create a (mostly) CSS-compliant color parser. It takes a string containing a named color, hex color or `rgb()` function call, and returns a UIColor object.
 
 
 ## Layout

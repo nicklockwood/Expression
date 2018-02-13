@@ -6,8 +6,8 @@
 //  Copyright © 2018 Nick Lockwood. All rights reserved.
 //
 
-import Foundation
 import Expression
+import Foundation
 import JavaScriptCore
 
 let symbols: [Expression.Symbol: Expression.SymbolEvaluator] = [
@@ -242,7 +242,7 @@ private let foo: @convention(block) (Double, Double) -> Double = { a, b in
 }
 
 private let bar: @convention(block) (Double) -> Double = {
-    return $0 - 2
+    $0 - 2
 }
 
 let jsSymbols: [String: Any] = [
@@ -295,4 +295,3 @@ func evaluateJSExpressions(_ expressions: [String]) -> JSValue? {
     }
     return result
 }
-

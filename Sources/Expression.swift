@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.12.4
+//  Version 0.12.5
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -755,6 +755,9 @@ private extension Expression {
             return isIdentifierHead(c)
         }
     }
+
+    // Placeholder evaluator function
+    static let placeholder: Expression.SymbolEvaluator = { _ in preconditionFailure() }
 }
 
 /// An opaque wrapper for a parsed expression
@@ -1017,9 +1020,6 @@ private extension Substring.UnicodeScalarView {
 }
 
 private extension UnicodeScalarView {
-    // Placeholder evaluator function
-    private func placeholder(_: [Double]) throws -> Double { preconditionFailure() }
-
     mutating func scanCharacters(_ matching: (UnicodeScalar) -> Bool) -> String? {
         var index = startIndex
         while index < endIndex {
@@ -1167,11 +1167,11 @@ private extension UnicodeScalarView {
             if let tail = scanCharacters(Expression.isOperator) {
                 op += tail
             }
-            return .symbol(.infix(op), [], placeholder)
+            return .symbol(.infix(op), [], Expression.placeholder)
         }
         if let op = scanCharacters(Expression.isOperator) ??
             scanCharacter({ "([,".unicodeScalars.contains($0) }) {
-            return .symbol(.infix(op), [], placeholder)
+            return .symbol(.infix(op), [], Expression.placeholder)
         }
         return nil
     }
@@ -1213,7 +1213,7 @@ private extension UnicodeScalarView {
         guard let identifier = scanIdentifier() else {
             return nil
         }
-        return .symbol(.variable(identifier), [], placeholder)
+        return .symbol(.variable(identifier), [], Expression.placeholder)
     }
 
     // Note: this is not actually part of the parser, but is colocated
@@ -1297,7 +1297,7 @@ private extension UnicodeScalarView {
                 .unexpectedToken(string) : .missingDelimiter(String(delimiter)), string)
         }
         string.append(Character(delimiter))
-        return .symbol(.variable(string), [], placeholder)
+        return .symbol(.variable(string), [], Expression.placeholder)
     }
 
     mutating func parseSubexpression(upTo delimiters: [String]) throws -> Subexpression {
@@ -1317,12 +1317,12 @@ private extension UnicodeScalarView {
                     }
                     // Assume postfix operator was actually an infix operator
                     stack[i] = args[0]
-                    stack.insert(.symbol(.infix(op), [], placeholder), at: i + 1)
+                    stack.insert(.symbol(.infix(op), [], Expression.placeholder), at: i + 1)
                     try collapseStack(from: i)
                 } else if case let .symbol(symbol, _, _) = rhs {
                     switch symbol {
                     case _ where stack.count <= i + 2, .postfix:
-                        stack[i ... i + 1] = [.symbol(.postfix(symbol.name), [lhs], placeholder)]
+                        stack[i ... i + 1] = [.symbol(.postfix(symbol.name), [lhs], Expression.placeholder)]
                         try collapseStack(from: 0)
                     default:
                         let rhs = stack[i + 2]
@@ -1336,19 +1336,19 @@ private extension UnicodeScalarView {
                                 }
                             }
                             if symbol.name == ":", case let .symbol(.infix("?"), args, _) = lhs { // ternary
-                                stack[i ... i + 2] = [.symbol(.infix("?:"), [args[0], args[1], rhs], placeholder)]
+                                stack[i ... i + 2] = [.symbol(.infix("?:"), [args[0], args[1], rhs], Expression.placeholder)]
                             } else {
-                                stack[i ... i + 2] = [.symbol(.infix(symbol.name), [lhs, rhs], placeholder)]
+                                stack[i ... i + 2] = [.symbol(.infix(symbol.name), [lhs, rhs], Expression.placeholder)]
                             }
                             try collapseStack(from: 0)
                         } else if case let .symbol(symbol2, _, _) = rhs {
                             if case .prefix = symbol2 {
                                 try collapseStack(from: i + 2)
                             } else if ["+", "/", "*"].contains(symbol.name) { // Assume infix
-                                stack[i + 2] = .symbol(.prefix(symbol2.name), [], placeholder)
+                                stack[i + 2] = .symbol(.prefix(symbol2.name), [], Expression.placeholder)
                                 try collapseStack(from: i + 2)
                             } else { // Assume postfix
-                                stack[i + 1] = .symbol(.postfix(symbol.name), [], placeholder)
+                                stack[i + 1] = .symbol(.postfix(symbol.name), [], Expression.placeholder)
                                 try collapseStack(from: i)
                             }
                         } else if case let .error(error, _) = rhs {
@@ -1361,7 +1361,7 @@ private extension UnicodeScalarView {
             } else if case let .symbol(symbol, _, _) = lhs {
                 // Treat as prefix operator
                 if rhs.isOperand {
-                    stack[i ... i + 1] = [.symbol(.prefix(symbol.name), [rhs], placeholder)]
+                    stack[i ... i + 1] = [.symbol(.prefix(symbol.name), [rhs], Expression.placeholder)]
                     try collapseStack(from: 0)
                 } else if case .symbol = rhs {
                     // Nested prefix operator?
@@ -1413,7 +1413,7 @@ private extension UnicodeScalarView {
                     case let .symbol(.variable(name), _, _)?:
                         let args = try scanArguments(upTo: ")")
                         stack[stack.count - 1] =
-                            .symbol(.function(name, arity: .exactly(args.count)), args, placeholder)
+                            .symbol(.function(name, arity: .exactly(args.count)), args, Expression.placeholder)
                     case let last? where last.isOperand:
                         throw Expression.Error.unexpectedToken("(")
                     default:
@@ -1429,7 +1429,7 @@ private extension UnicodeScalarView {
                     operandPosition = true
                     if let last = stack.last, !last.isOperand, case let .symbol(.infix(op), _, _) = last {
                         // If previous token was an infix operator, convert it to postfix
-                        stack[stack.count - 1] = .symbol(.postfix(op), [], placeholder)
+                        stack[stack.count - 1] = .symbol(.postfix(op), [], Expression.placeholder)
                     }
                     stack.append(expression)
                     operandPosition = true
@@ -1441,14 +1441,14 @@ private extension UnicodeScalarView {
                         guard args.count == 1 else {
                             throw Expression.Error.arityMismatch(.array(name))
                         }
-                        stack[stack.count - 1] = .symbol(.array(name), [args[0]], placeholder)
+                        stack[stack.count - 1] = .symbol(.array(name), [args[0]], Expression.placeholder)
                     case let last? where last.isOperand:
                         guard args.count == 1 else {
                             throw Expression.Error.arityMismatch(.infix("[]"))
                         }
-                        stack[stack.count - 1] = .symbol(.infix("[]"), [last, args[0]], placeholder)
+                        stack[stack.count - 1] = .symbol(.infix("[]"), [last, args[0]], Expression.placeholder)
                     default:
-                        stack.append(.symbol(.function("[]", arity: .exactly(args.count)), args, placeholder))
+                        stack.append(.symbol(.function("[]", arity: .exactly(args.count)), args, Expression.placeholder))
                     }
                     operandPosition = false
                     followedByWhitespace = skipWhitespace()
@@ -1457,15 +1457,15 @@ private extension UnicodeScalarView {
                     case (true, true), (false, false):
                         stack.append(expression)
                     case (true, false):
-                        stack.append(.symbol(.prefix(name), [], placeholder))
+                        stack.append(.symbol(.prefix(name), [], Expression.placeholder))
                     case (false, true):
-                        stack.append(.symbol(.postfix(name), [], placeholder))
+                        stack.append(.symbol(.postfix(name), [], Expression.placeholder))
                     }
                     operandPosition = true
                 }
             case let .symbol(.variable(name), _, _) where !operandPosition:
                 operandPosition = true
-                stack.append(.symbol(.infix(name), [], placeholder))
+                stack.append(.symbol(.infix(name), [], Expression.placeholder))
             default:
                 operandPosition = false
                 stack.append(expression)
