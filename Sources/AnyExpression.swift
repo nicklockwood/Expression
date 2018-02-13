@@ -286,6 +286,28 @@ public struct AnyExpression: CustomStringConvertible {
                             throw Error.typeMismatch(symbol, [lhs, rhs])
                         }
                     }
+                case .postfix("..."):
+                    return { args in
+                        switch (box.load(args[0])) {
+                        case let (index as NSNumber):
+                            return box.store(Int(truncating: index)...)
+                        case let (index as String.Index):
+                            return box.store(index...)
+                        case let index:
+                            throw Error.typeMismatch(symbol, [index])
+                        }
+                    }
+                case .prefix("..."):
+                    return { args in
+                        switch (box.load(args[0])) {
+                        case let (index as NSNumber):
+                            return box.store(...Int(truncating: index))
+                        case let (index as String.Index):
+                            return box.store(...index)
+                        case let index:
+                            throw Error.typeMismatch(symbol, [index])
+                        }
+                    }
                 case .infix("..<"):
                     return { args in
                         switch (box.load(args[0]), box.load(args[1])) {
@@ -298,6 +320,17 @@ public struct AnyExpression: CustomStringConvertible {
                             return box.store(lhs ..< rhs)
                         case let (lhs, rhs):
                             throw Error.typeMismatch(symbol, [lhs, rhs])
+                        }
+                    }
+                case .prefix("..<"):
+                    return { args in
+                        switch (box.load(args[0])) {
+                        case let (index as NSNumber):
+                            return box.store(..<Int(truncating: index))
+                        case let (index as String.Index):
+                            return box.store(..<index)
+                        case let index:
+                            throw Error.typeMismatch(symbol, [index])
                         }
                     }
                 case .function("[]", _):
@@ -751,7 +784,7 @@ extension UInt64: _Numeric {}
 extension Double: _Numeric {}
 extension Float: _Numeric {}
 
-// Used for subcripting
+// Used for subscripting
 private protocol _Range {
     func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any>
     func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring
@@ -785,7 +818,8 @@ extension ClosedRange: _Range {
             let startIndex = substring.index(substring.startIndex, offsetBy: range.lowerBound)
             let endIndex = substring.index(startIndex, offsetBy: range.count - 1)
             return try (startIndex ... endIndex).slice(of: substring, for: symbol)
-        case let range as ClosedRange<String.Index>:
+        case let range:
+            let range = range as! ClosedRange<String.Index>
             guard substring.indices.contains(range.lowerBound) else {
                 throw AnyExpression.Error.stringBounds(substring, range.lowerBound)
             }
@@ -793,8 +827,6 @@ extension ClosedRange: _Range {
                 throw AnyExpression.Error.stringBounds(substring, range.upperBound)
             }
             return substring[range]
-        default:
-            throw AnyExpression.Error.typeMismatch(symbol, [string, self])
         }
     }
 }
@@ -821,7 +853,8 @@ extension Range: _Range {
         switch self {
         case let range as Range<Int>:
             return try (range.lowerBound ... range.upperBound - 1).slice(of: string, for: symbol)
-        case let range as Range<String.Index>:
+        case let range:
+            let range = range as! Range<String.Index>
             let substring = string.substring
             guard substring.indices.contains(range.lowerBound) else {
                 throw AnyExpression.Error.stringBounds(substring, range.lowerBound)
@@ -831,8 +864,6 @@ extension Range: _Range {
             }
             let endIndex = substring.index(before: range.upperBound)
             return try (range.lowerBound ... endIndex).slice(of: substring, for: symbol)
-        default:
-            throw AnyExpression.Error.typeMismatch(symbol, [string, self])
         }
     }
 }
@@ -844,6 +875,106 @@ extension CountableRange: _Range {
 
     fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
         return try Range(self).slice(of: string, for: symbol)
+    }
+}
+
+extension PartialRangeThrough: _Range {
+    fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
+        guard let range = self as? PartialRangeThrough<Int> else {
+            throw AnyExpression.Error.typeMismatch(symbol, [array, self])
+        }
+        let array = array.values
+        guard range.upperBound >= 0 else {
+            throw AnyExpression.Error.arrayBounds(symbol, Double(range.upperBound))
+        }
+        return try Range(0 ... range.upperBound).slice(of: array, for: symbol)
+    }
+
+    fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
+        let substring = string.substring
+        switch self {
+        case let range as PartialRangeThrough<Int>:
+            guard range.upperBound >= 0 else {
+                throw AnyExpression.Error.stringBounds(String(substring), range.upperBound)
+            }
+            return try (0 ... range.upperBound).slice(of: string, for: symbol)
+        case let range:
+            let range = range as! PartialRangeThrough<String.Index>
+            guard range.upperBound >= substring.startIndex else {
+                throw AnyExpression.Error.stringBounds(substring, range.upperBound)
+            }
+            return try (substring.startIndex ... range.upperBound).slice(of: string, for: symbol)
+        }
+    }
+}
+
+extension PartialRangeUpTo: _Range {
+    fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
+        guard let range = self as? PartialRangeUpTo<Int> else {
+            throw AnyExpression.Error.typeMismatch(symbol, [array, self])
+        }
+        let array = array.values
+        guard range.upperBound > 0 else {
+            throw AnyExpression.Error.arrayBounds(symbol, Double(range.upperBound))
+        }
+        return try Range(0 ..< range.upperBound).slice(of: array, for: symbol)
+    }
+
+    fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
+        let substring = string.substring
+        switch self {
+        case let range as PartialRangeUpTo<Int>:
+            guard range.upperBound > 0 else {
+                throw AnyExpression.Error.stringBounds(String(substring), range.upperBound)
+            }
+            return try (0 ..< range.upperBound).slice(of: string, for: symbol)
+        case let range:
+            let range = range as! PartialRangeUpTo<String.Index>
+            guard range.upperBound > substring.startIndex else {
+                throw AnyExpression.Error.stringBounds(substring, range.upperBound)
+            }
+            return try (substring.startIndex ..< range.upperBound).slice(of: string, for: symbol)
+        }
+    }
+}
+
+extension PartialRangeFrom: _Range {
+    fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
+        guard let range = self as? PartialRangeFrom<Int> else {
+            throw AnyExpression.Error.typeMismatch(symbol, [array, self])
+        }
+        let array = array.values
+        guard range.lowerBound < array.count else {
+            throw AnyExpression.Error.arrayBounds(symbol, Double(range.lowerBound))
+        }
+        return try Range(range.lowerBound ..< array.endIndex).slice(of: array, for: symbol)
+    }
+
+    fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
+        let substring = string.substring
+        switch self {
+        case let range as PartialRangeFrom<Int>:
+            guard range.lowerBound < substring.count else {
+                throw AnyExpression.Error.stringBounds(String(substring), range.lowerBound)
+            }
+            return try (range.lowerBound ..< substring.count).slice(of: string, for: symbol)
+        case let range:
+            let range = range as! PartialRangeFrom<String.Index>
+            guard range.lowerBound < substring.endIndex else {
+                throw AnyExpression.Error.stringBounds(substring, range.lowerBound)
+            }
+            return try (range.lowerBound ..< substring.endIndex).slice(of: string, for: symbol)
+        }
+    }
+}
+
+extension CountablePartialRangeFrom: _Range {
+    fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
+        return try PartialRangeFrom(lowerBound).slice(of: array, for: symbol)
+    }
+
+    fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
+        return try PartialRangeFrom(lowerBound).slice(of: string, for: symbol)
     }
 }
 
