@@ -785,6 +785,24 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), "oo")
     }
 
+    func testSubscriptNSStringWithInvalidClosedIntRangeLowerBound() {
+        let expression = AnyExpression("foo[-1...2]", constants: [
+            "foo": "foo" as NSString,
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))
+        }
+    }
+
+    func testSubscriptNSStringWithInvalidClosedIntRangeUpperBound() {
+        let expression = AnyExpression("foo[1...3]", constants: [
+            "foo": "foo" as NSString,
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 3))
+        }
+    }
+
     func testSubscriptStringLiteralWithInvalidIndexType() {
         let expression = AnyExpression("'foo'[index]", constants: [
             "index": NSObject(),

@@ -776,6 +776,12 @@ extension ClosedRange: _Range {
         let substring = string.substring
         switch self {
         case let range as ClosedRange<Int>:
+            guard range.lowerBound >= 0, range.lowerBound < substring.count else {
+                throw AnyExpression.Error.stringBounds(String(substring), range.lowerBound)
+            }
+            guard range.upperBound < substring.count else {
+                throw AnyExpression.Error.stringBounds(String(substring), range.upperBound)
+            }
             let startIndex = substring.index(substring.startIndex, offsetBy: range.lowerBound)
             let endIndex = substring.index(startIndex, offsetBy: range.count - 1)
             return try (startIndex ... endIndex).slice(of: substring, for: symbol)
