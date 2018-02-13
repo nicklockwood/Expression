@@ -32,90 +32,21 @@
 import Expression
 import XCTest
 
-private struct HashableStruct: Hashable {
-    let foo: Int
-    var hashValue: Int {
-        return foo.hashValue
-    }
-
-    static func == (lhs: HashableStruct, rhs: HashableStruct) -> Bool {
-        return lhs.foo == rhs.foo
-    }
-}
-
-let symbols: [Expression.Symbol: Expression.SymbolEvaluator] = [
-    .variable("a"): { _ in 5 },
-    .variable("b"): { _ in 6 },
-    .variable("c"): { _ in 7 },
-    .variable("hello"): { _ in -5 },
-    .variable("world"): { _ in -3 },
-    .function("foo", arity: 0): { _ in .pi },
-    .function("foo", arity: 2): { $0[0] - $0[1] },
-    .function("bar", arity: 1): { $0[0] - 2 },
-]
-
-let anySymbols: [AnyExpression.Symbol: AnyExpression.SymbolEvaluator] = [
-    .variable("a"): { _ in 5 },
-    .variable("b"): { _ in 6 },
-    .variable("c"): { _ in 7 },
-    .variable("hello"): { _ in "hello" },
-    .variable("world"): { _ in "world" },
-    .function("foo", arity: 0): { _ in "foo" },
-    .function("foo", arity: 2): { "\($0[0])\($0[1])" },
-    .function("bar", arity: 1): { (Double("\($0[0])") ?? 0) - 2 },
-]
-
-let shortExpressions = [
-    "5",
-    "a",
-    "foo()",
-    "hello",
-    "67",
-    "3.5",
-    "pi",
-]
-
-let mediumExpressions = [
-    "5 + 7",
-    "a + b",
-    "foo(5, 6)",
-    "hello + world",
-    "67 * 2",
-    "3.5 / 6",
-    "pi + 15",
-]
-
-let longExpressions = [
-    "5 + min(a, b * 10)",
-    "max(a + b, b + c)",
-    "foo(5, 6 + bar(6))",
-    "hello + world",
-    "(67 * 2) + (68 * 3)",
-    "3.5 / 6 + 1234 * 54",
-    "pi * -56.4 + (5 + 4)",
-]
-
-let reallyLongExpression: String = {
-    var parts = [String]()
-    for i in 0 ..< 100 {
-        parts.append("\(i)")
-    }
-    return "foo(" + parts.joined(separator: "+") + " + bar(5), a) + b"
-}()
-
-let booleanExpressions = [
-    "true && false",
-    "a == b",
-    "foo(5, 6) != foo(5, 6)",
-    "a ? hello : world",
-    "false || true",
-    "pi > 3",
-]
-
-let parseRepetitions = 500
-let evalRepetitions = 5000
-
 class PerformanceTests: XCTestCase {
+
+    private let parseRepetitions = 500
+    private let evalRepetitions = 5000
+
+    private struct HashableStruct: Hashable {
+        let foo: Int
+        var hashValue: Int {
+            return foo.hashValue
+        }
+
+        static func == (lhs: HashableStruct, rhs: HashableStruct) -> Bool {
+            return lhs.foo == rhs.foo
+        }
+    }
 
     // MARK: parsing
 
