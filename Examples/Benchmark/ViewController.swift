@@ -49,6 +49,9 @@ class ViewController: UITableViewController {
                     ("Short NSExpressions", time {
                         _ = evaluateNSExpressions(shortNSExpressions)
                     }),
+                    ("Short Eval Expressions", time {
+                        _ = evaluateEvalExpressions(shortExpressions)
+                    }),
                     ("Short JS Expressions", time {
                         _ = evaluateJSExpressions(shortExpressions)
                     }),
@@ -63,6 +66,9 @@ class ViewController: UITableViewController {
                     ("Medium NSExpressions", time {
                         _ = evaluateNSExpressions(mediumNSExpressions)
                     }),
+                    ("Medium Eval Expressions", time {
+                        _ = evaluateEvalExpressions(mediumExpressions)
+                    }),
                     ("Medium JS Expressions", time {
                         _ = evaluateJSExpressions(mediumExpressions)
                     }),
@@ -76,6 +82,9 @@ class ViewController: UITableViewController {
                     }),
                     ("Long NSExpressions", time {
                         _ = evaluateNSExpressions(longNSExpressions)
+                    }),
+                    ("Long Eval Expressions", time {
+                        _ = evaluateEvalExpressions(longExpressions)
                     }),
                     ("Long JS Expressions", time {
                         _ = evaluateJSExpressions(longExpressions)
@@ -93,6 +102,9 @@ class ViewController: UITableViewController {
                     ("Short NSExpressions", time {
                         _ = buildNSExpressions(shortNSExpressions)
                     }),
+                    ("Short Eval Expressions", time {
+                        _ = buildEvalExpressions(shortExpressions)
+                    }),
                     ("Short JS Expressions", time {
                         _ = buildJSExpressions(shortExpressions)
                     }),
@@ -107,6 +119,9 @@ class ViewController: UITableViewController {
                     ("Medium NSExpressions", time {
                         _ = buildNSExpressions(mediumNSExpressions)
                     }),
+                    ("Medium Eval Expressions", time {
+                        _ = buildEvalExpressions(mediumExpressions)
+                    }),
                     ("Medium JS Expressions", time {
                         _ = buildJSExpressions(mediumExpressions)
                     }),
@@ -120,6 +135,9 @@ class ViewController: UITableViewController {
                     }),
                     ("Long NSExpressions", time {
                         _ = buildNSExpressions(longNSExpressions)
+                    }),
+                    ("Long Eval Expressions", time {
+                        _ = buildEvalExpressions(longExpressions)
                     }),
                     ("Long JS Expressions", time {
                         _ = buildJSExpressions(longExpressions)
@@ -140,6 +158,10 @@ class ViewController: UITableViewController {
                         { buildNSExpressions(shortNSExpressions) },
                         { _ = evaluateNSExpressions($0 as! [NSExpression]) }
                     )),
+                    ("Short Eval Expressions", time(
+                        { buildEvalExpressions(shortExpressions) },
+                        { _ = evaluateEvalExpressions($0 as! [() -> Double?]) }
+                    )),
                     ("Short JS Expressions", time(
                         { buildJSExpressions(shortExpressions) },
                         { _ = evaluateJSExpressions($0 as! [() -> JSValue]) }
@@ -158,6 +180,10 @@ class ViewController: UITableViewController {
                         { buildNSExpressions(mediumNSExpressions) },
                         { _ = evaluateNSExpressions($0 as! [NSExpression]) }
                     )),
+                    ("Medium Eval Expressions", time(
+                        { buildEvalExpressions(mediumExpressions) },
+                        { _ = evaluateEvalExpressions($0 as! [() -> Double?]) }
+                    )),
                     ("Medium JS Expressions", time(
                         { buildJSExpressions(mediumExpressions) },
                         { _ = evaluateJSExpressions($0 as! [() -> JSValue]) }
@@ -175,6 +201,10 @@ class ViewController: UITableViewController {
                     ("Long NSExpressions", time(
                         { buildNSExpressions(longNSExpressions) },
                         { _ = evaluateNSExpressions($0 as! [NSExpression]) }
+                    )),
+                    ("Long Eval Expressions", time(
+                        { buildEvalExpressions(longExpressions) },
+                        { _ = evaluateEvalExpressions($0 as! [() -> Double?]) }
                     )),
                     ("Long JS Expressions", time(
                         { buildJSExpressions(longExpressions) },
