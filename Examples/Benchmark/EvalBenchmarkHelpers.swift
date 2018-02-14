@@ -69,12 +69,13 @@ private let parens = Function<Double>(Keyword("(") + Variable<Double>("value") +
     return arguments["value"] as? Double
 }
 
+let interpreter = TypedInterpreter(
+    dataTypes: [number],
+    functions: [multiplication, division, addition, min, max, foo, foo2, bar, parens]
+)
+
 func buildEvalExpressions(_ expressions: [String]) -> [() -> Double?] {
     return expressions.map { exp -> () -> Double? in
-        let interpreter = TypedInterpreter(
-            dataTypes: [number],
-            functions: [multiplication, division, addition, min, max, foo, foo2, bar, parens]
-        )
         return { interpreter.evaluate(exp) as? Double }
     }
 }
