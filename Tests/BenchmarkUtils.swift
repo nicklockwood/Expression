@@ -136,7 +136,7 @@ func evaluateAnyExpressions(_ expressions: [String]) -> Double? {
     for _ in 0 ..< parseRepetitions {
         for exp in expressions {
             let parsedExpression = Expression.parse(exp, usingCache: false)
-            let expression = AnyExpression(parsedExpression, options: .pureSymbols, symbols: anySymbols)
+            let expression = AnyExpression(parsedExpression, options: .noOptimize, symbols: anySymbols)
             result = try! expression.evaluate()
         }
     }
