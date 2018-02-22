@@ -85,11 +85,33 @@ public struct AnyExpression: CustomStringConvertible {
             options: options,
             impureSymbols: { symbol in
                 switch symbol {
-                case let .variable(name), let .array(name):
-                    // TODO: should an unmatched array lookup fall back to variable?
+                case let .variable(name):
                     if constants[name] == nil, let fn = symbols[symbol] {
                         return fn
                     }
+                case let .array(name):
+                    if !(constants[name].map(AnyExpression.isSubscriptable) ?? false),
+                        let fn = symbols[symbol] {
+                        return fn
+                    }
+                case let .function(name, _): // TODO: could operators work this way too?
+                    if let fn = constants[name] {
+                        if let fn = fn as? SymbolEvaluator {
+                            return fn
+                        }
+                        if let fn = fn as? Expression.SymbolEvaluator {
+                            return { args in
+                                try fn(args.map {
+                                    guard let doubleValue = ($0 as? NSNumber)
+                                        .flatMap(Double.init(truncating:)) else {
+                                            throw Error.typeMismatch(symbol, args)
+                                    }
+                                    return doubleValue
+                                })
+                            }
+                        }
+                    }
+                    fallthrough
                 default:
                     if !pureSymbols, let fn = symbols[symbol] {
                         return fn
@@ -148,7 +170,17 @@ public struct AnyExpression: CustomStringConvertible {
         let box = NanBox()
 
         func loadNumber(_ arg: Double) -> Double? {
-            return box.loadIfStored(arg).map { ($0 as? NSNumber).map { Double(truncating: $0) } } ?? arg
+            return box.loadIfStored(arg).map {
+                ($0 as? NSNumber).map(Double.init(truncating:))
+            } ?? arg
+        }
+        func argsToDouble(_ args: [Double], for symbol: Symbol) throws -> [Double] {
+            return try args.map {
+                guard let doubleValue = loadNumber($0) else {
+                    throw Error.typeMismatch(symbol, args.map(box.load))
+                }
+                return doubleValue
+            }
         }
         func equalArgs(_ lhs: Double, _ rhs: Double) throws -> Bool {
             switch (AnyExpression.unwrap(box.load(lhs)), AnyExpression.unwrap(box.load(rhs))) {
@@ -231,12 +263,7 @@ public struct AnyExpression: CustomStringConvertible {
                     return { args in
                         // We potentially lose precision by converting all numbers to doubles
                         // TODO: find alternative approach that doesn't lose precision
-                        try fn(args.map {
-                            guard let doubleValue = loadNumber($0) else {
-                                throw Error.typeMismatch(symbol, args.map(box.load))
-                            }
-                            return doubleValue
-                        })
+                        try fn(argsToDouble(args, for: symbol))
                     }
                 }
             } else if let fn = boolSymbols[symbol] {
@@ -250,19 +277,15 @@ public struct AnyExpression: CustomStringConvertible {
                         guard args.count == 3 else {
                             throw Error.undefinedSymbol(symbol)
                         }
-                        if let number = loadNumber(args[0]) {
-                            return number != 0 ? args[1] : args[2]
+                        guard let doubleValue = loadNumber(args[0]) else {
+                            throw Error.typeMismatch(symbol, args.map(box.load))
                         }
-                        throw Error.typeMismatch(symbol, args.map(box.load))
+                        return doubleValue != 0 ? args[1] : args[2]
                     }
                 default:
                     return { args in
-                        try fn(args.map {
-                            guard let doubleValue = loadNumber($0) else {
-                                throw Error.typeMismatch(symbol, args.map(box.load))
-                            }
-                            return doubleValue
-                        }) == 0 ? NanBox.falseValue : NanBox.trueValue
+                        try fn(argsToDouble(args, for: symbol)) == 0 ?
+                            NanBox.falseValue : NanBox.trueValue
                     }
                 }
             } else {
@@ -363,6 +386,17 @@ public struct AnyExpression: CustomStringConvertible {
                     return { args in
                         let fn = AnyExpression.arrayEvaluator(for: symbol, try fn([]))
                         return try box.store(fn(args.map(box.load)))
+                    }
+                } else if case .infix("()") = symbol {
+                    return { args in
+                        switch box.load(args[0]) {
+                        case let fn as SymbolEvaluator:
+                            return try box.store(fn(args.dropFirst().map(box.load)))
+                        case let fn as Expression.SymbolEvaluator:
+                            return try fn(argsToDouble(Array(args.dropFirst()), for: symbol))
+                        default:
+                            throw Error.typeMismatch(symbol, args.map(box.load))
+                        }
                     }
                 }
                 if !shouldOptimize {
@@ -473,9 +507,28 @@ extension AnyExpression.Error {
         }
         switch symbol {
         case .infix("[]") where types.count == 2:
-            return .message("Attempted to subscript \(types[0]) with incompatible index type \(types[1])")
+            if AnyExpression.isSubscriptable(args[0]) {
+                return .message("Attempted to subscript \(types[0]) with incompatible index type \(types[1])")
+            } else {
+                return .message("Attempted to subscript \(types[0]) value")
+            }
+        case .array where types.count == 2:
+            if AnyExpression.isSubscriptable(args[0]) {
+                fallthrough
+            } else {
+                return .message("Attempted to subscript \(types[0]) value \(symbol.escapedName)")
+            }
         case .array where !types.isEmpty:
             return .message("Attempted to subscript \(symbol.escapedName) with incompatible index type \(types.last!)")
+        case .infix("()") where !types.isEmpty:
+            switch type(of: args[0]) {
+            case is Expression.SymbolEvaluator.Type, is AnyExpression.SymbolEvaluator.Type:
+                return .message("Attempted to call function with incompatible arguments (\(types.dropFirst().joined(separator: ", ")))")
+            case _ where types[0].contains("->"):
+                return .message("Attempted to call non SymbolEvaluator function type \(types[0])")
+            default:
+                return .message("Attempted to call non function type \(types[0])")
+            }
         case .infix("==") where types.count == 2 && types[0] == types[1]:
             return .message("Arguments for \(symbol) must conform to the Hashable protocol")
         case _ where types.count == 1:
@@ -511,13 +564,6 @@ extension AnyExpression.Error {
     static func resultTypeMismatch(_ type: Any.Type, _ value: Any) -> AnyExpression.Error {
         let valueType = AnyExpression.stringify(AnyExpression.unwrap(value).map { Swift.type(of: $0) } as Any)
         return .message("Result type \(valueType) is not compatible with expected type \(AnyExpression.stringify(type))")
-    }
-
-    /// Standard error message for subscripting a non-array value
-    static func illegalSubscript(_ symbol: AnyExpression.Symbol, _ value: Any) -> AnyExpression.Error {
-        let type = AnyExpression.stringify(AnyExpression.unwrap(value).map { Swift.type(of: $0) } as Any)
-        let value = symbol == .infix("[]") ? AnyExpression.stringify(value) : symbol.escapedName
-        return .message("Attempted to subscript \(type) value \(value)")
     }
 }
 
@@ -598,6 +644,11 @@ extension AnyExpression {
             return isNil(value)
         }
         return value is NSNull
+    }
+
+    // Test if a value supports subscripting
+    static func isSubscriptable(_ value: Any) -> Bool {
+        return value is _Array || value is _Dictionary || value is _String
     }
 }
 
@@ -742,9 +793,7 @@ private extension AnyExpression {
                 }
             }
         case let value:
-            return { _ in
-                throw Error.illegalSubscript(symbol, value)
-            }
+            return { throw Error.typeMismatch(symbol, [value] + $0) }
         }
     }
 

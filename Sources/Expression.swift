@@ -133,6 +133,8 @@ public final class Expression: CustomStringConvertible {
                 return "ternary operator \(escapedName)"
             case .infix("[]"):
                 return "subscript operator \(escapedName)"
+            case .infix("()"):
+                return "function call operator \(escapedName)"
             case .infix:
                 return "infix operator \(escapedName)"
             case .prefix:
@@ -214,6 +216,8 @@ public final class Expression: CustomStringConvertible {
                 switch symbol {
                 case let .function(_, requiredArity):
                     arity = requiredArity
+                case .infix("()"):
+                    arity = .atLeast(1)
                 case .array, .infix("[]"):
                     arity = 1
                 case .infix("?:"):
@@ -591,7 +595,7 @@ extension Expression {
     // Fallback evaluator for when symbol is not found
     static func errorEvaluator(for symbol: Symbol) -> SymbolEvaluator {
         switch symbol {
-        case .infix(","), .infix("[]"), .function("[]", _):
+        case .infix(","), .infix("[]"), .function("[]", _), .infix("()"):
             return { _ in throw Error.unexpectedToken(String(symbol.name.prefix(1))) }
         case let .function(called, arity):
             let keys = Set(mathSymbols.keys).union(boolSymbols.keys)
@@ -1412,9 +1416,11 @@ private extension UnicodeScalarView {
                         stack[stack.count - 1] =
                             .symbol(.function(name, arity: .exactly(args.count)), args, nil)
                     case let last? where last.isOperand:
-                        throw Expression.Error.unexpectedToken("(")
+                        let args = try scanArguments(upTo: ")")
+                        stack[stack.count - 1] = .symbol(.infix("()"), [last] + args, nil)
                     default:
                         // TODO: if we make `,` a multifix operator, we can use `scanArguments()` here instead
+                        // Alternatively: add .function("()", arity: .any), as with []
                         try stack.append(parseSubexpression(upTo: [")"]))
                         guard scanCharacter(")") else {
                             throw Expression.Error.missingDelimiter(")")

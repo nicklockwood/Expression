@@ -308,6 +308,11 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(error.description, "Subscript operator [] expects 1 argument")
     }
 
+    func testFunctionCallOperatorArityMismatchErrorDescription() {
+        let error = Expression.Error.arityMismatch(.infix("()"))
+        XCTAssertEqual(error.description, "Function call operator () expects at least 1 argument")
+    }
+
     func testPostfixOperatorArityMismatchErrorDescription() {
         let error = Expression.Error.arityMismatch(.postfix("foo"))
         XCTAssertEqual(error.description, "Postfix operator foo expects 1 argument")
@@ -1005,6 +1010,20 @@ class ExpressionTests: XCTestCase {
 
     // MARK: Function chaining
 
+    func testCallNumericLiteral() {
+        let expression = Expression("1(3)")
+        XCTAssertThrowsError(try expression.evaluate()) { error in
+            XCTAssertEqual(error as? Expression.Error, .unexpectedToken("("))
+        }
+    }
+
+    func testCallNumericLiteralWithFunctionCallOperator() {
+        let expression = Expression("1(3)", symbols: [
+            .infix("()"): { $0[0] + $0[1] }
+        ])
+        XCTAssertEqual(try expression.evaluate(), 4)
+    }
+
     func testCallResultOfFunction() {
         let expression = Expression("pow(1,2)(3)")
         XCTAssertThrowsError(try expression.evaluate()) { error in
@@ -1012,18 +1031,45 @@ class ExpressionTests: XCTestCase {
         }
     }
 
-    func testCallResultOfArray() {
-        let expression = Expression("foo[1](3)")
+    func testCallResultOfFunctionWithFunctionCallOperator() {
+        let expression = Expression("pow(1,2)(3)", symbols: [
+            .infix("()"): { $0[0] + $0[1] }
+        ])
+        XCTAssertEqual(try expression.evaluate(), 4)
+    }
+
+    func testCallResultOfSubscript() {
+        let expression = Expression("foo[1](3)", symbols: [
+            .array("foo"): { _ in 1 },
+        ])
         XCTAssertThrowsError(try expression.evaluate()) { error in
             XCTAssertEqual(error as? Expression.Error, .unexpectedToken("("))
         }
     }
 
+    func testCallResultOfSubscriptWithFunctionCallOperator() {
+        let expression = Expression("foo[1](3)", symbols: [
+            .array("foo"): { _ in 1 },
+            .infix("()"): { $0[0] + $0[1] }
+        ])
+        XCTAssertEqual(try expression.evaluate(), 4)
+    }
+
     func testCallArrayLiteral() {
-        let expression = Expression("[1,2](3)")
+        let expression = Expression("[1,2](3)", symbols: [
+            .function("[]", arity: .any): { _ in 1 },
+        ])
         XCTAssertThrowsError(try expression.evaluate()) { error in
             XCTAssertEqual(error as? Expression.Error, .unexpectedToken("("))
         }
+    }
+
+    func testCallArrayLiteralWithFunctionCallOperator() {
+        let expression = Expression("[1,2](3)", symbols: [
+            .function("[]", arity: .any): { _ in 1 },
+            .infix("()"): { $0[0] + $0[1] }
+        ])
+        XCTAssertEqual(try expression.evaluate(), 4)
     }
 
     // MARK: Arrays
