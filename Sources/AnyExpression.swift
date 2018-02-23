@@ -605,6 +605,12 @@ extension AnyExpression {
                 return "\(uint)"
             }
             return "\(number)"
+        case let array as _Array:
+            return "[" + array.values.map(stringify).joined(separator: ", ") + "]"
+        case let dictionary as [AnyHashable: Any]:
+            return "[" + dictionary.enumerated().map {
+                stringify($0.element.key) + ": " + stringify($0.element.value)
+            }.joined(separator: ", ") + "]"
         case is Any.Type:
             let typeName = "\(value)"
             #if !swift(>=3.3) || (swift(>=4) && !swift(>=4.1))
@@ -1097,7 +1103,7 @@ private protocol _Dictionary {
 }
 
 extension Dictionary: _Dictionary {
-    func value(for key: Any) -> Any? {
+    fileprivate func value(for key: Any) -> Any? {
         guard let key = AnyExpression.cast(key) as Key? else {
             return nil // Type mismatch
         }

@@ -1449,6 +1449,28 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), "footrue")
     }
 
+    func testAddStringToArray() {
+        let expression = AnyExpression("'foo' + [1,2]")
+        XCTAssertEqual(try expression.evaluate(), "foo[1, 2]")
+    }
+
+    func testAddStringToDictionary() {
+        let expression = AnyExpression("'foo' + bar", constants: [
+            "bar": [1.0: 2.0]
+        ])
+        XCTAssertEqual(try expression.evaluate(), "foo[1: 2]")
+    }
+
+    func testAddStringToRange() {
+        let expression = AnyExpression("'foo' + (1...2)")
+        XCTAssertEqual(try expression.evaluate(), "foo1...2")
+    }
+
+    func testAddStringToHalfOpenRange() {
+        let expression = AnyExpression("'foo' + (1..<2)")
+        XCTAssertEqual(try expression.evaluate(), "foo1..<2")
+    }
+
     func testAddStringVariables() {
         let expression = AnyExpression("a + b", symbols: [
             .variable("a"): { _ in "foo" },
