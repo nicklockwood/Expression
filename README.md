@@ -34,7 +34,7 @@
 	- [Calculator](#calculator)
 	- [Colors](#colors)
     - [Layout](#layout)
-
+    - [REPL](#repl)
 
 # Introduction
 
@@ -568,16 +568,13 @@ For accurate results, the Benchmark app should be run in release mode on a real 
 
 In my own tests, Expression was consistently the fastest implementation, and JavaScriptCore was consistently the slowest, both for initial setup and for evaluation once the context has been initialized.
 
-
 ## Calculator
 
 Not much to say about this. It's a calculator. You can type mathematical expressions into it, and it will evaluate them and produce a result (or an error, if what you typed was invalid).
 
-
 ## Colors
 
 The Colors example demonstrates how to use `AnyExpression` to create a (mostly) CSS-compliant color parser. It takes a string containing a named color, hex color or `rgb()` function call, and returns a UIColor object.
-
 
 ## Layout
 
@@ -603,3 +600,15 @@ Here are some things to note:
 * Remember you can use functions like `min()` and `max()` to ensure that relative values don't go above or below a fixed threshold.
 
 This is just a toy example, but if you like the concept check out the [Layout framework](https://github.com/schibsted/layout) on Github, which takes this idea to the next level.
+
+## REPL
+
+The Expression REPL (Read Evaluate Print Loop) is a Mac command-line tool for evaluating expressions. Unlike the Calculator example, the REPL is based on `AnyExpression`, so it allows the use of any type that can be represented as a literal in Expression syntax - not just numbers.
+
+Each line you type into the REPL is evaluated independently. To share values between expressions, you can define variables using an identifier name followed by `=` and then an expression, e.g:
+
+```
+foo = (5 + 6) + 7
+```
+
+The identifier ("foo", in this case) is then available to use in later expressions.

@@ -31,6 +31,9 @@
 		01A3420D2033043600F769A6 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 01A3420B2033043600F769A6 /* Main.storyboard */; };
 		01A3420F2033043600F769A6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 01A3420E2033043600F769A6 /* Assets.xcassets */; };
 		01A342122033043600F769A6 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 01A342102033043600F769A6 /* LaunchScreen.storyboard */; };
+		01ABE85E2040868B00798A05 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01ABE85D2040868B00798A05 /* main.swift */; };
+		01ABE862204086E500798A05 /* Expression.swift in Sources */ = {isa = PBXBuildFile; fileRef = 015B35B61D8AD16700ABBD4E /* Expression.swift */; };
+		01ABE863204086E500798A05 /* AnyExpression.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01FEBBDB2008C3C7009469E9 /* AnyExpression.swift */; };
 		01CC9F191EE2E08E001941BC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CC9F091EE2DCC2001941BC /* AppDelegate.swift */; };
 		01CC9F1A1EE2E092001941BC /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 01CC9F0B1EE2DCC2001941BC /* LaunchScreen.storyboard */; };
 		01CC9F1B1EE2E096001941BC /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 01CC9F0D1EE2DCC2001941BC /* Main.storyboard */; };
@@ -155,6 +158,15 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		01ABE8592040868B00798A05 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -174,6 +186,8 @@
 		01A3420E2033043600F769A6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		01A342112033043600F769A6 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		01A342132033043600F769A6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		01ABE85B2040868B00798A05 /* REPL */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = REPL; sourceTree = BUILT_PRODUCTS_DIR; };
+		01ABE85D2040868B00798A05 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		01CC9EF51EE2DC79001941BC /* Calculator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Calculator.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		01CC9F091EE2DCC2001941BC /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		01CC9F0A1EE2DCC2001941BC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -235,6 +249,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				015E4955203310580015B0E8 /* Expression.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		01ABE8582040868B00798A05 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -304,6 +325,7 @@
 				01CC9F221EE2E0E9001941BC /* Colors.app */,
 				01CC9F4D1EE2E16F001941BC /* Layout.app */,
 				01A342052033043600F769A6 /* Benchmark.app */,
+				01ABE85B2040868B00798A05 /* REPL */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -346,6 +368,14 @@
 			path = Examples/Benchmark;
 			sourceTree = "<group>";
 		};
+		01ABE85C2040868B00798A05 /* REPL */ = {
+			isa = PBXGroup;
+			children = (
+				01ABE85D2040868B00798A05 /* main.swift */,
+			);
+			path = REPL;
+			sourceTree = "<group>";
+		};
 		01CC9F071EE2DC82001941BC /* Examples */ = {
 			isa = PBXGroup;
 			children = (
@@ -353,6 +383,7 @@
 				01CC9F081EE2DCC2001941BC /* Calculator */,
 				01CC9F341EE2E11B001941BC /* Colors */,
 				01CC9F611EE2E1B0001941BC /* Layout */,
+				01ABE85C2040868B00798A05 /* REPL */,
 			);
 			name = Examples;
 			sourceTree = "<group>";
@@ -505,6 +536,23 @@
 			productReference = 01A342052033043600F769A6 /* Benchmark.app */;
 			productType = "com.apple.product-type.application";
 		};
+		01ABE85A2040868B00798A05 /* REPL */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 01ABE8612040868B00798A05 /* Build configuration list for PBXNativeTarget "REPL" */;
+			buildPhases = (
+				01ABE8572040868B00798A05 /* Sources */,
+				01ABE8582040868B00798A05 /* Frameworks */,
+				01ABE8592040868B00798A05 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = REPL;
+			productName = REPL;
+			productReference = 01ABE85B2040868B00798A05 /* REPL */;
+			productType = "com.apple.product-type.tool";
+		};
 		01CC9EF41EE2DC79001941BC /* Calculator */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 01CC9F061EE2DC7A001941BC /* Build configuration list for PBXNativeTarget "Calculator" */;
@@ -626,6 +674,11 @@
 						DevelopmentTeam = 8VQKF583ED;
 						ProvisioningStyle = Automatic;
 					};
+					01ABE85A2040868B00798A05 = {
+						CreatedOnToolsVersion = 9.2;
+						DevelopmentTeam = 8VQKF583ED;
+						ProvisioningStyle = Automatic;
+					};
 					01CC9EF41EE2DC79001941BC = {
 						CreatedOnToolsVersion = 8.3.2;
 						DevelopmentTeam = 8VQKF583ED;
@@ -674,6 +727,7 @@
 				01CC9F211EE2E0E9001941BC /* Colors */,
 				01CC9F4C1EE2E16F001941BC /* Layout */,
 				01A342042033043600F769A6 /* Benchmark */,
+				01ABE85A2040868B00798A05 /* REPL */,
 			);
 		};
 /* End PBXProject section */
@@ -791,6 +845,16 @@
 				01A3420A2033043600F769A6 /* ViewController.swift in Sources */,
 				01A342082033043600F769A6 /* AppDelegate.swift in Sources */,
 				0136199B20332F910016143B /* BenchmarkUtils.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		01ABE8572040868B00798A05 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				01ABE863204086E500798A05 /* AnyExpression.swift in Sources */,
+				01ABE85E2040868B00798A05 /* main.swift in Sources */,
+				01ABE862204086E500798A05 /* Expression.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1229,6 +1293,38 @@
 			};
 			name = Release;
 		};
+		01ABE85F2040868B00798A05 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 8VQKF583ED;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 4.0;
+			};
+			name = Debug;
+		};
+		01ABE8602040868B00798A05 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 8VQKF583ED;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 4.0;
+			};
+			name = Release;
+		};
 		01CC9F041EE2DC7A001941BC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1446,6 +1542,15 @@
 			buildConfigurations = (
 				01A342152033043600F769A6 /* Debug */,
 				01A342162033043600F769A6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		01ABE8612040868B00798A05 /* Build configuration list for PBXNativeTarget "REPL" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				01ABE85F2040868B00798A05 /* Debug */,
+				01ABE8602040868B00798A05 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
