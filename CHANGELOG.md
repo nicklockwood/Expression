@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.12.6](https://github.com/nicklockwood/Expression/releases/tag/0.12.6) (2018-02-22)
+
+- AnyExpression now supports calling functions stored in a constant or variable
+- AnyExpression now supports calling anonymous functions returned by a sub-expression
+- Fixed some bugs with array constants incorrectly shadowing symbols
+
 ## [0.12.5](https://github.com/nicklockwood/Expression/releases/tag/0.12.5) (2018-02-13)
 
 - Added Benchmark app for comparing Expression performance against NSExpression and JavaScriptCore
@@ -18,7 +24,7 @@
 ## [0.12.3](https://github.com/nicklockwood/Expression/releases/tag/0.12.3) (2018-02-06)
 
 - AnyExpression now supports array literals like `[1,2,3]` and `["hello", "world"]`
-- AnyExpression can now uatomatically cast between numeric arrays of different types
+- AnyExpression can now automatically cast between numeric arrays of different types
 - Improved messaging for function arity errors and some types of syntax error
 - Fixed Swift 3.2 compatibility issues
 

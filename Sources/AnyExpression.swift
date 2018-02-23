@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.12.5
+//  Version 0.12.6
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -104,7 +104,7 @@ public struct AnyExpression: CustomStringConvertible {
                                 try fn(args.map {
                                     guard let doubleValue = ($0 as? NSNumber)
                                         .flatMap(Double.init(truncating:)) else {
-                                            throw Error.typeMismatch(symbol, args)
+                                        throw Error.typeMismatch(symbol, args)
                                     }
                                     return doubleValue
                                 })

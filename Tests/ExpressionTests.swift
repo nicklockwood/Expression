@@ -1019,7 +1019,7 @@ class ExpressionTests: XCTestCase {
 
     func testCallNumericLiteralWithFunctionCallOperator() {
         let expression = Expression("1(3)", symbols: [
-            .infix("()"): { $0[0] + $0[1] }
+            .infix("()"): { $0[0] + $0[1] },
         ])
         XCTAssertEqual(try expression.evaluate(), 4)
     }
@@ -1033,7 +1033,7 @@ class ExpressionTests: XCTestCase {
 
     func testCallResultOfFunctionWithFunctionCallOperator() {
         let expression = Expression("pow(1,2)(3)", symbols: [
-            .infix("()"): { $0[0] + $0[1] }
+            .infix("()"): { $0[0] + $0[1] },
         ])
         XCTAssertEqual(try expression.evaluate(), 4)
     }
@@ -1050,7 +1050,7 @@ class ExpressionTests: XCTestCase {
     func testCallResultOfSubscriptWithFunctionCallOperator() {
         let expression = Expression("foo[1](3)", symbols: [
             .array("foo"): { _ in 1 },
-            .infix("()"): { $0[0] + $0[1] }
+            .infix("()"): { $0[0] + $0[1] },
         ])
         XCTAssertEqual(try expression.evaluate(), 4)
     }
@@ -1067,7 +1067,7 @@ class ExpressionTests: XCTestCase {
     func testCallArrayLiteralWithFunctionCallOperator() {
         let expression = Expression("[1,2](3)", symbols: [
             .function("[]", arity: .any): { _ in 1 },
-            .infix("()"): { $0[0] + $0[1] }
+            .infix("()"): { $0[0] + $0[1] },
         ])
         XCTAssertEqual(try expression.evaluate(), 4)
     }

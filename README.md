@@ -28,6 +28,7 @@
     - [Usage](#usage-1)
     - [Symbols](#symbols-1)
     - [Literals](#literals)
+    - [Anonymous Functions](#anonymous-functions)
 - [Example Projects](#example-projects)
     - [Benchmark](#benchmark)
 	- [Calculator](#calculator)
@@ -72,14 +73,14 @@ Expression is fast, lightweight, well-tested, and written entirely in Swift. It 
 
 Expression works by parsing an expression string into a tree of symbols, which can then be evaluated at runtime. Each symbol maps to a Swift closure (function) which is executed during evaluation. There are built-in functions representing common math operations, or you can provide your own custom ones.
 
-Although `Expression` only works with `Double` values, `AnyExpression` uses a technique called [NaN boxing](https://wingolog.org/archives/2011/05/18/value-representation-in-javascript-implementations) to reference arbitrary data via the unused bit patterns in the IEEE floating point specification.
+Although the `Expression` class only works with `Double` values, [AnyExpression](#anyexpression) uses a technique called [NaN boxing](https://wingolog.org/archives/2011/05/18/value-representation-in-javascript-implementations) to reference arbitrary data via the unused bit patterns in the IEEE floating point specification.
 
 
 # Usage
 
 ## Installation
 
-The Expression API is encapsulated in a single file, and everything public is prefixed or name-spaced, so you can simply drag the `Expression.swift` file into your project to use it. If you wish to use the AnyExpression extension then include `AnyExpression.swift` as well.
+The `Expression` class is encapsulated in a single file, and everything public is prefixed or name-spaced, so you can simply drag the `Expression.swift` file into your project to use it. If you wish to use the [AnyExpression](#anyexpression) extension then include the `AnyExpression.swift` file as well.
 
 If you prefer, there's a framework for Mac and iOS that you can import which includes both the `Expression` and `AnyExpression` classes. You can install this manually, or by using CocoaPods, Carthage, or Swift Package Manager.
 
@@ -169,11 +170,11 @@ do {
 
 When using the `constants`, `arrays` and `symbols` dictionaries, error message generation is handled automatically by the Expression library. If you need to support dynamic symbol decoding (as in the hex color example earlier), you can use the `init(impureSymbols:pureSymbols)` initializer, which is a little bit more complex.
 
-The `init(impureSymbols:pureSymbols)` initializer accepts one or both of a pair of lookup functions that accept a `Symbol` and return a `SymbolEvaluator` function. This interface is very powerful because it allows you to dynamically resolve symbols (such as the hex color constants in the colors example) without needing to create a dictionary of all possible values in advance.
+The `init(impureSymbols:pureSymbols)` initializer accepts a pair of lookup functions that take a `Symbol` and return a `SymbolEvaluator` function. This interface is very powerful because it allows you to dynamically resolve symbols (such as the hex color constants in the colors example) without needing to create a dictionary of all possible values in advance.
 
-For each symbol, your lookup functions can return either a `SymbolEvaluator` function, or nil. If you do not recognize a symbol, you should return nil so that it can be handled by the default evaluator. If neither lookup function matches the symbol, and it is not one of the standard math or boolean functions, Expression will throw an error.
+For each symbol, your lookup functions can return either a `SymbolEvaluator` function, or nil. If you do not recognize a symbol, you should return nil so that it can be handled by the default evaluator. If neither lookup function matches the symbol, and it is not one of the standard math or boolean functions, `evaluate()` will throw an error.
 
-In some cases you may be *certain* that a symbol is incorrect, and this is an opportunity to provide a more useful error message than the default ".unknownSymbol`. The following example matches a function `bar` with an arity of 1 (meaning that it takes one argument). This will only match calls to `bar` that take a single argument, and will ignore calls with zero or multiple arguments.
+In some cases you may recognize a symbol, but be *certain* that it is incorrect, and this is an opportunity to provide a more specific error message than Expression would generate by default. The following example matches a function `bar` with an arity of 1 (meaning that it takes one argument). This will only match calls to `bar` that take a single argument, and will ignore calls with zero or multiple arguments.
 
 ```swift
 switch symbol {
@@ -190,7 +191,7 @@ Since `bar` is a custom function, we know that it should only take one argument,
 switch symbol {
 case .function("bar", let arity):
     guard arity == 1 else {
-        return { _ in throw Expression.Error.arityMismatch(symbol) }
+        return { _ in throw Expression.Error.message("function bar expects 1 argument") }
     }
     return { arg in args[0] + 1 }
 default:
@@ -198,7 +199,7 @@ default:
 }
 ```
 
-Note that you can either check the arity of the function at lookup time using pattern matching (as we did above), or by checking `args.count` when the function is called. These will always match.
+**Note:** Newer versions of Expression can correctly report trivial arity errors like this anyway, so this is a slightly contrived example, but this approach may be useful for other types of error, such as when arguments are out of range, or the wrong type.
 
 
 # Symbols
@@ -217,7 +218,9 @@ This is an alphanumeric identifier representing a constant or variable in an exp
 
 Like Swift, Expression allows unicode characters in identifiers, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for name-spacing (as demonstrated in the Layout example app).
 
-The parser also accepts quoted strings as identifiers. Single quotes (') , double quotes (") , or backticks (`) may be used. Since Expression only deals with numeric values, it's up to your application to map these string indentifiers to numbers. Unlike regular identifiers, quoted identifiers can contain any unicode character, including spaces. Newlines, quotes and other special characters can be escaped using a backslash (\). Escape sequences are decoded for you, but the outer quotes are retained so you can distinguish strings from other identifiers.
+The parser also accepts quoted strings as identifiers. Single quotes (') , double quotes (") , or backticks (`) may be used. Since `Expression` only deals with numeric values, it's up to your application to map these string indentifiers to numbers (if you are using [AnyExpression](#anyexpression) then this is handled automatically).
+
+Unlike regular identifiers, quoted identifiers can contain any unicode character, including spaces. Newlines, quotes and other special characters can be escaped using a backslash (\). Escape sequences are decoded for you, but the outer quotes are retained so you can distinguish strings from other identifiers.
 
 Finally, unquoted identifiers are permitted to end with a single quote ('), as this is a common notation used in mathematics to indicate modified values. A quote at any other point in the identifier will be treated as the end of the name.
 
@@ -231,7 +234,7 @@ To verify that a given string is safe for use as an identifier, you can use the 
 .postfix(String)
 ```
 
-These symbols represent *operators*. Operators can be one or more characters long, and can contain almost any symbol that wouldn't conflict with a valid identifier name, with some caveats:
+These symbols represent *operators*. Operators can be one or more characters long, and can contain almost any symbol that doesn't conflict with a valid identifier name, with some caveats:
 
 * Comma (,) is a valid operator on its own, but cannot form part of a longer character sequence
 * The bracket characters `[`, '(', '{', and their counterparts are reserved and cannot be used as operators
@@ -263,7 +266,12 @@ A function symbol is defined with a name and an `Arity`, which is the number of 
 
 **Note:** `Arity` conforms to `ExpressibleByIntegerLiteral`, so for fixed-arity functions you can just write `.function("foo", arity: 2)` instead of `.function("foo", arity: .exactly(2))`
 
-Functions are called in an expression by using their name followed by a comma-delimited sequence of arguments in parentheses. If the argument count does not match any of the specified arity variants, an `arityError` will be thrown.
+Functions are called by using their name followed by a comma-delimited sequence of arguments in parentheses. If the argument count does not match any of the specified arity variants, an `arityError` will be thrown.
+
+Since function symbols must have a name, it is not directly possible to use anonymous functions in an expression (e.g. functions that are stored in a variable, or returned by another function).
+
+There is syntax support for this however, if you implement the function call operator `.infix("()")`, which accepts one or more arguments, with the first being treated as the function to be called. This is of limited use in `Expression` (where values are all numeric) but [AnyExpression](#anyexpression) uses this approach to provide full support for [anonymous functions(#anonymous-functions).
+
 
 ## Arrays
 
@@ -273,11 +281,11 @@ Functions are called in an expression by using their name followed by a comma-de
 
 Array symbols represent a sequence of values that can be accessed by index. Array symbols are referenced in an expression by using their name followed by an index argument in square brackets.
 
-The simplest way to use arrays with Expression is to pass in a constant array value via the `arrays` initializer argument. For variable arrays, you can return an `.array()` symbol implementation via the `symbols` argument.
+The simplest way to use arrays with `Expression` is to pass in a constant array value via the `arrays` initializer argument. For variable arrays, you can return an `.array()` symbol implementation via the `symbols` argument.
  
 Expression also supports Swift-style array literal syntax like `[1, 2, 3]` and subscripting of arbitrary expressions like `(a + b)[c]`. Array literals map to the array literal constructor symbol `.function("[]", arity: .any)` and subscripting maps to the array subscripting operator `.infix("[]")`.
 
-Because Expression cannot work with non-numeric types, neither the array literal constructor nor the array subscripting operator have default implementations in Expression, however both of these *are* implemented in [AnyExpression](#anyexpression)'s standard symbol library.
+Because `Expression` cannot work with non-numeric types, neither the array literal constructor nor the array subscripting operator have default implementations in `Expression`, however both of these *are* implemented in [AnyExpression](#anyexpression)'s standard symbol library.
 
 
 # Performance
@@ -341,7 +349,7 @@ On the other hand, if your expressions are being evaluated hundreds or thousands
 
 By default, Expression supports a number of basic math functions, operators, and constants that are generally useful, independent of any particular application.
 
-If you use a custom symbol dictionary, you can override any default symbol, or overload default functions with a different number of arguments (arity). Any symbols from the standard library that you do not explicitly override will still be available.
+If you use a custom symbol dictionary, you can override any default symbol, or overload default functions with different numbers of arguments (arity). Any symbols from the standard library that you do not explicitly override will still be available.
 
 To explicitly disable individual symbols from the standard library, you can override them and throw an exception:
 
@@ -466,9 +474,11 @@ false
 
 `AnyExpression` is used in almost the exact same way as the `Expression` class, with the following exceptions:
 
-* AnyExpression's `SymbolEvaluator` functions accept and return `Any` instead of `Double`
+* `AnyExpression`'s `SymbolEvaluator` functions accept and return `Any` instead of `Double`
 * Boolean symbols and operators are enabled by default when you create an `AnyExpression`
-* There is no separate `arrays` argument for the AnyExpression constructor. If you wish to pass an array or dictionary constant, you can add it to the `constants` dictionary like any other value type
+* There is no separate `arrays` argument for the `AnyExpression` constructor. If you wish to pass an array or dictionary constant, you can add it to the `constants` dictionary like any other value type
+* `AnyExpression` supports [anonymous functions[(#anonymous-functions), which can be any value of type `Expression.SymbolEvaluator` or `AnyExpression.SymbolEvaluator`
+* You can also pass `Expression.SymbolEvaluator` or `AnyExpression.SymbolEvaluator` functions into `AnyExpression` using the constants dictionary, and these will behave just like ordinary function symbols
 
 You can create and evaluate an `AnyExpression` instance as follows:
 
@@ -477,7 +487,7 @@ let expression = AnyExpression("'hello' + 'world'")
 let result: String = try expression.evaluate() // 'helloworld'
 ```
 
-Note the use of single quotes (') for string literals. AnyExpression supports single or double quotes for string literals. There is no difference between these, except that single quotes do not need to be escaped inside a Swift string literal.
+Note the use of single quotes (') for string literals. `AnyExpression` supports single or double quotes for string literals. There is no difference between these, except that single quotes do not need to be escaped inside a Swift string literal.
 
 Since `AnyExpression`'s `evaluate()` method has a generic return type, you will need to tell it the expected type. In the example above, we did this by specifying an explicit type for the `result` variable, but you could also do it by using the `as` operator (without ! or ?):
 
@@ -498,7 +508,7 @@ The currently supported automatic conversions are:
 
 ## Symbols
 
-In addition to adding support for string literals, AnyExpression extends Expression's standard library with some additional symbols for dealing with Optionals and null values:
+In addition to adding support for string literals, `AnyExpression` extends `Expression`'s standard library with some additional symbols for dealing with Optionals and null values:
 
 * `nil` - the null literal
 * `??` - the null coalescing operator
@@ -507,15 +517,43 @@ Optional unwrapping is automatic, so there is currently no need for the postfix 
 
 Comparison operators like `==` and !=` are also extended to work with any `Hashable` type, and `+` can be used for string concatenation, as in the example above.
 
-For `array` symbols, AnyExpression can use any `Hashable` type as the index. This means that AnyExpression can work with `Dictionary` values as well as `Array`s and `ArraySlice`s.
+For `array` symbols, `AnyExpression` can use any `Hashable` type as the index. This means that `AnyExpression` can work with `Dictionary` values as well as `Array`s and `ArraySlice`s.
 
 ## Literals
 
-As mentioned above, AnyExpression supports the use of quoted string literals, delimited with either single quotes (') or double quotes ("). Special characters inside the string can be escaped using a backlash (\).
+As mentioned above, `AnyExpression` supports the use of quoted string literals, delimited with either single quotes (') or double quotes ("). Special characters inside the string can be escaped using a backlash (\).
 
-AnyExpression supports array literals defined in square brackets, e.g. `[1, 2, 3]` or `['foo', 'bar', 'baz']`. Array literals can contain a mixture of value types and/or sub-expressions.
+`AnyExpression` supports array literals defined in square brackets, e.g. `[1, 2, 3]` or `['foo', 'bar', 'baz']`. Array literals can contain a mixture of value types and/or sub-expressions.
 
-You can also create range literals using the `..<` and `...` syntaxes. Closed, half-open and partial ranges are supported. Ranges work with either `Int` or `String.Index` values, and can be used in conjunction with subscripting syntax for slicing arrays and strings. 
+You can also create range literals using the `..<` and `...` syntaxes. Closed, half-open and partial ranges are supported. Ranges work with either `Int` or `String.Index` values, and can be used in conjunction with subscripting syntax for slicing arrays and strings.
+
+## Anonymous Functions
+
+In addition to ordinary named function symbols, `AnyExpression` also calling anonymous functions, which are values of type `Expression.SymbolEvaluator` or `AnyExpression.SymbolEvaluator` that can be stored in a constant or returned from a sub-expression.
+
+You can pass anonymous functions into `AnyExpression` by using a constant value instead of a `.function()` symbol, but note that this approach does not allow you the option of overloading functions with the same name by arity.
+
+Unlike function symbols, anonymous functions do not support overloading, but you can use a switch inside the function body to implement different behaviors depending on the number of arguments. You should also throw an `arityMismatch` error if an unsupported number of arguments is passed, as this cannot be detected automatically, e.g.
+
+```swift
+let bar = { (args: [Any] throws -> Any in
+    switch args.count {
+    case 1:
+        // behavior 1
+    case 2:
+        // behavior 2
+    default:
+        throw Expression.Error.arityMismatch(.function("bar", arity: 2))
+    }
+}
+
+// static function foo returns anonymous function bar, which is called in the expression
+let expression = AnyExpression("foo()(2)", symbols: [
+    .function("foo"): { _ in bar }
+])
+```
+
+**Note:** anonymous functions are assumed to be impure, so they are never eligible for inlining, regardless of whether you use the `pureSymbols` option.
 
 
 # Example Projects

@@ -99,11 +99,11 @@ class AnyExpressionTests: XCTestCase {
 
     func testCallEvaluatorFunctionWithWrongArgumentsErrorDescription() {
         let error = Expression.Error.typeMismatch(.infix("()"), [
-            { (_: [Double]) throws -> Double in 0 }, 57, "foo"
+            { (_: [Double]) throws -> Double in 0 }, 57, "foo",
         ])
         XCTAssertEqual(error.description, "Attempted to call function with incompatible arguments (Double, String)")
     }
-    
+
     func testSubscriptArraySymbolWithIncompatibleIndexTypeErrorDescription() {
         let error = Expression.Error.typeMismatch(.array("foo"), ["bar"])
         XCTAssertEqual(error.description, "Attempted to subscript foo with incompatible index type String")
@@ -256,7 +256,7 @@ class AnyExpressionTests: XCTestCase {
         let expression = AnyExpression(
             "foo[0]",
             constants: [
-                "foo": [4]
+                "foo": [4],
             ],
             symbols: [
                 .array("foo"): { _ in 5 },
@@ -269,7 +269,7 @@ class AnyExpressionTests: XCTestCase {
         let expression = AnyExpression(
             "foo[0]",
             constants: [
-                "foo": 4
+                "foo": 4,
             ],
             symbols: [
                 .array("foo"): { _ in 5 },
@@ -1192,7 +1192,7 @@ class AnyExpressionTests: XCTestCase {
 
     func testCallExpressionSymbolEvaluatorConstant() {
         let expression = AnyExpression("foo(1, 2)", constants: [
-            "foo": { $0[0] + $0[1] } as Expression.SymbolEvaluator
+            "foo": { $0[0] + $0[1] } as Expression.SymbolEvaluator,
         ])
         XCTAssertEqual(try expression.evaluate(), 3)
         XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
@@ -1200,7 +1200,7 @@ class AnyExpressionTests: XCTestCase {
 
     func testCallAnyExpressionSymbolEvaluatorConstant() {
         let expression = AnyExpression("foo('foo', 'bar')", constants: [
-            "foo": { ($0[0] as! String) + ($0[1] as! String) } as AnyExpression.SymbolEvaluator
+            "foo": { ($0[0] as! String) + ($0[1] as! String) } as AnyExpression.SymbolEvaluator,
         ])
         XCTAssertEqual(try expression.evaluate(), "foobar")
         XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
@@ -1210,10 +1210,10 @@ class AnyExpressionTests: XCTestCase {
         let expression = AnyExpression(
             "foo('foo', 'bar')",
             constants: [
-                "foo": { ($0[0] as! String) + ($0[1] as! String) } as AnyExpression.SymbolEvaluator
+                "foo": { ($0[0] as! String) + ($0[1] as! String) } as AnyExpression.SymbolEvaluator,
             ],
             symbols: [
-                .function("foo", arity: 2): { ($0[1] as! String) + ($0[0] as! String) }
+                .function("foo", arity: 2): { ($0[1] as! String) + ($0[0] as! String) },
             ]
         )
         XCTAssertEqual(try expression.evaluate(), "foobar")
@@ -1225,10 +1225,10 @@ class AnyExpressionTests: XCTestCase {
             "foo('foo', 'bar')",
             options: .pureSymbols,
             constants: [
-                "foo": { ($0[0] as! String) + ($0[1] as! String) } as AnyExpression.SymbolEvaluator
+                "foo": { ($0[0] as! String) + ($0[1] as! String) } as AnyExpression.SymbolEvaluator,
             ],
             symbols: [
-                .function("foo", arity: 2): { ($0[1] as! String) + ($0[0] as! String) }
+                .function("foo", arity: 2): { ($0[1] as! String) + ($0[0] as! String) },
             ]
         )
         XCTAssertEqual(try expression.evaluate(), "foobar")
@@ -1279,7 +1279,7 @@ class AnyExpressionTests: XCTestCase {
 
     func testCallConstantThatIsNotASymbolEvaluator() {
         let expression = AnyExpression("foo(1, 2)", constants: [
-            "foo": "foo"
+            "foo": "foo",
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.function("foo", arity: 2)))
@@ -1290,10 +1290,10 @@ class AnyExpressionTests: XCTestCase {
         let expression = AnyExpression(
             "foo('foo', 'bar')",
             constants: [
-                "foo": "foo"
+                "foo": "foo",
             ],
             symbols: [
-                .function("foo", arity: 2): { ($0[1] as! String) + ($0[0] as! String) }
+                .function("foo", arity: 2): { ($0[1] as! String) + ($0[0] as! String) },
             ]
         )
         XCTAssertEqual(try expression.evaluate(), "barfoo")
@@ -1301,7 +1301,7 @@ class AnyExpressionTests: XCTestCase {
 
     func testCallExpressionSymbolEvaluatorConstantWithNonNumericArgument() {
         let expression = AnyExpression("foo(1, 'foo')", constants: [
-            "foo": { $0[0] + $0[1] } as Expression.SymbolEvaluator
+            "foo": { $0[0] + $0[1] } as Expression.SymbolEvaluator,
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .typeMismatch(.function("foo", arity: 2), [1.0, "foo"]))
