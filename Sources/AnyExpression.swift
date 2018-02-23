@@ -584,7 +584,7 @@ extension AnyExpression {
         case let numericType as _Numeric.Type:
             if anyValue is Bool { return nil }
             return (anyValue as? NSNumber).map { numericType.init(truncating: $0) } as? T
-        case let arrayType as _Array.Type:
+        case let arrayType as _SwiftArray.Type:
             return arrayType.cast(anyValue) as? T
         case is String.Type:
             return (anyValue as? _String).map { String($0.substring) } as? T
@@ -769,11 +769,13 @@ private extension AnyExpression {
         case let array as _Array:
             return { args in
                 switch args[0] {
-                case let index as NSNumber:
-                    guard let value = array.value(at: Int(truncating: index)) else {
-                        throw Error.arrayBounds(symbol, Double(truncating: index))
+                case let index as NSNumber: // TODO: should Bool be explicitly disallowed?
+                    let values = array.values
+                    let index = Int(truncating: index) // TODO: should this use Int(exactly:)?
+                    if (0 ..< values.count).contains(index) {
+                        return values[index]
                     }
-                    return value
+                    throw Error.arrayBounds(symbol, Double(index))
                 case let range as _Range:
                     return try range.slice(of: array, for: symbol)
                 case let index:
@@ -1070,20 +1072,15 @@ extension NSString: _String {
 // Used for array values
 private protocol _Array {
     var values: [Any] { get }
-    func value(at index: Int) -> Any?
+}
+
+private protocol _SwiftArray: _Array {
     static func cast(_ value: Any) -> Any?
 }
 
-extension Array: _Array {
+extension Array: _SwiftArray {
     fileprivate var values: [Any] {
         return self
-    }
-
-    fileprivate func value(at index: Int) -> Any? {
-        guard indices.contains(index) else {
-            return nil // Out of bounds
-        }
-        return self[index]
     }
 
     fileprivate static func cast(_ value: Any) -> Any? {
@@ -1091,20 +1088,19 @@ extension Array: _Array {
     }
 }
 
-extension ArraySlice: _Array {
+extension ArraySlice: _SwiftArray {
     fileprivate var values: [Any] {
         return Array(self)
     }
 
-    fileprivate func value(at index: Int) -> Any? {
-        guard indices.contains(index) else {
-            return nil // Out of bounds
-        }
-        return self[index]
-    }
-
     static func cast(_ value: Any) -> Any? {
         return (AnyExpression.arrayCast(value) as [Element]?).map(self.init)
+    }
+}
+
+extension NSArray: _Array {
+    fileprivate var values: [Any] {
+        return Array(self)
     }
 }
 
@@ -1118,6 +1114,12 @@ extension Dictionary: _Dictionary {
         guard let key = AnyExpression.cast(key) as Key? else {
             return nil // Type mismatch
         }
+        return self[key] as Any
+    }
+}
+
+extension NSDictionary: _Dictionary {
+    fileprivate func value(for key: Any) -> Any? {
         return self[key] as Any
     }
 }

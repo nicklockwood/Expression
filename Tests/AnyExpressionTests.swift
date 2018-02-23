@@ -347,15 +347,6 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
-    func testSubscriptStringDictionaryWithInt() {
-        let expression = AnyExpression("foo()[2]", symbols: [
-            .function("foo", arity: 0): { _ in ["bar": "baz"] },
-        ])
-        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("[]"), [[String: String](), 2.0]))
-        }
-    }
-
     func testSubscriptStringArrayLiteralOutOfBounds() {
         let expression = AnyExpression("['a','b','c'][3]")
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
@@ -390,7 +381,7 @@ class AnyExpressionTests: XCTestCase {
 
     // MARK: Dictionaries
 
-    func testSubscriptStringDictionaryConstant() {
+    func testSubscriptStringDictionaryWithString() {
         let expression = AnyExpression("a[b]", constants: [
             "a": ["hello": "world"],
             "b": "hello",
@@ -399,7 +390,16 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate() as String, "world")
     }
 
-    func testSubscriptDoubleDictionaryConstant() {
+    func testSubscriptStringNSDictionaryWithString() {
+        let expression = AnyExpression("a[b]", constants: [
+            "a": ["hello": "world"] as NSDictionary,
+            "b": "hello",
+        ])
+        XCTAssertEqual(expression.symbols, [])
+        XCTAssertEqual(try expression.evaluate() as String, "world")
+    }
+
+    func testSubscriptDoubleDictionaryWithInt() {
         let expression = AnyExpression("a[b]", constants: [
             "a": [1.0: "world"],
             "b": 1,
@@ -407,7 +407,7 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), "world")
     }
 
-    func testSubscriptIntDictionaryConstantWithDouble() {
+    func testSubscriptIntDictionaryWithDouble() {
         let expression = AnyExpression("a[b]", constants: [
             "a": [1: "world"],
             "b": 1.0,
@@ -415,9 +415,9 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), "world")
     }
 
-    func testSubscriptStringDictionaryConstantWithInt() {
+    func testSubscriptStringDictionaryWithInt() {
         let expression = AnyExpression("a[b]", constants: [
-            "a": ["hello": "world"],
+            "a": ["1": "world"],
             "b": 1,
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
@@ -425,7 +425,15 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
-    func testSubscriptStringDictionaryConstantWithNonHashableType() {
+    func testSubscriptStringNSDictionaryWithInt() {
+        let expression = AnyExpression("a[b]", constants: [
+            "a": ["1": "world"] as NSDictionary,
+            "b": 1,
+        ])
+        XCTAssertNil(try expression.evaluate() as Any?)
+    }
+
+    func testSubscriptStringDictionaryWithNonHashableType() {
         let expression = AnyExpression("a[b]", constants: [
             "a": ["hello": "world"],
             "b": EquatableStruct(foo: 1),
@@ -767,6 +775,16 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .arrayBounds(.infix("[]"), -1))
         }
+    }
+
+    func testNSArraySubscripting() {
+        let expression = AnyExpression(
+            "foo[1...2]",
+            constants: [
+                "foo": NSArray(array: [1, 2, 3])
+            ]
+        )
+        XCTAssertEqual(try expression.evaluate(), [2, 3])
     }
 
     // MARK: String subscripting
@@ -2242,6 +2260,37 @@ class AnyExpressionTests: XCTestCase {
             "foo": Substring("foo"),
         ])
         XCTAssertEqual(try expression.evaluate(), "foo" as NSString?)
+    }
+
+    func testCastArrayAsArraySlice() {
+        let expression = AnyExpression("[3, 4]")
+        XCTAssertEqual(try expression.evaluate(), ArraySlice([3, 4]))
+    }
+
+    func testCastArrayAsNSArray() {
+        let expression = AnyExpression("[3, 4]")
+        XCTAssertEqual(try expression.evaluate(), [3, 4] as NSArray)
+    }
+
+    func testCastArraySliceAsNSArray() {
+        let expression = AnyExpression("[3, 4]", constants: [
+            "array": ArraySlice([3.0, 4.0])
+        ])
+        XCTAssertEqual(try expression.evaluate(), [3, 4] as NSArray)
+    }
+
+    func testCastNSArrayAsArraySlice() {
+        let expression = AnyExpression("array", constants: [
+            "array": [3, 4] as NSArray
+        ])
+        XCTAssertEqual(try expression.evaluate(), ArraySlice([3, 4]))
+    }
+
+    func testCastNSArrayAsArray() {
+        let expression = AnyExpression("array", constants: [
+            "array": [3, 4] as NSArray
+        ])
+        XCTAssertEqual(try expression.evaluate(), [3, 4])
     }
 
     // MARK: Optimization
