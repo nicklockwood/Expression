@@ -557,7 +557,10 @@ extension AnyExpression.Error {
 
     /// Standard error message for invalid range
     static func invalidRange<T: Comparable>(_ lhs: T, _ rhs: T) -> AnyExpression.Error {
-        return .message("Cannot form range with upperBound \(lhs > rhs ? "<" : "<=") lowerBound")
+        if lhs > rhs {
+            return .message("Cannot form range with lower bound > upper bound")
+        }
+        return .message("Cannot form half-open range with lower bound == upper bound")
     }
 
     /// Standard error message for mismatched return type
