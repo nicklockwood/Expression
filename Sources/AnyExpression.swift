@@ -614,6 +614,14 @@ extension AnyExpression {
             return "[" + dictionary.enumerated().map {
                 stringify($0.element.key) + ": " + stringify($0.element.value)
             }.joined(separator: ", ") + "]"
+        case let range as PartialRangeUpTo<Int>:
+            return "..<\(range.upperBound)"
+        case let range as PartialRangeThrough<Int>:
+            return "...\(range.upperBound)"
+        case let range as PartialRangeFrom<Int>:
+            return "\(range.lowerBound)..."
+        case let range as CountablePartialRangeFrom<Int>:
+            return "\(range.lowerBound)..."
         case is Any.Type:
             let typeName = "\(value)"
             #if !swift(>=3.3) || (swift(>=4) && !swift(>=4.1))

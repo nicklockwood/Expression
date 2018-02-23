@@ -1120,15 +1120,19 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
-    func testSubscriptStringFromInvalidIndexRange2() {
-        let expression = AnyExpression("foo[index...]", constants: [
-            "foo": "afoo"["afoo".range(of: "foo")!],
-            "index": "afoo".startIndex,
-        ])
-        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))
+    #if swift(>=4)
+
+        func testSubscriptStringFromInvalidIndexRange2() {
+            let expression = AnyExpression("foo[index...]", constants: [
+                "foo": "afoo"["afoo".range(of: "foo")!],
+                "index": "afoo".startIndex,
+                ])
+            XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+                XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))
+            }
         }
-    }
+
+    #endif
 
     func testSubscriptStringUpToIndexRange() {
         let expression = AnyExpression("'foo'[..<index]", constants: [
@@ -1178,15 +1182,19 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
-    func testSubscriptStringThroughInvalidIndexRange2() {
-        let expression = AnyExpression("foo[...index]", constants: [
-            "foo": "afoo"["afoo".range(of: "foo")!],
-            "index": "afoo".startIndex,
-        ])
-        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))
+    #if swift(>=4)
+
+        func testSubscriptStringThroughInvalidIndexRange2() {
+            let expression = AnyExpression("foo[...index]", constants: [
+                "foo": "afoo"["afoo".range(of: "foo")!],
+                "index": "afoo".startIndex,
+            ])
+            XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+                XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))
+            }
         }
-    }
+
+    #endif
 
     // MARK: Functions
 
@@ -1469,6 +1477,28 @@ class AnyExpressionTests: XCTestCase {
     func testAddStringToHalfOpenRange() {
         let expression = AnyExpression("'foo' + (1..<2)")
         XCTAssertEqual(try expression.evaluate(), "foo1..<2")
+    }
+
+    func testAddStringToPartialRangeUpTo() {
+        let expression = AnyExpression("'foo' + (..<2)")
+        XCTAssertEqual(try expression.evaluate(), "foo..<2")
+    }
+
+    func testAddStringToPartialRangeThrough() {
+        let expression = AnyExpression("'foo' + (...2)")
+        XCTAssertEqual(try expression.evaluate(), "foo...2")
+    }
+
+    func testAddStringToPartialRangeFrom() {
+        let expression = AnyExpression("'foo' + range", constants: [
+            "range": PartialRangeFrom(1)
+        ])
+        XCTAssertEqual(try expression.evaluate(), "foo1...")
+    }
+
+    func testAddStringToCountablePartialRangeFrom() {
+        let expression = AnyExpression("'foo' + (1...)")
+        XCTAssertEqual(try expression.evaluate(), "foo1...")
     }
 
     func testAddStringVariables() {
