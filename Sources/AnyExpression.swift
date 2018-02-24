@@ -103,7 +103,7 @@ public struct AnyExpression: CustomStringConvertible {
                             return { args in
                                 try fn(args.map {
                                     guard let doubleValue = ($0 as? NSNumber)
-                                        .flatMap(Double.init(truncating:)) else {
+                                        .map(Double.init(truncating:)) else {
                                         throw Error.typeMismatch(symbol, args)
                                     }
                                     return doubleValue
@@ -583,7 +583,7 @@ extension AnyExpression {
         switch type {
         case let numericType as _Numeric.Type:
             if anyValue is Bool { return nil }
-            return (anyValue as? NSNumber).map { numericType.init(truncating: $0) } as? T
+            return (anyValue as? NSNumber).map(numericType.init(truncating:)) as? T
         case let arrayType as _SwiftArray.Type:
             return arrayType.cast(anyValue) as? T
         case is String.Type:
@@ -851,6 +851,11 @@ extension UInt64: _Numeric {}
 
 extension Double: _Numeric {}
 extension Float: _Numeric {}
+
+#if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+    import CoreGraphics
+    extension CGFloat: _Numeric {}
+#endif
 
 // Used for subscripting
 private protocol _Range {

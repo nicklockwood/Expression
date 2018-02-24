@@ -31,6 +31,7 @@
 
 @testable import Expression
 import XCTest
+import CoreGraphics
 
 private struct HashableStruct: Hashable {
     let foo: Int
@@ -2134,6 +2135,16 @@ class AnyExpressionTests: XCTestCase {
     func testCastDoubleResultAsOptionalInt8() {
         let expression = AnyExpression("57.5")
         XCTAssertEqual(try expression.evaluate() as Int8?, 57)
+    }
+
+    func testCastDoubleResultAsCGFloat() {
+        let expression = AnyExpression("57.5")
+        XCTAssertEqual(try expression.evaluate() as CGFloat, 57.5)
+    }
+
+    func testCastDoubleResultAsOptionalCGFloat() {
+        let expression = AnyExpression("57.5")
+        XCTAssertEqual(try expression.evaluate() as CGFloat?, 57.5)
     }
 
     func testCastNonzeroResultAsBool() {
