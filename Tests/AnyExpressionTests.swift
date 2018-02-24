@@ -253,64 +253,6 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
-    func testArrayConstantTakesPrecedenceOverArraySymbol() {
-        let expression = AnyExpression(
-            "foo[0]",
-            constants: [
-                "foo": [4],
-            ],
-            symbols: [
-                .array("foo"): { _ in 5 },
-            ]
-        )
-        XCTAssertEqual(try expression.evaluate(), 4)
-    }
-
-    func testArrayConstantTakesPrecedenceOverIntSymbol() {
-        let expression = AnyExpression(
-            "foo[0]",
-            constants: [
-                "foo": 4,
-            ],
-            symbols: [
-                .array("foo"): { _ in 5 },
-            ]
-        )
-        XCTAssertEqual(try expression.evaluate(), 5)
-    }
-
-    func testArraySymbolTakesPrecedenceOverIntConstant() {
-        let expression = AnyExpression(
-            "foo[0]",
-            options: .pureSymbols,
-            symbols: [
-                .variable("foo"): { _ in 4 },
-                .array("foo"): { _ in 5 },
-            ]
-        )
-        XCTAssertEqual(try expression.evaluate(), 5)
-    }
-
-    func testArraySymbolTakesPrecedenceOverVariable() {
-        let expression = AnyExpression("foo[0]", symbols: [
-            .variable("foo"): { _ in 4 },
-            .array("foo"): { _ in 5 },
-        ])
-        XCTAssertEqual(try expression.evaluate(), 5)
-    }
-
-    func testArraySymbolTakesPrecedenceOverVariableWithPureSymbols() {
-        let expression = AnyExpression(
-            "foo[0]",
-            options: .pureSymbols,
-            symbols: [
-                .variable("foo"): { _ in 4 },
-                .array("foo"): { _ in 5 },
-            ]
-        )
-        XCTAssertEqual(try expression.evaluate(), 5)
-    }
-
     func testStringArrayLiteral() {
         let expression = AnyExpression("['a','b','c']")
         XCTAssertEqual(try expression.evaluate(), ["a", "b", "c"])
@@ -1232,34 +1174,61 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), "foobar")
         XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
     }
-
-    func testSymbolEvaluatorConstantTakesPrecedenceOverImpureFunctionSymbol() {
-        let expression = AnyExpression(
-            "foo('foo', 'bar')",
-            constants: [
-                "foo": { ($0[0] as! String) + ($0[1] as! String) } as AnyExpression.SymbolEvaluator,
-            ],
-            symbols: [
-                .function("foo", arity: 2): { ($0[1] as! String) + ($0[0] as! String) },
-            ]
-        )
-        XCTAssertEqual(try expression.evaluate(), "foobar")
+    
+    func testCallExpressionSymbolEvaluatorSymbol() {
+        let expression = AnyExpression("foo(1, 2)", symbols: [
+            .variable("foo"): { _ in
+                { $0[0] + $0[1] } as Expression.SymbolEvaluator
+            }
+        ])
+        XCTAssertEqual(try expression.evaluate(), 3)
         XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
     }
 
-    func testSymbolEvaluatorConstantTakesPrecedenceOverPureFunctionSymbol() {
-        let expression = AnyExpression(
-            "foo('foo', 'bar')",
-            options: .pureSymbols,
-            constants: [
-                "foo": { ($0[0] as! String) + ($0[1] as! String) } as AnyExpression.SymbolEvaluator,
-            ],
-            symbols: [
-                .function("foo", arity: 2): { ($0[1] as! String) + ($0[0] as! String) },
-            ]
-        )
-        XCTAssertEqual(try expression.evaluate(), "foobar")
+    func testCallExpressionSymbolEvaluatorPureSymbol() {
+        let parsedExpression = Expression.parse("foo(1, 2)")
+        let expression = AnyExpression(parsedExpression, pureSymbols: { symbol in
+            switch symbol {
+            case .variable("foo"):
+                return { _ in
+                    { $0[0] + $0[1] } as Expression.SymbolEvaluator
+                }
+            default:
+                return nil
+            }
+        })
+        XCTAssertEqual(try expression.evaluate(), 3)
         XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
+    }
+
+    func testCallExpressionSymbolEvaluatorPureSymbolError() {
+        let parsedExpression = Expression.parse("foo(1, 2)")
+        let expression = AnyExpression(parsedExpression, pureSymbols: { symbol in
+            switch symbol {
+            case .variable("foo"):
+                return { _ in throw Expression.Error.message("foo") }
+            default:
+                return nil
+            }
+        })
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .message("foo"))
+        }
+    }
+
+    func testCallExpressionSymbolEvaluatorImpureSymbolError() {
+        let parsedExpression = Expression.parse("foo(1, 2)")
+        let expression = AnyExpression(parsedExpression, impureSymbols: { symbol in
+            switch symbol {
+            case .variable("foo"):
+                return { _ in throw Expression.Error.message("foo") }
+            default:
+                return nil
+            }
+        })
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .message("foo"))
+        }
     }
 
     func testCallSymbolEvaluatorReturnedByFunction() {
@@ -1304,15 +1273,6 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
-    func testCallConstantThatIsNotASymbolEvaluator() {
-        let expression = AnyExpression("foo(1, 2)", constants: [
-            "foo": "foo",
-        ])
-        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssertEqual(error as? Expression.Error, .undefinedSymbol(.function("foo", arity: 2)))
-        }
-    }
-
     func testConstantThatIsNotASymbolEvaluatorDoesntConflictWithFunctionSymbol() {
         let expression = AnyExpression(
             "foo('foo', 'bar')",
@@ -1332,6 +1292,43 @@ class AnyExpressionTests: XCTestCase {
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .typeMismatch(.function("foo", arity: 2), [1.0, "foo"]))
+        }
+    }
+
+    func testCallNonExpressionSymbolEvaluatorConstant() {
+        let expression = AnyExpression("foo(1, 2)", constants: [
+            "foo": "foo",
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("()"), ["foo", 1.0, 2.0]))
+        }
+    }
+
+    func testCallNonExpressionSymbolEvaluatorImpureSymbol() {
+        let expression = AnyExpression("foo(1, 2)", symbols: [
+            .variable("foo"): { _ in "foo" },
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("()"), ["foo", 1.0, 2.0]))
+        }
+    }
+
+    func testCallNonExpressionSymbolEvaluatorPureSymbol() {
+        let expression = AnyExpression("foo(1, 2)", options: .pureSymbols, symbols: [
+            .variable("foo"): { _ in "foo" },
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("()"), ["foo", 1.0, 2.0]))
+        }
+    }
+
+    func testCallNonExpressionSymbolEvaluatorPureSymbolWhenFuncOfDifferentArityExists() {
+        let expression = AnyExpression("foo(1, 2)", options: .pureSymbols, symbols: [
+            .function("foo", arity: 1): { _ in 0 },
+            .variable("foo"): { _ in "foo" },
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("()"), ["foo", 1.0, 2.0]))
         }
     }
 
@@ -2415,13 +2412,160 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), "foo")
     }
 
-    func testArrayConstantTakesPrecedenceOverSymbol() {
+    func testArrayConstantTakesPrecedenceOverArraySymbol() {
         let expression = AnyExpression(
             "foo[0]",
-            constants: ["foo": ["foo"]],
-            symbols: [.array("foo"): { _ in "bar" }]
+            constants: [
+                "foo": [4],
+            ],
+            symbols: [
+                .array("foo"): { _ in 5 },
+            ]
         )
-        XCTAssertEqual(try expression.evaluate(), "foo")
+        XCTAssertEqual(try expression.evaluate(), 4)
+    }
+
+    func testArrayConstantTakesPrecedenceOverIntSymbol() {
+        let expression = AnyExpression(
+            "foo[0]",
+            constants: [
+                "foo": 4,
+            ],
+            symbols: [
+                .array("foo"): { _ in 5 },
+            ]
+        )
+        XCTAssertEqual(try expression.evaluate(), 5)
+    }
+
+    func testArraySymbolTakesPrecedenceOverIntConstant() {
+        let expression = AnyExpression(
+            "foo[0]",
+            options: .pureSymbols,
+            symbols: [
+                .variable("foo"): { _ in 4 },
+                .array("foo"): { _ in 5 },
+            ]
+        )
+        XCTAssertEqual(try expression.evaluate(), 5)
+    }
+
+    func testArraySymbolTakesPrecedenceOverVariable() {
+        let expression = AnyExpression("foo[0]", symbols: [
+            .variable("foo"): { _ in 4 },
+            .array("foo"): { _ in 5 },
+        ])
+        XCTAssertEqual(try expression.evaluate(), 5)
+    }
+
+    func testArraySymbolTakesPrecedenceOverVariableWithPureSymbols() {
+        let expression = AnyExpression(
+            "foo[0]",
+            options: .pureSymbols,
+            symbols: [
+                .variable("foo"): { _ in 4 },
+                .array("foo"): { _ in 5 },
+            ]
+        )
+        XCTAssertEqual(try expression.evaluate(), 5)
+    }
+
+    func testSymbolEvaluatorConstantTakesPrecedenceOverImpureFunctionSymbol() {
+        let expression = AnyExpression(
+            "foo('foo', 'bar')",
+            constants: [
+                "foo": { ($0[0] as! String) + ($0[1] as! String) } as AnyExpression.SymbolEvaluator,
+            ],
+            symbols: [
+                .function("foo", arity: 2): { ($0[1] as! String) + ($0[0] as! String) },
+            ]
+        )
+        XCTAssertEqual(try expression.evaluate(), "foobar")
+        XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
+    }
+
+    func testSymbolEvaluatorConstantTakesPrecedenceOverPureFunctionSymbol() {
+        let expression = AnyExpression(
+            "foo('foo', 'bar')",
+            options: .pureSymbols,
+            constants: [
+                "foo": { ($0[0] as! String) + ($0[1] as! String) } as AnyExpression.SymbolEvaluator,
+            ],
+            symbols: [
+                .function("foo", arity: 2): { ($0[1] as! String) + ($0[0] as! String) },
+            ]
+        )
+        XCTAssertEqual(try expression.evaluate(), "foobar")
+        XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
+    }
+
+    func testImpureFunctionSymbolTakesPrecedenceOverImpureSymbolEvaluatorSymbol() {
+        let parsedExpression = Expression.parse("foo(1, 2)")
+        let expression = AnyExpression(
+            parsedExpression,
+            impureSymbols: { symbol in
+                switch symbol {
+                case .variable("foo"):
+                    return { _ in
+                        { _ in 3 } as Expression.SymbolEvaluator
+                    }
+                case .function("foo", arity: 2):
+                    return { _ in 2 }
+                default:
+                    return nil
+                }
+            }
+        )
+        XCTAssertEqual(try expression.evaluate(), 2)
+        XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
+    }
+
+    func testPureSymbolEvaluatorSymbolTakesPrecedenceOverPureFunctionSymbol() {
+        let parsedExpression = Expression.parse("foo(1, 2)")
+        let expression = AnyExpression(
+            parsedExpression,
+            pureSymbols: { symbol in
+                switch symbol {
+                case .variable("foo"):
+                    return { _ in
+                        { _ in 3 } as Expression.SymbolEvaluator
+                    }
+                case .function("foo", arity: 2):
+                    return { _ in 2 }
+                default:
+                    return nil
+                }
+            }
+        )
+        XCTAssertEqual(try expression.evaluate(), 3)
+        XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
+    }
+
+    func testImpureFunctionSymbolTakesPrecedenceOverPureSymbolEvaluatorSymbol() {
+        let parsedExpression = Expression.parse("foo(1, 2)")
+        let expression = AnyExpression(
+            parsedExpression,
+            impureSymbols: { symbol in
+                switch symbol {
+                case .function("foo", arity: 2):
+                    return { _ in 2 }
+                default:
+                    return nil
+                }
+            },
+            pureSymbols: { symbol in
+                switch symbol {
+                case .variable("foo"):
+                    return { _ in
+                        { _ in 3 } as Expression.SymbolEvaluator
+                    }
+                default:
+                    return nil
+                }
+        }
+        )
+        XCTAssertEqual(try expression.evaluate(), 2)
+        XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
     }
 
     // MARK: Memory
