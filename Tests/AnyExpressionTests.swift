@@ -2470,7 +2470,7 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 5)
     }
 
-    func testSymbolEvaluatorConstantTakesPrecedenceOverImpureFunctionSymbol() {
+    func testImpureFunctionSymbolTakesPrecedenceOverSymbolEvaluatorConstant() {
         let expression = AnyExpression(
             "foo('foo', 'bar')",
             constants: [
@@ -2480,11 +2480,11 @@ class AnyExpressionTests: XCTestCase {
                 .function("foo", arity: 2): { ($0[1] as! String) + ($0[0] as! String) },
             ]
         )
-        XCTAssertEqual(try expression.evaluate(), "foobar")
+        XCTAssertEqual(try expression.evaluate(), "barfoo")
         XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
     }
 
-    func testSymbolEvaluatorConstantTakesPrecedenceOverPureFunctionSymbol() {
+    func testPureFunctionSymbolTakesPrecedenceOverSymbolEvaluatorConstant() {
         let expression = AnyExpression(
             "foo('foo', 'bar')",
             options: .pureSymbols,
@@ -2495,8 +2495,8 @@ class AnyExpressionTests: XCTestCase {
                 .function("foo", arity: 2): { ($0[1] as! String) + ($0[0] as! String) },
             ]
         )
-        XCTAssertEqual(try expression.evaluate(), "foobar")
-        XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
+        XCTAssertEqual(try expression.evaluate(), "barfoo")
+        XCTAssertEqual(expression.symbols, [])
     }
 
     func testImpureFunctionSymbolTakesPrecedenceOverImpureSymbolEvaluatorSymbol() {
@@ -2520,7 +2520,7 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
     }
 
-    func testPureSymbolEvaluatorSymbolTakesPrecedenceOverPureFunctionSymbol() {
+    func testPureFunctionSymbolTakesPrecedenceOverPureSymbolEvaluatorSymbol() {
         let parsedExpression = Expression.parse("foo(1, 2)")
         let expression = AnyExpression(
             parsedExpression,
@@ -2537,8 +2537,8 @@ class AnyExpressionTests: XCTestCase {
                 }
             }
         )
-        XCTAssertEqual(try expression.evaluate(), 3)
-        XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
+        XCTAssertEqual(try expression.evaluate(), 2)
+        XCTAssertEqual(expression.symbols, [])
     }
 
     func testImpureFunctionSymbolTakesPrecedenceOverPureSymbolEvaluatorSymbol() {

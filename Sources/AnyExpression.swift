@@ -94,13 +94,6 @@ public struct AnyExpression: CustomStringConvertible {
                     if !(constants[name].map(AnyExpression.isSubscriptable) ?? false) {
                         return symbols[symbol]
                     }
-                case let .function(name, _):
-                    if let value = constants[name],
-                        value as? SymbolEvaluator != nil ||
-                        value as? Expression.SymbolEvaluator != nil {
-                        return nil // Ensure constant function takes precedence over symbols
-                    }
-                    fallthrough
                 default:
                     if !pureSymbols {
                         return symbols[symbol]
@@ -204,6 +197,8 @@ public struct AnyExpression: CustomStringConvertible {
             return String(name.dropFirst().dropLast())
         }
         func arrayEvaluator(for symbol: Symbol, _ value: Any) -> SymbolEvaluator {
+            // TODO: should arrayEvaluator call the `.infix("[]")` implementation,
+            // rather than vice-versa?
             switch value {
             case let array as _Array:
                 return { args in
@@ -255,6 +250,7 @@ public struct AnyExpression: CustomStringConvertible {
             }
         }
         func funcEvaluator(for symbol: Symbol, _ value: Any) -> Expression.SymbolEvaluator? {
+            // TODO: should funcEvaluator call the `.infix("()")` implementation?
             switch value {
             case let fn as SymbolEvaluator:
                 return { args in
@@ -425,18 +421,43 @@ public struct AnyExpression: CustomStringConvertible {
         }
 
         // Build Expression
+        var _pureSymbols = [Symbol: Expression.SymbolEvaluator]()
         let expression = Expression(
             expression,
             impureSymbols: { symbol in
                 if let fn = impureSymbols(symbol) {
                     return { try box.store(fn($0.map(box.load))) }
-                } else if case let .array(name) = symbol,
-                    let fn = impureSymbols(.variable(name)) {
-                    return { args in
-                        let fn = arrayEvaluator(for: symbol, try fn([]))
-                        return try box.store(fn(args.map(box.load)))
+                } else if let fn = pureSymbols(symbol) {
+                    switch symbol {
+                    case .variable, .function(_, arity: 0):
+                        do {
+                            let value = try box.store(fn([]))
+                            _pureSymbols[symbol] = { _ in value }
+                        } catch {
+                            return { _ in throw error }
+                        }
+                    default:
+                        _pureSymbols[symbol] = { try box.store(fn($0.map(box.load))) }
+                    }
+                } else if case let .array(name) = symbol {
+                    if let fn = impureSymbols(.variable(name)) {
+                        return { args in
+                            let fn = arrayEvaluator(for: symbol, try fn([]))
+                            return try box.store(fn(args.map(box.load)))
+                        }
+                    } else if let fn = pureSymbols(.variable(name)) {
+                        let evaluator: SymbolEvaluator
+                        do {
+                            evaluator = try arrayEvaluator(for: symbol, fn([]))
+                        } catch {
+                            return { _ in throw error }
+                        }
+                        // This is outside do/catch catch in order to fix codecov glitch
+                        _pureSymbols[symbol] = { try box.store(evaluator($0.map(box.load))) }
                     }
                 } else if case .infix("()") = symbol {
+                    // TODO: check for pure `.infix("()")` implementation, and use as
+                    // fallback if the lhs isn't a SymbolEvaluator?
                     return { args in
                         switch box.load(args[0]) {
                         case let fn as SymbolEvaluator:
@@ -448,7 +469,9 @@ public struct AnyExpression: CustomStringConvertible {
                         }
                     }
                 } else if case let .function(name, _) = symbol {
-                    if let fn = impureSymbols(.variable(name)) {
+                    if let fn = defaultEvaluator(for: symbol) {
+                        _pureSymbols[symbol] = fn
+                    } else if let fn = impureSymbols(.variable(name)) {
                         return { args in
                             let value = try fn([])
                             if let fn = funcEvaluator(for: symbol, value) {
@@ -469,39 +492,14 @@ public struct AnyExpression: CustomStringConvertible {
                     }
                 }
                 if !shouldOptimize {
-                    if let fn = pureSymbols(symbol) {
-                        return { try box.store(fn($0.map(box.load))) }
-                    }
-                    return defaultEvaluator(for: symbol)
+                    return _pureSymbols[symbol] ?? defaultEvaluator(for: symbol)
                 }
                 return nil
             },
             pureSymbols: { symbol in
-                if let fn = pureSymbols(symbol) {
-                    switch symbol {
-                    case .variable, .function(_, arity: 0):
-                        do {
-                            let value = try box.store(fn([]))
-                            return { _ in value }
-                        } catch {
-                            return { _ in throw error }
-                        }
-                    default:
-                        return { try box.store(fn($0.map(box.load))) }
-                    }
-                } else if case let .array(name) = symbol,
-                    let fn = pureSymbols(.variable(name)) {
-                    let evaluator: SymbolEvaluator
-                    do {
-                        evaluator = try arrayEvaluator(for: symbol, fn([]))
-                    } catch {
-                        return { _ in throw error }
-                    }
-                    // This is outside do/catch catch in order to fix codecov glitch
-                    return { try box.store(evaluator($0.map(box.load))) }
-                }
-                guard let fn = defaultEvaluator(for: symbol) else {
+                guard let fn = _pureSymbols[symbol] ?? defaultEvaluator(for: symbol) else {
                     if case let .function(name, _) = symbol {
+                        // TODO: check for pure `.infix("()")` implementation?
                         for i in 0 ... 10 {
                             let symbol = Symbol.function(name, arity: .exactly(i))
                             if impureSymbols(symbol) ?? pureSymbols(symbol) != nil {
