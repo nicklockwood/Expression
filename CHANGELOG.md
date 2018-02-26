@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.12.8](https://github.com/nicklockwood/Expression/releases/tag/0.12.8) (2018-02-26)
+
+- Pure function symbols now take precedence over impure SymbolEvaluator symbols of the same name
+
 ## [0.12.7](https://github.com/nicklockwood/Expression/releases/tag/0.12.7) (2018-02-26)
 
 - Anonymous function syntax now works with all symbol types
@@ -154,7 +158,7 @@
 ## [0.7.1](https://github.com/nicklockwood/Expression/releases/tag/0.7.1) (2017-07-05)
 
 - Made `clearCache()` method public (was previously left internal by accident)
-- Added additional hard-coded precendence for common operator types and names
+- Added additional hard-coded precedence for common operator types and names
 - Now supports right-associativity for assignment and comparison operators
 - Improved description logic, now correctly handles nested prefix/postfix operators
 - Added support for infix alphanumeric operators, in addition to postfix

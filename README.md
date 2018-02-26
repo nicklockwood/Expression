@@ -155,7 +155,7 @@ let color: UIColor = {
 }()
 ```
 
-Note that the `evaluate()` function may throw an error. An error will be thrown automaticallu during evaluation if the expression was malformed, or if it references an unknown symbol. Your custom symbol implementations may also throw application-specific errors, as in the colors example above.
+Note that the `evaluate()` function may throw an error. An error will be thrown automatically during evaluation if the expression was malformed, or if it references an unknown symbol. Your custom symbol implementations may also throw application-specific errors, as in the colors example above.
 
 For a simple, hard-coded expression like the first example there is no possibility of an error being thrown, but if you accept user-entered expressions, you must always ensure that you catch and handle errors. The error messages produced by Expression are detailed and human-readable (but not localized).
 
@@ -611,4 +611,4 @@ Each line you type into the REPL is evaluated independently. To share values bet
 foo = (5 + 6) + 7
 ```
 
-The identifier ("foo", in this case) is then available to use in later expressions.
+The named variable ("foo", in this case) is then available to use in subsequent expressions.
