@@ -1,5 +1,14 @@
 # Change Log
 
+## [0.12.7](https://github.com/nicklockwood/Expression/releases/tag/0.12.7) (2018-02-26)
+
+- Anonymous function syntax now works with all symbol types
+- AnyExpression `evaluate()` now supports CGFloat values
+- AnyExpression now correctly handles `NSArray` and `NSDictionary` values
+- Improved AnyExpression stringifying of array, dictionary and partial range values
+- Improved error messages for invalid range and type mismatch
+- Added AnyExpression REPL example project
+
 ## [0.12.6](https://github.com/nicklockwood/Expression/releases/tag/0.12.6) (2018-02-22)
 
 - AnyExpression now supports calling functions stored in a constant or variable

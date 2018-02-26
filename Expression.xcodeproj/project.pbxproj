@@ -373,7 +373,8 @@
 			children = (
 				01ABE85D2040868B00798A05 /* main.swift */,
 			);
-			path = REPL;
+			name = REPL;
+			path = Examples/REPL;
 			sourceTree = "<group>";
 		};
 		01CC9F071EE2DC82001941BC /* Examples */ = {

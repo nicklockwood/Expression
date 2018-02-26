@@ -29,9 +29,9 @@
 //  SOFTWARE.
 //
 
+import CoreGraphics
 @testable import Expression
 import XCTest
-import CoreGraphics
 
 private struct HashableStruct: Hashable {
     let foo: Int
@@ -724,7 +724,7 @@ class AnyExpressionTests: XCTestCase {
         let expression = AnyExpression(
             "foo[1...2]",
             constants: [
-                "foo": NSArray(array: [1, 2, 3])
+                "foo": NSArray(array: [1, 2, 3]),
             ]
         )
         XCTAssertEqual(try expression.evaluate(), [2, 3])
@@ -1087,7 +1087,7 @@ class AnyExpressionTests: XCTestCase {
             let expression = AnyExpression("foo[index...]", constants: [
                 "foo": "afoo"["afoo".range(of: "foo")!],
                 "index": "afoo".startIndex,
-                ])
+            ])
             XCTAssertThrowsError(try expression.evaluate() as Any) { error in
                 XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))
             }
@@ -1174,12 +1174,12 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), "foobar")
         XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
     }
-    
+
     func testCallExpressionSymbolEvaluatorSymbol() {
         let expression = AnyExpression("foo(1, 2)", symbols: [
             .variable("foo"): { _ in
                 { $0[0] + $0[1] } as Expression.SymbolEvaluator
-            }
+            },
         ])
         XCTAssertEqual(try expression.evaluate(), 3)
         XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])
@@ -1480,7 +1480,7 @@ class AnyExpressionTests: XCTestCase {
 
     func testAddStringToDictionary() {
         let expression = AnyExpression("'foo' + bar", constants: [
-            "bar": [1.0: 2.0]
+            "bar": [1.0: 2.0],
         ])
         XCTAssertEqual(try expression.evaluate(), "foo[1: 2]")
     }
@@ -1507,7 +1507,7 @@ class AnyExpressionTests: XCTestCase {
 
     func testAddStringToPartialRangeFrom() {
         let expression = AnyExpression("'foo' + range", constants: [
-            "range": PartialRangeFrom(1)
+            "range": PartialRangeFrom(1),
         ])
         XCTAssertEqual(try expression.evaluate(), "foo1...")
     }
@@ -2282,21 +2282,21 @@ class AnyExpressionTests: XCTestCase {
 
     func testCastArraySliceAsNSArray() {
         let expression = AnyExpression("[3, 4]", constants: [
-            "array": ArraySlice([3.0, 4.0])
+            "array": ArraySlice([3.0, 4.0]),
         ])
         XCTAssertEqual(try expression.evaluate(), [3, 4] as NSArray)
     }
 
     func testCastNSArrayAsArraySlice() {
         let expression = AnyExpression("array", constants: [
-            "array": [3, 4] as NSArray
+            "array": [3, 4] as NSArray,
         ])
         XCTAssertEqual(try expression.evaluate(), ArraySlice([3, 4]))
     }
 
     func testCastNSArrayAsArray() {
         let expression = AnyExpression("array", constants: [
-            "array": [3, 4] as NSArray
+            "array": [3, 4] as NSArray,
         ])
         XCTAssertEqual(try expression.evaluate(), [3, 4])
     }
@@ -2562,7 +2562,7 @@ class AnyExpressionTests: XCTestCase {
                 default:
                     return nil
                 }
-        }
+            }
         )
         XCTAssertEqual(try expression.evaluate(), 2)
         XCTAssertEqual(expression.symbols, [.function("foo", arity: 2)])

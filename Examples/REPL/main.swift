@@ -11,7 +11,7 @@ import Foundation
 // Prevent control characters confusing expression
 private let start = UnicodeScalar(63232)!
 private let end = UnicodeScalar(63235)!
-private let cursorCharacters = CharacterSet(charactersIn: start...end)
+private let cursorCharacters = CharacterSet(charactersIn: start ... end)
 
 // Previously defined variables
 private var variables = [String: Any]()
@@ -19,7 +19,7 @@ private var variables = [String: Any]()
 while true {
     print("> ", terminator: "")
     guard var input = readLine() else { break }
-    for c in 63232...63235 {
+    for c in 63232 ... 63235 {
         input = input.replacingOccurrences(of: String(UnicodeScalar(c)!), with: "")
     }
     var variable: String?
@@ -45,4 +45,3 @@ while true {
         print("error: \(error)")
     }
 }
-
