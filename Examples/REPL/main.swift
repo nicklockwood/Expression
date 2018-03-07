@@ -24,9 +24,7 @@ func evaluate(_ parsed: ParsedExpression) throws -> Any {
 while true {
     print("> ", terminator: "")
     guard var input = readLine() else { break }
-    for c in 63232 ... 63235 {
-        input = input.replacingOccurrences(of: String(UnicodeScalar(c)!), with: "")
-    }
+    input = String(input.unicodeScalars.filter { !cursorCharacters.contains($0) })
     do {
         var parsed = Expression.parse(input)
         if parsed.symbols.contains(where: { $0 == .infix("=") || $0 == .prefix("=") }) {

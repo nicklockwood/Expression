@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.12.8
+//  Version 0.12.9
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -528,12 +528,12 @@ public struct AnyExpression: CustomStringConvertible {
         // Beware that these objc mutexes are not available on Linux
         evaluator = {
             #if !os(Linux)
-            objc_sync_enter(box)
+                objc_sync_enter(box)
             #endif
             defer {
                 box.values = literals
                 #if !os(Linux)
-                objc_sync_exit(box)
+                    objc_sync_exit(box)
                 #endif
             }
             let value = try expression.evaluate()
@@ -1096,11 +1096,11 @@ extension Substring: _String {
 }
 
 #if !os(Linux)
-extension NSString: _String {
-    var substring: Substring {
-        return Substring(self as String)
+    extension NSString: _String {
+        var substring: Substring {
+            return Substring(self as String)
+        }
     }
-}
 #endif
 
 // Used for array values
