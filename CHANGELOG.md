@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.12.9](https://github.com/nicklockwood/Expression/releases/tag/0.12.9) (2018-03-07)
+
+- AnyExpression now works on Linux, with a couple of caveats (see README for details)
+
 ## [0.12.8](https://github.com/nicklockwood/Expression/releases/tag/0.12.8) (2018-02-26)
 
 - Pure function symbols now take precedence over impure SymbolEvaluator symbols of the same name

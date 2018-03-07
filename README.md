@@ -1,6 +1,6 @@
 [![Travis](https://img.shields.io/travis/nicklockwood/Expression.svg)](https://travis-ci.org/nicklockwood/Expression)
 [![Coveralls](https://coveralls.io/repos/github/nicklockwood/Expression/badge.svg)](https://coveralls.io/github/nicklockwood/Expression)
-[![Platform](https://img.shields.io/cocoapods/p/Expression.svg?style=flat)](http://cocoadocs.org/docsets/Expression)
+[![Platforms](https://img.shields.io/badge/platforms-iOS%20|%20macOS%20|%20tvOS%20|%20watchOS%20|%20Linux-lightgray.svg)]()
 [![Swift 3.2](https://img.shields.io/badge/swift-3.2-orange.svg?style=flat)](https://developer.apple.com/swift)
 [![Swift 4.0](https://img.shields.io/badge/swift-4.0-red.svg?style=flat)](https://developer.apple.com/swift)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
@@ -29,6 +29,7 @@
     - [Symbols](#symbols-1)
     - [Literals](#literals)
     - [Anonymous Functions](#anonymous-functions)
+    - [Linux Support](#linux-support)
 - [Example Projects](#example-projects)
     - [Benchmark](#benchmark)
 	- [Calculator](#calculator)
@@ -40,7 +41,7 @@
 
 ## What?
 
-Expression is a library for Mac and iOS for evaluating expressions at runtime.
+Expression is a Swift framework for evaluating expressions at runtime on Apple and Linux platforms
 
 The Expression library is split into two parts:
 
@@ -82,7 +83,7 @@ Although the `Expression` class only works with `Double` values, [AnyExpression]
 
 The `Expression` class is encapsulated in a single file, and everything public is prefixed or name-spaced, so you can simply drag the `Expression.swift` file into your project to use it. If you wish to use the [AnyExpression](#anyexpression) extension then include the `AnyExpression.swift` file as well.
 
-If you prefer, there's a framework for Mac and iOS that you can import which includes both the `Expression` and `AnyExpression` classes. You can install this manually, or by using CocoaPods, Carthage, or Swift Package Manager.
+If you prefer, there's a framework that you can import which includes both the `Expression` and `AnyExpression` classes. You can install this manually by drag and drop, or automatically using CocoaPods, Carthage, or Swift Package Manager.
 
 To install Expression using CocoaPods, add the following to your Podfile:
 
@@ -96,6 +97,13 @@ To install using Carthage, add this to your Cartfile:
 github "nicklockwood/Expression" ~> 0.12
 ```
 
+To install using Swift Package Manage, add this to the `dependencies:` section in your Package.swift file:
+
+```
+.package(url: "https://github.com/nicklockwood/Expression.git", .upToNextMinor(from: "0.12.0")),
+```
+
+
 ## Integration
 
 You create an `Expression` instance by passing a string containing your expression, and (optionally) any or all of the following:
@@ -106,6 +114,8 @@ You create an `Expression` instance by passing a string containing your expressi
 * A dictionary of symbols and `SymbolEvaluator` functions - this allows you to provide custom variables, functions or operators
 
 You can then calculate the result by calling the `evaluate()` method.
+
+**Note:** The `evaluate()` function for a given `Expression` instance is thread-safe, meaning that you can call it concurrently from multiple threads. `AnyExpression`'s evaluate method is also thread-safe *except on Linux* due to unavailability of the `objc_sync` APIs (see [Linux Support](#linux-support) section below).
 
 By default, Expression already implements most standard math functions and operators, so you only need to provide a custom symbol dictionary if your app needs to support additional functions or variables. You can mix and match implementations, so if you have some custom constants or arrays and some custom functions or operators, you can provide separate constants and symbols dictionaries.
 
@@ -554,6 +564,14 @@ let expression = AnyExpression("foo()(2)", symbols: [
 ```
 
 **Note:** anonymous functions are assumed to be impure, so they are never eligible for inlining, regardless of whether you use the `pureSymbols` option.
+
+## Linux Support
+
+AnyExpression works on Linux, with the following caveats:
+
+- The `evaluate()` function is not thread-safe on Linux due to unavailability of the `objc_sync` APIs. Even multiple copies of the same expression cannot safely be evaluated concurrently. This is a bit counter-intuitive because `AnyExpression` is a struct, so it has copy semantics, but internally these copies all share a reference to the same underlying `Expression` instance.
+
+- `AnyExpression` doesn't support `NSString` bridging due to a limitation of Linux Foundation. If you want to use `AnyExpression` with `NSString` values then you'll have to manually convert them to `String` before and after evaluation.
 
 
 # Example Projects
