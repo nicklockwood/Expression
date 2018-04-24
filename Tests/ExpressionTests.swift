@@ -1353,7 +1353,11 @@ class ExpressionTests: XCTestCase {
 
     func testInfixAlphanumericOperator() {
         let expression = Expression("true or false", options: .boolSymbols, symbols: [
-            .infix("or"): { args in args[0] != 0 || args[1] != 0 ? 1 : 0 },
+            .infix("or"): { args in
+                if args[0] != 0 { return 1 }
+                if args[1] != 0 { return 1 }
+                return 0
+            },
         ])
         XCTAssertEqual(try expression.evaluate(), 1)
     }
@@ -1781,7 +1785,7 @@ class ExpressionTests: XCTestCase {
         let expression = Expression("3 is 1 ... 2", symbols: [
             .infix("..."): { $0[0] + $0[1] },
             .infix("is"): { $0[0] == $0[1] ? 1 : 0 },
-        ])
+        ] as [Expression.Symbol: ([Double]) throws -> Double])
         XCTAssertEqual(try expression.evaluate(), 1)
     }
 
