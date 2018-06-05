@@ -1414,7 +1414,7 @@ class AnyExpressionTests: XCTestCase {
         func testFontWeightTypePreserved() throws {
             let expression = AnyExpression("foo", constants: ["foo": NSFont.Weight(5)])
             let result: Any = try expression.evaluate()
-            XCTAssertEqual("\(type(of: result))", "Weight")
+            XCTAssert(type(of: result) is NSFont.Weight.Type)
         }
 
     #endif
@@ -2048,16 +2048,6 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
-    func testCompareStringAndArray() {
-        let expression = AnyExpression("a == b", constants: [
-            "a": ["world", "hello"],
-            "b": "hello world",
-        ])
-        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("=="), [["a"], "b"]))
-        }
-    }
-
     func testCompareEquatableStructs() {
         let expression = AnyExpression("a == b", constants: [
             "a": EquatableStruct(foo: 1),
@@ -2229,10 +2219,14 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate() as Double?, 1)
     }
 
-    func testCastBoolResultAsImplicitlyUnwrappedOptionalDouble() {
-        let expression = AnyExpression("5 > 4")
-        XCTAssertEqual(try expression.evaluate() as Double!, 1)
-    }
+    #if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
+
+        func testCastBoolResultAsImplicitlyUnwrappedOptionalDouble() {
+            let expression = AnyExpression("5 > 4")
+            XCTAssertEqual(try expression.evaluate() as Double!, 1)
+        }
+
+    #endif
 
     func testCastStringAsSubstring() {
         let expression = AnyExpression("'foo'")

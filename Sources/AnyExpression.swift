@@ -663,13 +663,13 @@ extension AnyExpression {
         switch type {
         case let numericType as _Numeric.Type:
             if anyValue is Bool { return nil }
-            return (anyValue as? NSNumber).map(numericType.init(truncating:)) as? T
+            return (anyValue as? NSNumber).map { numericType.init(truncating: $0) as! T }
         case let arrayType as _SwiftArray.Type:
             return arrayType.cast(anyValue) as? T
         case is String.Type:
-            return (anyValue as? _String).map { String($0.substring) } as? T
+            return (anyValue as? _String).map { String($0.substring) as! T }
         case is Substring.Type:
-            return (anyValue as? _String)?.substring as? T
+            return (anyValue as? _String)?.substring as! T?
         default:
             return nil
         }
@@ -931,15 +931,19 @@ extension ClosedRange: _Range {
     }
 }
 
-extension CountableClosedRange: _Range {
-    fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
-        return try ClosedRange(self).slice(of: array, for: symbol)
+#if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
+
+    extension CountableClosedRange: _Range {
+        fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
+            return try ClosedRange(self).slice(of: array, for: symbol)
+        }
+
+        fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
+            return try ClosedRange(self).slice(of: string, for: symbol)
+        }
     }
 
-    fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
-        return try ClosedRange(self).slice(of: string, for: symbol)
-    }
-}
+#endif
 
 extension Range: _Range {
     fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
@@ -968,15 +972,19 @@ extension Range: _Range {
     }
 }
 
-extension CountableRange: _Range {
-    fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
-        return try Range(self).slice(of: array, for: symbol)
+#if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
+
+    extension CountableRange: _Range {
+        fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
+            return try Range(self).slice(of: array, for: symbol)
+        }
+
+        fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
+            return try Range(self).slice(of: string, for: symbol)
+        }
     }
 
-    fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
-        return try Range(self).slice(of: string, for: symbol)
-    }
-}
+#endif
 
 extension PartialRangeThrough: _Range {
     fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
@@ -1068,15 +1076,19 @@ extension PartialRangeFrom: _Range {
     }
 }
 
-extension CountablePartialRangeFrom: _Range {
-    fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
-        return try PartialRangeFrom(lowerBound).slice(of: array, for: symbol)
+#if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
+
+    extension CountablePartialRangeFrom: _Range {
+        fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
+            return try PartialRangeFrom(lowerBound).slice(of: array, for: symbol)
+        }
+
+        fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
+            return try PartialRangeFrom(lowerBound).slice(of: string, for: symbol)
+        }
     }
 
-    fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
-        return try PartialRangeFrom(lowerBound).slice(of: string, for: symbol)
-    }
-}
+#endif
 
 // Used for string values
 private protocol _String {
@@ -1169,7 +1181,11 @@ extension Optional: _Optional {
     fileprivate static var wrappedType: Any.Type { return Wrapped.self }
 }
 
-extension ImplicitlyUnwrappedOptional: _Optional {
-    fileprivate var value: Any? { return self }
-    fileprivate static var wrappedType: Any.Type { return Wrapped.self }
-}
+#if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
+
+    extension ImplicitlyUnwrappedOptional: _Optional {
+        fileprivate var value: Any? { return self }
+        fileprivate static var wrappedType: Any.Type { return Wrapped.self }
+    }
+
+#endif
