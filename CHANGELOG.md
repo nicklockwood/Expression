@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.12.10](https://github.com/nicklockwood/Expression/releases/tag/0.12.10) (2018-06-05)
+
+- Fixed compilation errors in Xcode 10 beta (but not warnings, yet)
+- Fixed slow-compiling unit tests
+
 ## [0.12.9](https://github.com/nicklockwood/Expression/releases/tag/0.12.9) (2018-03-07)
 
 - AnyExpression now works on Linux, with a couple of caveats (see README for details)
