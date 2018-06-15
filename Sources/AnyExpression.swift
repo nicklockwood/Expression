@@ -700,8 +700,10 @@ extension AnyExpression {
             return "...\(range.upperBound)"
         case let range as PartialRangeFrom<Int>:
             return "\(range.lowerBound)..."
-        case let range as CountablePartialRangeFrom<Int>:
-            return "\(range.lowerBound)..."
+            #if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
+                case let range as CountablePartialRangeFrom<Int>:
+                    return "\(range.lowerBound)..."
+            #endif
         case is Any.Type:
             let typeName = "\(value)"
             #if !swift(>=3.3) || (swift(>=4) && !swift(>=4.1))
@@ -1018,14 +1020,15 @@ extension PartialRangeThrough: _Range {
 
 extension PartialRangeUpTo: _Range {
     fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
-        guard let range = self as? PartialRangeUpTo<Int> else {
+        guard let partialRange = self as? PartialRangeUpTo<Int> else {
             throw AnyExpression.Error.typeMismatch(symbol, [array, self])
         }
         let array = array.values
-        guard range.upperBound > 0 else {
-            throw AnyExpression.Error.arrayBounds(symbol, Double(range.upperBound))
+        guard partialRange.upperBound > 0 else {
+            throw AnyExpression.Error.arrayBounds(symbol, Double(partialRange.upperBound))
         }
-        return try Range(0 ..< range.upperBound).slice(of: array, for: symbol)
+        let range: Range = 0 ..< partialRange.upperBound
+        return try range.slice(of: array, for: symbol)
     }
 
     fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
@@ -1048,14 +1051,15 @@ extension PartialRangeUpTo: _Range {
 
 extension PartialRangeFrom: _Range {
     fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
-        guard let range = self as? PartialRangeFrom<Int> else {
+        guard let partialRange = self as? PartialRangeFrom<Int> else {
             throw AnyExpression.Error.typeMismatch(symbol, [array, self])
         }
         let array = array.values
-        guard range.lowerBound < array.count else {
-            throw AnyExpression.Error.arrayBounds(symbol, Double(range.lowerBound))
+        guard partialRange.lowerBound < array.count else {
+            throw AnyExpression.Error.arrayBounds(symbol, Double(partialRange.lowerBound))
         }
-        return try Range(range.lowerBound ..< array.endIndex).slice(of: array, for: symbol)
+        let range = partialRange.lowerBound ..< array.endIndex
+        return try range.slice(of: array, for: symbol)
     }
 
     fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
