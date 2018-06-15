@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.12.11](https://github.com/nicklockwood/Expression/releases/tag/0.12.11) (2018-06-15)
+
+- Fixed all warnings in Xcode 10 beta
+- Expression now requires Xcode 9.3 or higher
+
 ## [0.12.10](https://github.com/nicklockwood/Expression/releases/tag/0.12.10) (2018-06-05)
 
 - Fixed compilation errors in Xcode 10 beta (but not warnings, yet)

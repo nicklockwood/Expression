@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.12.10
+//  Version 0.12.11
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -705,15 +705,7 @@ extension AnyExpression {
                     return "\(range.lowerBound)..."
             #endif
         case is Any.Type:
-            let typeName = "\(value)"
-            #if !swift(>=3.3) || (swift(>=4) && !swift(>=4.1))
-                // Fix mangled private class names on Swift 4 and earlier
-                if typeName.hasPrefix("("), let range = typeName.range(of: " in") {
-                    let range = typeName.index(after: typeName.startIndex) ..< range.lowerBound
-                    return String(typeName[range])
-                }
-            #endif
-            return typeName
+            return "\(value)"
         case let value:
             return unwrap(value).map { "\($0)" } ?? "nil"
         }
