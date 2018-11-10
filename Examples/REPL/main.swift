@@ -13,12 +13,54 @@ private let start = UnicodeScalar(63232)!
 private let end = UnicodeScalar(63235)!
 private let cursorCharacters = CharacterSet(charactersIn: start ... end)
 
-// Previously defined variables
-private var variables = [String: Any]()
+class BoxedValue {
+    var value: Any
+    init(_ value: Any) {
+        self.value = value
+    }
+}
 
-func evaluate(_ parsed: ParsedExpression) throws -> Any {
-    let expression = AnyExpression(parsed, constants: variables)
-    return try expression.evaluate()
+// Previously defined variables
+private var variables = [String: BoxedValue]()
+
+func evaluate(_ input: String) throws -> Any {
+    return try AnyExpression(
+        Expression.parse(input), impureSymbols: { symbol in
+            // look up symbol in stdlib
+            if let fn = Expression.mathSymbols[symbol] ?? Expression.boolSymbols[symbol] {
+                return { args in
+                    try fn(args.map {
+                        let unboxed = ($0 as? BoxedValue)?.value ?? $0
+                        guard let number = (unboxed as? NSNumber) else {
+                            throw Expression.Error.typeMismatch(symbol, args)
+                        }
+                        return Double(truncating: number)
+                    })
+                }
+            }
+            // handle variable assignment and retrieval
+            switch symbol {
+            case .infix("="):
+                return { args in
+                    guard let boxedValue = args[0] as? BoxedValue else {
+                        throw Expression.Error.message("Left operand of = expression must be an lvalue")
+                    }
+                    boxedValue.value = args[1]
+                    return args[1]
+                }
+            case let .variable(name):
+                return { _ in
+                    if let value = variables[name] {
+                        return value
+                    }
+                    let newValue = BoxedValue(Any?.none as Any)
+                    variables[name] = newValue
+                    return newValue
+                }
+            default:
+                return nil
+            }
+        }).evaluate()
 }
 
 while true {
@@ -26,30 +68,11 @@ while true {
     guard var input = readLine() else { break }
     input = String(input.unicodeScalars.filter { !cursorCharacters.contains($0) })
     do {
-        var parsed = Expression.parse(input)
-        if parsed.symbols.contains(where: { $0 == .infix("=") || $0 == .prefix("=") }) {
-            let range = input.range(of: " = ") ?? input.range(of: "= ") ?? input.range(of: "=")!
-            parsed = Expression.parse(String(input[range.upperBound...]))
-            let identifier = input[..<range.lowerBound].trimmingCharacters(in: .whitespaces)
-            let symbols = Expression.parse(identifier).symbols
-            if symbols.count == 1 {
-                switch symbols.first! {
-                case let .variable(name):
-                    variables[name] = try evaluate(parsed)
-                case let .function(name, _):
-                    let expression = AnyExpression(parsed, constants: variables)
-                    variables[name] = { (args: [Any]) throws -> Any in
-                        try expression.evaluate()
-                    }
-                default:
-                    print("error: Invalid variable name '\(identifier)'")
-                }
-            } else {
-                print("error: Invalid left side for = expression: '\(identifier)'")
-            }
-        } else {
-            try print(AnyExpression.stringify(evaluate(parsed)))
+        var value = try evaluate(input)
+        if let boxedValue = value as? BoxedValue {
+            value = boxedValue.value
         }
+        print(AnyExpression.stringify(value))
     } catch {
         print("error: \(error)")
     }
