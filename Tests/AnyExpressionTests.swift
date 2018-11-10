@@ -53,7 +53,6 @@ private struct EquatableStruct: Equatable {
 }
 
 class AnyExpressionTests: XCTestCase {
-
     // MARK: Description
 
     func testDescriptionFormatting() {
@@ -1763,7 +1762,7 @@ class AnyExpressionTests: XCTestCase {
     }
 
     func testOptionalOptionalNilString() {
-        let null: Optional<Optional<String>> = nil
+        let null: String?? = nil
         let expression = AnyExpression("foo + 'bar'", constants: ["foo": null as Any])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix("+"), [nil as Any? as Any, "bar"]))
@@ -1771,7 +1770,7 @@ class AnyExpressionTests: XCTestCase {
     }
 
     func testOptionalOptionalNonnilString() {
-        let foo: Optional<Optional<String>> = "foo"
+        let foo: String?? = "foo"
         let expression = AnyExpression("foo + 'bar'", constants: ["foo": foo as Any])
         XCTAssertEqual(try expression.evaluate(), "foobar")
     }

@@ -700,10 +700,10 @@ extension AnyExpression {
             return "...\(range.upperBound)"
         case let range as PartialRangeFrom<Int>:
             return "\(range.lowerBound)..."
-            #if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
-                case let range as CountablePartialRangeFrom<Int>:
-                    return "\(range.lowerBound)..."
-            #endif
+        #if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
+            case let range as CountablePartialRangeFrom<Int>:
+                return "\(range.lowerBound)..."
+        #endif
         case is Any.Type:
             return "\(value)"
         case let value:

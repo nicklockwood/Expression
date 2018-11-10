@@ -1047,18 +1047,18 @@ private extension UnicodeScalarView {
     }
 
     mutating func scanCharacter(_ character: UnicodeScalar) -> Bool {
-        return scanCharacter({ $0 == character }) != nil
+        return scanCharacter { $0 == character } != nil
     }
 
     mutating func scanToEndOfToken() -> String? {
-        return scanCharacters({
+        return scanCharacters {
             switch $0 {
             case " ", "\t", "\n", "\r":
                 return false
             default:
                 return true
             }
-        })
+        }
     }
 
     mutating func skipWhitespace() -> Bool {
@@ -1114,7 +1114,7 @@ private extension UnicodeScalarView {
         func scanExponent() -> String? {
             let start = self
             if let e = scanCharacter({ $0 == "e" || $0 == "E" }) {
-                let sign = scanCharacter({ $0 == "-" || $0 == "+" }) ?? ""
+                let sign = scanCharacter { $0 == "-" || $0 == "+" } ?? ""
                 if let exponent = scanInteger() {
                     return e + sign + exponent
                 }
@@ -1266,14 +1266,14 @@ private extension UnicodeScalarView {
                 case "r":
                     string += "\r"
                 case "u" where scanCharacter("{"):
-                    let hex = scanCharacters({
+                    let hex = scanCharacters {
                         switch $0 {
                         case "0" ... "9", "A" ... "F", "a" ... "f":
                             return true
                         default:
                             return false
                         }
-                    }) ?? ""
+                    } ?? ""
                     guard scanCharacter("}") else {
                         guard let junk = scanToEndOfToken() else {
                             return .error(.missingDelimiter("}"), string)

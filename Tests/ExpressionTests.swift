@@ -33,7 +33,6 @@
 import XCTest
 
 class ExpressionTests: XCTestCase {
-
     // MARK: Description
 
     func testDescriptionSpacing() {

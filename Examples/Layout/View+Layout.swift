@@ -32,7 +32,7 @@
 import Expression
 import UIKit
 
-fileprivate class LayoutData: NSObject {
+private class LayoutData: NSObject {
     private weak var view: UIView!
     private var inProgress = Set<String>()
 
@@ -184,7 +184,7 @@ public extension UIView {
 
     private func layout(create: Bool) -> LayoutData! {
         let layout = layer.value(forKey: "layout") as? LayoutData
-        if layout == nil && create {
+        if layout == nil, create {
             let layout = LayoutData(self)
             layer.setValue(layout, forKey: "layout")
             return layout
@@ -229,7 +229,7 @@ public extension UIView {
         return nil
     }
 
-    public func updateLayout() throws {
+    func updateLayout() throws {
         guard let layout = self.layout(create: true) else {
             return
         }

@@ -54,7 +54,7 @@ private let functions: [AnyExpression.Symbol: AnyExpression.SymbolEvaluator] = [
 ]
 
 public extension UIColor {
-    public convenience init(rgba: UInt32) {
+    convenience init(rgba: UInt32) {
         let red = CGFloat((rgba & 0xFF000000) >> 24) / 255
         let green = CGFloat((rgba & 0x00FF0000) >> 16) / 255
         let blue = CGFloat((rgba & 0x0000FF00) >> 8) / 255
@@ -62,7 +62,7 @@ public extension UIColor {
         self.init(red: red, green: green, blue: blue, alpha: alpha)
     }
 
-    public convenience init(expression: String) throws {
+    convenience init(expression: String) throws {
         let parsedExpression = Expression.parse(expression)
         var constants = [String: Any]()
 
