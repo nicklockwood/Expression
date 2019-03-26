@@ -7,8 +7,11 @@
 //
 
 import Expression
-import JavaScriptCore
 import XCTest
+
+#if os(iOS) || os(macOS)
+    import JavaScriptCore
+#endif
 
 let parseRepetitions = 50
 let evalRepetitions = 500
@@ -40,13 +43,15 @@ class Benchmarks: XCTestCase {
         XCTAssertEqual(result, Double.pi as NSNumber)
     }
 
-    func testEndToEndShortJSExpressions() {
-        var result: JSValue?
-        measure {
-            result = evaluateJSExpressions(shortExpressions)
+    #if os(iOS) || os(macOS)
+        func testEndToEndShortJSExpressions() {
+            var result: JSValue?
+            measure {
+                result = evaluateJSExpressions(shortExpressions)
+            }
+            XCTAssertEqual(result?.toNumber(), Double.pi as NSNumber)
         }
-        XCTAssertEqual(result?.toNumber(), Double.pi as NSNumber)
-    }
+    #endif
 
     func testEndToEndMediumExpressions() {
         var result: Double?
@@ -72,13 +77,15 @@ class Benchmarks: XCTestCase {
         XCTAssertEqual(result, (Double.pi + 15) as NSNumber)
     }
 
-    func testEndToEndMediumJSExpressions() {
-        var result: JSValue?
-        measure {
-            result = evaluateJSExpressions(mediumExpressions)
+    #if os(iOS) || os(macOS)
+        func testEndToEndMediumJSExpressions() {
+            var result: JSValue?
+            measure {
+                result = evaluateJSExpressions(mediumExpressions)
+            }
+            XCTAssertEqual(result?.toNumber(), (Double.pi + 15) as NSNumber)
         }
-        XCTAssertEqual(result?.toNumber(), (Double.pi + 15) as NSNumber)
-    }
+    #endif
 
     func testEndToEndLongExpressions() {
         var result: Double?
@@ -104,13 +111,15 @@ class Benchmarks: XCTestCase {
         XCTAssertEqual(result, (Double.pi * -56.4 + 9) as NSNumber)
     }
 
-    func testEndToEndLongJSExpressions() {
-        var result: JSValue?
-        measure {
-            result = evaluateJSExpressions(longExpressions)
+    #if os(iOS) || os(macOS)
+        func testEndToEndLongJSExpressions() {
+            var result: JSValue?
+            measure {
+                result = evaluateJSExpressions(longExpressions)
+            }
+            XCTAssertEqual(result?.toNumber(), (Double.pi * -56.4 + 9) as NSNumber)
         }
-        XCTAssertEqual(result?.toNumber(), (Double.pi * -56.4 + 9) as NSNumber)
-    }
+    #endif
 
     // MARK: Evaluation
 
@@ -141,14 +150,16 @@ class Benchmarks: XCTestCase {
         XCTAssertEqual(result, Double.pi as NSNumber)
     }
 
-    func testEvaluateShortJSExpressions() {
-        let expressions = buildJSExpressions(shortExpressions)
-        var result: JSValue?
-        measure {
-            result = evaluateJSExpressions(expressions)
+    #if os(iOS) || os(macOS)
+        func testEvaluateShortJSExpressions() {
+            let expressions = buildJSExpressions(shortExpressions)
+            var result: JSValue?
+            measure {
+                result = evaluateJSExpressions(expressions)
+            }
+            XCTAssertEqual(result?.toNumber(), Double.pi as NSNumber)
         }
-        XCTAssertEqual(result?.toNumber(), Double.pi as NSNumber)
-    }
+    #endif
 
     func testEvaluateMediumExpressions() {
         let expressions = buildExpressions(mediumExpressions)
@@ -177,14 +188,16 @@ class Benchmarks: XCTestCase {
         XCTAssertEqual(result, (Double.pi + 15) as NSNumber)
     }
 
-    func testEvaluateMediumJSExpressions() {
-        let expressions = buildJSExpressions(mediumExpressions)
-        var result: JSValue?
-        measure {
-            result = evaluateJSExpressions(expressions)
+    #if os(iOS) || os(macOS)
+        func testEvaluateMediumJSExpressions() {
+            let expressions = buildJSExpressions(mediumExpressions)
+            var result: JSValue?
+            measure {
+                result = evaluateJSExpressions(expressions)
+            }
+            XCTAssertEqual(result?.toNumber(), (Double.pi + 15) as NSNumber)
         }
-        XCTAssertEqual(result?.toNumber(), (Double.pi + 15) as NSNumber)
-    }
+    #endif
 
     func testEvaluateLongExpressions() {
         let expressions = buildExpressions(longExpressions)
@@ -213,12 +226,14 @@ class Benchmarks: XCTestCase {
         XCTAssertEqual(result, (Double.pi * -56.4 + 9) as NSNumber)
     }
 
-    func testEvaluateLongJSExpressions() {
-        let expressions = buildJSExpressions(longExpressions)
-        var result: JSValue?
-        measure {
-            result = evaluateJSExpressions(expressions)
+    #if os(iOS) || os(macOS)
+        func testEvaluateLongJSExpressions() {
+            let expressions = buildJSExpressions(longExpressions)
+            var result: JSValue?
+            measure {
+                result = evaluateJSExpressions(expressions)
+            }
+            XCTAssertEqual(result?.toNumber(), (Double.pi * -56.4 + 9) as NSNumber)
         }
-        XCTAssertEqual(result?.toNumber(), (Double.pi * -56.4 + 9) as NSNumber)
-    }
+    #endif
 }

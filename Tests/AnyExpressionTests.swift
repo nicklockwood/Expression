@@ -29,7 +29,12 @@
 //  SOFTWARE.
 //
 
-import CoreGraphics
+#if os(macOS)
+    import CoreGraphics
+#else
+    typealias CGFloat = Double
+#endif
+
 @testable import Expression
 import XCTest
 
@@ -53,6 +58,15 @@ private struct EquatableStruct: Equatable {
 }
 
 class AnyExpressionTests: XCTestCase {
+    func testLinuxTestSuiteIncludesAllTests() {
+        #if os(macOS)
+            let thisClass = type(of: self)
+            let linuxCount = thisClass.__allTests.count
+            let darwinCount = thisClass.defaultTestSuite.testCaseCount
+            XCTAssertEqual(linuxCount, darwinCount, "run swift test --generate-linuxmain")
+        #endif
+    }
+
     // MARK: Description
 
     func testDescriptionFormatting() {
@@ -1411,9 +1425,11 @@ class AnyExpressionTests: XCTestCase {
     #if swift(>=4)
 
         func testFontWeightTypePreserved() throws {
+            #if os(macOS)
             let expression = AnyExpression("foo", constants: ["foo": NSFont.Weight(5)])
             let result: Any = try expression.evaluate()
             XCTAssert(type(of: result) is NSFont.Weight.Type)
+            #endif
         }
 
     #endif
@@ -2563,7 +2579,7 @@ class AnyExpressionTests: XCTestCase {
 
     // MARK: Memory
 
-    func testUnusedConstantsNotRetained() {
+    func testUnusedConstantsNotRetained() throws {
         weak var weakObject: NSObject?
         weak var weakString: NSString?
         let expression: AnyExpression
@@ -2576,13 +2592,13 @@ class AnyExpressionTests: XCTestCase {
                 "foo": string,
                 "bar": object,
             ])
-            _ = try! expression.evaluate() as String
+            _ = try expression.evaluate() as String
         }
         XCTAssertNil(weakObject)
         XCTAssertNotNil(weakString)
     }
 
-    func testUnusedSymbolsNotRetained() {
+    func testUnusedSymbolsNotRetained() throws {
         weak var weakObject: NSObject?
         weak var weakString: NSString?
         let expression: AnyExpression
@@ -2595,7 +2611,7 @@ class AnyExpressionTests: XCTestCase {
                 .variable("foo"): { _ in string },
                 .variable("bar"): { _ in object },
             ])
-            _ = try! expression.evaluate() as String
+            _ = try expression.evaluate() as String
         }
         XCTAssertNil(weakObject)
         XCTAssertNotNil(weakString)

@@ -8,7 +8,10 @@
 
 import Expression
 import Foundation
-import JavaScriptCore
+
+#if os(iOS) || os(macOS)
+    import JavaScriptCore
+#endif
 
 let symbols: [Expression.Symbol: Expression.SymbolEvaluator] = [
     .variable("a"): { _ in 5 },
@@ -232,66 +235,70 @@ func evaluateNSExpressions(_ expressions: [String]) -> NSNumber? {
     return result
 }
 
-// MARK: JS symbols
+#if os(iOS) || os(macOS)
 
-private let foo: @convention(block) (Double, Double) -> Double = { a, b in
-    if a.isNaN {
-        return Double.pi
+    // MARK: JS symbols
+
+    private let foo: @convention(block) (Double, Double) -> Double = { a, b in
+        if a.isNaN {
+            return Double.pi
+        }
+        return a + b
     }
-    return a + b
-}
 
-private let bar: @convention(block) (Double) -> Double = {
-    $0 - 2
-}
-
-let jsSymbols: [String: Any] = [
-    "pi": Double.pi,
-    "a": 5,
-    "b": 6,
-    "c": 7,
-    "hello": -5,
-    "world": -3,
-    "foo": foo,
-    "bar": bar,
-]
-
-func makeJSContext(symbols: [String: Any]) -> JSContext {
-    let context: JSContext = JSContext()
-    for (key, value) in symbols {
-        context.globalObject.setValue(value, forProperty: key)
+    private let bar: @convention(block) (Double) -> Double = {
+        $0 - 2
     }
-    return context
-}
 
-func buildJSExpressions(_ expressions: [String]) -> [() -> JSValue] {
-    return expressions.map { exp -> (() -> JSValue) in
-        let context = makeJSContext(symbols: jsSymbols)
-        // Note: it may seem unfair to be evaluating the script inside the block
-        // however, I tried wrapping the script as a function and storing the
-        // evaluated result in a JSValue to be executed in the block, and that
-        // was at least an order of magnitude slower than this approac
-        return { context.evaluateScript(exp) }
+    let jsSymbols: [String: Any] = [
+        "pi": Double.pi,
+        "a": 5,
+        "b": 6,
+        "c": 7,
+        "hello": -5,
+        "world": -3,
+        "foo": foo,
+        "bar": bar,
+    ]
+
+    func makeJSContext(symbols: [String: Any]) -> JSContext {
+        let context: JSContext = JSContext()
+        for (key, value) in symbols {
+            context.globalObject.setValue(value, forProperty: key)
+        }
+        return context
     }
-}
 
-func evaluateJSExpressions(_ expressions: [() -> JSValue]) -> JSValue? {
-    var result: JSValue?
-    for _ in 0 ..< evalRepetitions {
-        for expression in expressions {
-            result = expression()
+    func buildJSExpressions(_ expressions: [String]) -> [() -> JSValue] {
+        return expressions.map { exp -> (() -> JSValue) in
+            let context = makeJSContext(symbols: jsSymbols)
+            // Note: it may seem unfair to be evaluating the script inside the block
+            // however, I tried wrapping the script as a function and storing the
+            // evaluated result in a JSValue to be executed in the block, and that
+            // was at least an order of magnitude slower than this approac
+            return { context.evaluateScript(exp) }
         }
     }
-    return result
-}
 
-func evaluateJSExpressions(_ expressions: [String]) -> JSValue? {
-    var result: JSValue?
-    for _ in 0 ..< parseRepetitions {
-        let context = makeJSContext(symbols: jsSymbols)
-        for exp in expressions {
-            result = context.evaluateScript(exp)
+    func evaluateJSExpressions(_ expressions: [() -> JSValue]) -> JSValue? {
+        var result: JSValue?
+        for _ in 0 ..< evalRepetitions {
+            for expression in expressions {
+                result = expression()
+            }
         }
+        return result
     }
-    return result
-}
+
+    func evaluateJSExpressions(_ expressions: [String]) -> JSValue? {
+        var result: JSValue?
+        for _ in 0 ..< parseRepetitions {
+            let context = makeJSContext(symbols: jsSymbols)
+            for exp in expressions {
+                result = context.evaluateScript(exp)
+            }
+        }
+        return result
+    }
+
+#endif

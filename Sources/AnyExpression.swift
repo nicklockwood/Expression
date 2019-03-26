@@ -549,7 +549,7 @@ public struct AnyExpression: CustomStringConvertible {
             switch T.self {
             case _ where AnyExpression.isNil(anyValue):
                 break // Fall through
-            case is _String.Type, is String?.Type, is Substring?.Type:
+            case is _String.Type, is NSString?.Type, is String?.Type, is Substring?.Type:
                 // TODO: should we stringify any type like this?
                 return (AnyExpression.cast(AnyExpression.stringify(anyValue)) as T?)!
             case is Bool.Type, is Bool?.Type:
@@ -1108,13 +1108,11 @@ extension Substring: _String {
     }
 }
 
-#if !os(Linux)
-    extension NSString: _String {
-        var substring: Substring {
-            return Substring(self as String)
-        }
+extension NSString: _String {
+    var substring: Substring {
+        return Substring(self as String)
     }
-#endif
+}
 
 // Used for array values
 private protocol _Array {
