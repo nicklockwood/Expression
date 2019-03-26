@@ -1825,6 +1825,26 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 32)
     }
 
+    func testWhitespaceDoesNotaffectPrecedence() {
+        let expression = Expression("3 * 4 +5")
+        XCTAssertEqual(try expression.evaluate(), 17)
+    }
+
+    func testWhitespaceDoesNotaffectPrecedence2() {
+        let expression = Expression("3 * 4+ 5")
+        XCTAssertEqual(try expression.evaluate(), 17)
+    }
+
+    func testWhitespaceDoesNotaffectPrecedence3() {
+        let expression = Expression("3 *4 + 5")
+        XCTAssertEqual(try expression.evaluate(), 17)
+    }
+
+    func testWhitespaceDoesNotaffectPrecedence4() {
+        let expression = Expression("3* 4 + 5")
+        XCTAssertEqual(try expression.evaluate(), 17)
+    }
+
     // MARK: Symbol precedence
 
     func testConstantTakesPrecedenceOverSymbol() {

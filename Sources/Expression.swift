@@ -1330,9 +1330,14 @@ private extension UnicodeScalarView {
                         let rhs = stack[i + 2]
                         if rhs.isOperand {
                             if stack.count > i + 3 {
-                                let rhs = stack[i + 3]
-                                guard !rhs.isOperand, case let .symbol(.infix(op2), _, _) = rhs,
-                                    Expression.operator(symbol.name, takesPrecedenceOver: op2) else {
+                                switch stack[i + 3] {
+                                case let .symbol(.infix(op2), _, _),
+                                     let .symbol(.prefix(op2), _, _),
+                                     let .symbol(.postfix(op2), _, _):
+                                    if !Expression.operator(symbol.name, takesPrecedenceOver: op2) {
+                                        fallthrough
+                                    }
+                                default:
                                     try collapseStack(from: i + 2)
                                     return
                                 }
