@@ -678,9 +678,14 @@ extension AnyExpression {
     // Convert any value to a printable string
     static func stringify(_ value: Any) -> String {
         switch value {
-        case let bool as Bool:
-            return bool ? "true" : "false"
         case let number as NSNumber:
+            // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html
+            switch UnicodeScalar(UInt8(number.objCType.pointee)) {
+            case "c", "B":
+                return number == 0 ? "false" : "true"
+            default:
+                break
+            }
             if let int = Int64(exactly: number) {
                 return "\(int)"
             }
