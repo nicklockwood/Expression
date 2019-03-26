@@ -97,7 +97,7 @@ To install using Carthage, add this to your Cartfile:
 github "nicklockwood/Expression" ~> 0.12
 ```
 
-To install using Swift Package Manage, add this to the `dependencies:` section in your Package.swift file:
+To install using Swift Package Manager, add this to the `dependencies:` section in your Package.swift file:
 
 ```
 .package(url: "https://github.com/nicklockwood/Expression.git", .upToNextMinor(from: "0.12.0")),

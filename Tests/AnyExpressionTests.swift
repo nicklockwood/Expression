@@ -1094,9 +1094,8 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
-    #if swift(>=4)
-
-        func testSubscriptStringFromInvalidIndexRange2() {
+    func testSubscriptStringFromInvalidIndexRange2() {
+        #if swift(>=4)
             let expression = AnyExpression("foo[index...]", constants: [
                 "foo": "afoo"["afoo".range(of: "foo")!],
                 "index": "afoo".startIndex,
@@ -1104,9 +1103,8 @@ class AnyExpressionTests: XCTestCase {
             XCTAssertThrowsError(try expression.evaluate() as Any) { error in
                 XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))
             }
-        }
-
-    #endif
+        #endif
+    }
 
     func testSubscriptStringUpToIndexRange() {
         let expression = AnyExpression("'foo'[..<index]", constants: [
@@ -1156,9 +1154,8 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
-    #if swift(>=4)
-
-        func testSubscriptStringThroughInvalidIndexRange2() {
+    func testSubscriptStringThroughInvalidIndexRange2() {
+        #if swift(>=4)
             let expression = AnyExpression("foo[...index]", constants: [
                 "foo": "afoo"["afoo".range(of: "foo")!],
                 "index": "afoo".startIndex,
@@ -1166,9 +1163,8 @@ class AnyExpressionTests: XCTestCase {
             XCTAssertThrowsError(try expression.evaluate() as Any) { error in
                 XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))
             }
-        }
-
-    #endif
+        #endif
+    }
 
     // MARK: Functions
 
@@ -1422,17 +1418,15 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(result as? Double, 10)
     }
 
-    #if swift(>=4)
-
-        func testFontWeightTypePreserved() throws {
+    func testFontWeightTypePreserved() throws {
+        #if swift(>=4)
             #if os(macOS)
-            let expression = AnyExpression("foo", constants: ["foo": NSFont.Weight(5)])
-            let result: Any = try expression.evaluate()
-            XCTAssert(type(of: result) is NSFont.Weight.Type)
+                let expression = AnyExpression("foo", constants: ["foo": NSFont.Weight(5)])
+                let result: Any = try expression.evaluate()
+                XCTAssert(type(of: result) is NSFont.Weight.Type)
             #endif
-        }
-
-    #endif
+        #endif
+    }
 
     // MARK: String concatenation
 
@@ -2234,14 +2228,12 @@ class AnyExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate() as Double?, 1)
     }
 
-    #if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
-
-        func testCastBoolResultAsImplicitlyUnwrappedOptionalDouble() {
+    func testCastBoolResultAsImplicitlyUnwrappedOptionalDouble() {
+        #if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
             let expression = AnyExpression("5 > 4")
             XCTAssertEqual(try expression.evaluate() as Double!, 1)
-        }
-
-    #endif
+        #endif
+    }
 
     func testCastStringAsSubstring() {
         let expression = AnyExpression("'foo'")

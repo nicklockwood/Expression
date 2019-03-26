@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.12.12](https://github.com/nicklockwood/Expression/releases/tag/0.12.12) (2019-03-26)
+
+- Expression now builds correctly on Linux, including the test suite
+- Fixed bug where whitespace around operators could affect the precedence
+- Fixed a bug where numeric values could incorrectly be printed as a boolean
+
 ## [0.12.11](https://github.com/nicklockwood/Expression/releases/tag/0.12.11) (2018-06-15)
 
 - Fixed all warnings in Xcode 10 beta
