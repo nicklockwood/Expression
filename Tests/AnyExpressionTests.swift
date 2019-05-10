@@ -40,21 +40,10 @@ import XCTest
 
 private struct HashableStruct: Hashable {
     let foo: Int
-    var hashValue: Int {
-        return foo.hashValue
-    }
-
-    static func == (lhs: HashableStruct, rhs: HashableStruct) -> Bool {
-        return lhs.foo == rhs.foo
-    }
 }
 
 private struct EquatableStruct: Equatable {
     let foo: Int
-
-    static func == (lhs: EquatableStruct, rhs: EquatableStruct) -> Bool {
-        return lhs.foo == rhs.foo
-    }
 }
 
 class AnyExpressionTests: XCTestCase {
@@ -1080,14 +1069,14 @@ class AnyExpressionTests: XCTestCase {
 
     func testSubscriptStringFromIndexRange() {
         let expression = AnyExpression("'foo'[index...]", constants: [
-            "index": "foo".index(of: "o")!,
+            "index": "foo".firstIndex(of: "o")!,
         ])
         XCTAssertEqual(try expression.evaluate(), "oo")
     }
 
     func testSubscriptStringFromInvalidIndexRange() {
         let expression = AnyExpression("'foo'[index...]", constants: [
-            "index": "food".index(of: "d")!,
+            "index": "food".firstIndex(of: "d")!,
         ])
         XCTAssertThrowsError(try expression.evaluate() as Any) { error in
             XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", 3))
@@ -1095,15 +1084,13 @@ class AnyExpressionTests: XCTestCase {
     }
 
     func testSubscriptStringFromInvalidIndexRange2() {
-        #if swift(>=4)
-            let expression = AnyExpression("foo[index...]", constants: [
-                "foo": "afoo"["afoo".range(of: "foo")!],
-                "index": "afoo".startIndex,
-            ])
-            XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-                XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))
-            }
-        #endif
+        let expression = AnyExpression("foo[index...]", constants: [
+            "foo": "afoo"["afoo".range(of: "foo")!],
+            "index": "afoo".startIndex,
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))
+        }
     }
 
     func testSubscriptStringUpToIndexRange() {
@@ -1155,15 +1142,13 @@ class AnyExpressionTests: XCTestCase {
     }
 
     func testSubscriptStringThroughInvalidIndexRange2() {
-        #if swift(>=4)
-            let expression = AnyExpression("foo[...index]", constants: [
-                "foo": "afoo"["afoo".range(of: "foo")!],
-                "index": "afoo".startIndex,
-            ])
-            XCTAssertThrowsError(try expression.evaluate() as Any) { error in
-                XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))
-            }
-        #endif
+        let expression = AnyExpression("foo[...index]", constants: [
+            "foo": "afoo"["afoo".range(of: "foo")!],
+            "index": "afoo".startIndex,
+        ])
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .stringBounds("foo", -1))
+        }
     }
 
     // MARK: Functions
@@ -1419,12 +1404,10 @@ class AnyExpressionTests: XCTestCase {
     }
 
     func testFontWeightTypePreserved() throws {
-        #if swift(>=4)
-            #if os(macOS)
-                let expression = AnyExpression("foo", constants: ["foo": NSFont.Weight(5)])
-                let result: Any = try expression.evaluate()
-                XCTAssert(type(of: result) is NSFont.Weight.Type)
-            #endif
+        #if os(macOS)
+            let expression = AnyExpression("foo", constants: ["foo": NSFont.Weight(5)])
+            let result: Any = try expression.evaluate()
+            XCTAssert(type(of: result) is NSFont.Weight.Type)
         #endif
     }
 
@@ -2226,13 +2209,6 @@ class AnyExpressionTests: XCTestCase {
     func testCastBoolResultAsOptionalDouble() {
         let expression = AnyExpression("5 > 4")
         XCTAssertEqual(try expression.evaluate() as Double?, 1)
-    }
-
-    func testCastBoolResultAsImplicitlyUnwrappedOptionalDouble() {
-        #if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
-            let expression = AnyExpression("5 > 4")
-            XCTAssertEqual(try expression.evaluate() as Double!, 1)
-        #endif
     }
 
     func testCastStringAsSubstring() {

@@ -2,7 +2,7 @@
 //  Expression.swift
 //  Expression
 //
-//  Version 0.12.12
+//  Version 0.13.0
 //
 //  Created by Nick Lockwood on 15/09/2016.
 //  Copyright © 2016 Nick Lockwood. All rights reserved.
@@ -44,9 +44,7 @@ public final class Expression: CustomStringConvertible {
     public typealias SymbolEvaluator = (_ args: [Double]) throws -> Double
 
     /// Type representing the arity (number of arguments) accepted by a function
-    public enum Arity: ExpressibleByIntegerLiteral, CustomStringConvertible, Equatable {
-        public typealias IntegerLiteralType = Int
-
+    public enum Arity: ExpressibleByIntegerLiteral, CustomStringConvertible, Hashable {
         /// An exact number of arguments
         case exactly(Int)
 
@@ -70,6 +68,10 @@ public final class Expression: CustomStringConvertible {
                 return "at least \(value) argument\(value == 1 ? "" : "s")"
             }
         }
+
+        /// No-op Hashable implementation
+        /// Required to support custom Equatable implementation
+        public func hash(into _: inout Hasher) {}
 
         /// Equatable implementation
         /// Note: this works more like a contains() function if
@@ -148,32 +150,6 @@ public final class Expression: CustomStringConvertible {
                 return "array \(escapedName)[]"
             }
         }
-
-        /// Required by the Hashable protocol
-        public var hashValue: Int {
-            return name.hashValue
-        }
-
-        /// Equatable implementation
-        public static func == (lhs: Symbol, rhs: Symbol) -> Bool {
-            switch (lhs, rhs) {
-            case let (.variable(lhs), .variable(rhs)),
-                 let (.infix(lhs), .infix(rhs)),
-                 let (.prefix(lhs), .prefix(rhs)),
-                 let (.postfix(lhs), .postfix(rhs)),
-                 let (.array(lhs), .array(rhs)):
-                return lhs == rhs
-            case let (.function(lhs), .function(rhs)):
-                return lhs == rhs
-            case (.variable, _),
-                 (.infix, _),
-                 (.prefix, _),
-                 (.postfix, _),
-                 (.function, _),
-                 (.array, _):
-                return false
-            }
-        }
     }
 
     /// Runtime error when parsing or evaluating an expression
@@ -234,28 +210,6 @@ public final class Expression: CustomStringConvertible {
                 return "\(description.prefix(1).uppercased())\(description.dropFirst()) expects \(arity)"
             case let .arrayBounds(symbol, index):
                 return "Index \(Expression.stringify(index)) out of bounds for \(symbol)"
-            }
-        }
-
-        /// Equatable implementation
-        public static func == (lhs: Error, rhs: Error) -> Bool {
-            switch (lhs, rhs) {
-            case let (.message(lhs), .message(rhs)),
-                 let (.unexpectedToken(lhs), .unexpectedToken(rhs)),
-                 let (.missingDelimiter(lhs), .missingDelimiter(rhs)):
-                return lhs == rhs
-            case let (.undefinedSymbol(lhs), .undefinedSymbol(rhs)),
-                 let (.arityMismatch(lhs), .arityMismatch(rhs)):
-                return lhs == rhs
-            case let (.arrayBounds(lhs), .arrayBounds(rhs)):
-                return lhs == rhs
-            case (.message, _),
-                 (.unexpectedToken, _),
-                 (.missingDelimiter, _),
-                 (.undefinedSymbol, _),
-                 (.arityMismatch, _),
-                 (.arrayBounds, _):
-                return false
             }
         }
     }

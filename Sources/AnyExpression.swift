@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.12.12
+//  Version 0.13.0
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -705,10 +705,6 @@ extension AnyExpression {
             return "...\(range.upperBound)"
         case let range as PartialRangeFrom<Int>:
             return "\(range.lowerBound)..."
-        #if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
-            case let range as CountablePartialRangeFrom<Int>:
-                return "\(range.lowerBound)..."
-        #endif
         case is Any.Type:
             return "\(value)"
         case let value:
@@ -930,20 +926,6 @@ extension ClosedRange: _Range {
     }
 }
 
-#if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
-
-    extension CountableClosedRange: _Range {
-        fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
-            return try ClosedRange(self).slice(of: array, for: symbol)
-        }
-
-        fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
-            return try ClosedRange(self).slice(of: string, for: symbol)
-        }
-    }
-
-#endif
-
 extension Range: _Range {
     fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
         guard let range = self as? Range<Int> else {
@@ -970,20 +952,6 @@ extension Range: _Range {
         }
     }
 }
-
-#if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
-
-    extension CountableRange: _Range {
-        fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
-            return try Range(self).slice(of: array, for: symbol)
-        }
-
-        fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
-            return try Range(self).slice(of: string, for: symbol)
-        }
-    }
-
-#endif
 
 extension PartialRangeThrough: _Range {
     fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
@@ -1077,20 +1045,6 @@ extension PartialRangeFrom: _Range {
     }
 }
 
-#if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
-
-    extension CountablePartialRangeFrom: _Range {
-        fileprivate func slice(of array: _Array, for symbol: Expression.Symbol) throws -> ArraySlice<Any> {
-            return try PartialRangeFrom(lowerBound).slice(of: array, for: symbol)
-        }
-
-        fileprivate func slice(of string: _String, for symbol: Expression.Symbol) throws -> Substring {
-            return try PartialRangeFrom(lowerBound).slice(of: string, for: symbol)
-        }
-    }
-
-#endif
-
 // Used for string values
 private protocol _String {
     var substring: Substring { get }
@@ -1179,12 +1133,3 @@ extension Optional: _Optional {
     fileprivate var value: Any? { return self }
     fileprivate static var wrappedType: Any.Type { return Wrapped.self }
 }
-
-#if !swift(>=3.4) || (swift(>=4) && !swift(>=4.1.5))
-
-    extension ImplicitlyUnwrappedOptional: _Optional {
-        fileprivate var value: Any? { return self }
-        fileprivate static var wrappedType: Any.Type { return Wrapped.self }
-    }
-
-#endif

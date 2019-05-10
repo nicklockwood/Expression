@@ -63,7 +63,6 @@ extension AnyExpressionTests {
         ("testCastArrayAsNSArray", testCastArrayAsNSArray),
         ("testCastArraySliceAsNSArray", testCastArraySliceAsNSArray),
         ("testCastBoolResultAsDouble", testCastBoolResultAsDouble),
-        ("testCastBoolResultAsImplicitlyUnwrappedOptionalDouble", testCastBoolResultAsImplicitlyUnwrappedOptionalDouble),
         ("testCastBoolResultAsOptionalBool", testCastBoolResultAsOptionalBool),
         ("testCastBoolResultAsOptionalDouble", testCastBoolResultAsOptionalDouble),
         ("testCastDoubleAsDate", testCastDoubleAsDate),

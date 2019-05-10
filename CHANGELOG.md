@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.13.0](https://github.com/nicklockwood/Expression/releases/tag/0.12.13) (2019-05-10)
+
+- Fixed Xcode 10.2 warnings
+- Expression now requires a minimum Swift version of 4.2
+
 ## [0.12.12](https://github.com/nicklockwood/Expression/releases/tag/0.12.12) (2019-03-26)
 
 - Expression now builds correctly on Linux, including the test suite
