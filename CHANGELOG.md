@@ -1,6 +1,10 @@
 # Change Log
 
-## [0.13.0](https://github.com/nicklockwood/Expression/releases/tag/0.12.13) (2019-05-10)
+## [0.13.1](https://github.com/nicklockwood/Expression/releases/tag/0.13.1) (2019-06-05)
+
+- Fixed error in Swift 5.1 beta
+
+## [0.13.0](https://github.com/nicklockwood/Expression/releases/tag/0.13.0) (2019-05-10)
 
 - Fixed Xcode 10.2 warnings
 - Expression now requires a minimum Swift version of 4.2
