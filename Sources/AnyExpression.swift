@@ -531,7 +531,6 @@ public struct AnyExpression: CustomStringConvertible {
 
         evaluator = {
             #if !os(Linux)
-                objc_sync_enter(box)
                  lock.lock()
             #endif
           
