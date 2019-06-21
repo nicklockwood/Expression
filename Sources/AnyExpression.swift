@@ -524,21 +524,12 @@ public struct AnyExpression: CustomStringConvertible {
         let literals = box.values
 
         // Evaluation isn't thread-safe due to shared values
-        // so we use objc_sync_enter/exit to prevent re-entrancy
-        // Beware that these objc mutexes are not available on Linux
-        
-        let lock = NSLock()
-
+        // so we use NSLock to prevent re-entrancep
         evaluator = {
-            #if !os(Linux)
-                 lock.lock()
-            #endif
-          
+            box.lock.lock()
             defer {
                 box.values = literals
-                #if !os(Linux)
-                    lock.unlock()
-                #endif
+                 box.lock.unlock()
             }
             let value = try expression.evaluate()
             return box.load(value)
@@ -771,6 +762,7 @@ private extension AnyExpression {
 
         // The values stored in the box
         public var values = [Any]()
+        public var lock = NSLock()
 
         // Store a value in the box
         public func store(_ value: Any) -> Double {
