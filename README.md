@@ -115,7 +115,7 @@ You create an `Expression` instance by passing a string containing your expressi
 
 You can then calculate the result by calling the `evaluate()` method.
 
-**Note:** The `evaluate()` function for a given `Expression` instance is thread-safe, meaning that you can call it concurrently from multiple threads. `AnyExpression`'s evaluate method is also thread-safe *except on Linux* due to unavailability of the `objc_sync` APIs (see [Linux Support](#linux-support) section below).
+**Note:** The `evaluate()` function for a given `Expression` or `AnyExpression` instance is thread-safe, meaning that you can call it concurrently from multiple threads.
 
 By default, Expression already implements most standard math functions and operators, so you only need to provide a custom symbol dictionary if your app needs to support additional functions or variables. You can mix and match implementations, so if you have some custom constants or arrays and some custom functions or operators, you can provide separate constants and symbols dictionaries.
 
@@ -567,9 +567,7 @@ let expression = AnyExpression("foo()(2)", symbols: [
 
 ## Linux Support
 
-AnyExpression works on Linux, with the following caveats:
-
-- The `evaluate()` function is not thread-safe on Linux due to unavailability of the `objc_sync` APIs. Even multiple copies of the same expression cannot safely be evaluated concurrently. This is a bit counter-intuitive because `AnyExpression` is a struct, so it has copy semantics, but internally these copies all share a reference to the same underlying `Expression` instance.
+AnyExpression works on Linux, with the following caveat:
 
 - `AnyExpression` doesn't support `NSString` bridging due to a limitation of Linux Foundation. If you want to use `AnyExpression` with `NSString` values then you'll have to manually convert them to `String` before and after evaluation.
 

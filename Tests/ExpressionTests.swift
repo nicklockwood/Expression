@@ -1263,9 +1263,9 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), -16)
     }
 
-    func testModFunction() {
-        let expression = Expression("mod(-4, 2.5)")
-        XCTAssertEqual(try expression.evaluate(), -1.5)
+    func testPiConstant() {
+        let expression = Expression("pi + 1")
+        XCTAssertEqual(try expression.evaluate(), 1.0 + .pi)
     }
 
     func testSqrtFunction() {
@@ -1273,19 +1273,79 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 10)
     }
 
+    func testFloorFunction() {
+        let expression = Expression("floor(2.5)")
+        XCTAssertEqual(try expression.evaluate(), 2.0)
+    }
+
+    func testCeilFunction() {
+        let expression = Expression("ceil(2.5)")
+        XCTAssertEqual(try expression.evaluate(), 3.0)
+    }
+
+    func testRoundFunction() {
+        let expression = Expression("round(2.5)")
+        XCTAssertEqual(try expression.evaluate(), 3.0)
+    }
+
+    func testCosFunction() {
+        let expression = Expression("cos(pi)")
+        XCTAssertEqual(try expression.evaluate(), -1.0)
+    }
+
+    func testAcosFunction() {
+        let expression = Expression("acos(-1.0)")
+        XCTAssertEqual(try expression.evaluate(), .pi)
+    }
+
+    func testSinFunction() {
+        let expression = Expression("sin(pi)")
+        XCTAssert(try abs(expression.evaluate() as Double) < 0.000001)
+    }
+
+    func testAsinFunction() {
+        let expression = Expression("asin(0)")
+        XCTAssertEqual(try expression.evaluate(), 0.0)
+    }
+
+    func testTanFunction() {
+        let expression = Expression("tan(pi)")
+        XCTAssert(try abs(expression.evaluate() as Double) < 0.000001)
+    }
+
+    func testAtanFunction() {
+        let expression = Expression("atan(0)")
+        XCTAssertEqual(try expression.evaluate(), 0.0)
+    }
+
+    func testAbsFunction() {
+        let expression = Expression("abs(-1)")
+        XCTAssertEqual(try expression.evaluate(), 1.0)
+    }
+
     func testPowFunction() {
         let expression = Expression("7 + pow(9, 1/2)")
         XCTAssertEqual(try expression.evaluate(), 10)
     }
 
-    func testVariadicMinFunction() {
-        let expression = Expression("min(3, 2, 7)")
-        XCTAssertEqual(try expression.evaluate(), 2)
+    func testAtan2Function() {
+        let expression = Expression("atan2(1, 0)")
+        XCTAssertEqual(try expression.evaluate(), .pi/2)
+    }
+
+    func testModFunction() {
+        let expression = Expression("mod(-4, 2.5)")
+        XCTAssertEqual(try expression.evaluate(), -1.5)
     }
 
     func testVariadicMaxFunction() {
         let expression = Expression("max(7, 8, 9)")
         XCTAssertEqual(try expression.evaluate(), 9)
+    }
+
+    func testVariadicMinFunction() {
+        let expression = Expression("min(3, 2, 7)")
+        XCTAssertEqual(try expression.evaluate(), 2)
     }
 
     // MARK: Function parsing

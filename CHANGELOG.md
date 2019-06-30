@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.13.2](https://github.com/nicklockwood/Expression/releases/tag/0.13.2) (2019-06-30)
+
+- AnyExpression now supports concurrent evaluation on Linux
+- Fixed NSString bug on Linux
+
 ## [0.13.1](https://github.com/nicklockwood/Expression/releases/tag/0.13.1) (2019-06-05)
 
 - Fixed error in Swift 5.1 beta
