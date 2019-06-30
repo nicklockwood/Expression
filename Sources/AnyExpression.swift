@@ -524,17 +524,13 @@ public struct AnyExpression: CustomStringConvertible {
         let literals = box.values
 
         // Evaluation isn't thread-safe due to shared values
-        // so we use objc_sync_enter/exit to prevent re-entrancy
-        // Beware that these objc mutexes are not available on Linux
+        // so we use NSLock to prevent re-entrance
+        let lock = NSLock()
         evaluator = {
-            #if !os(Linux)
-                objc_sync_enter(box)
-            #endif
+            lock.lock()
             defer {
                 box.values = literals
-                #if !os(Linux)
-                    objc_sync_exit(box)
-                #endif
+                lock.unlock()
             }
             let value = try expression.evaluate()
             return box.load(value)
@@ -1064,7 +1060,7 @@ extension Substring: _String {
 
 extension NSString: _String {
     var substring: Substring {
-        return Substring(self as String)
+        return Substring("\(self)")
     }
 }
 
