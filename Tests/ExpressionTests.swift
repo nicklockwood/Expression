@@ -515,7 +515,7 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(expression.symbols, [.variable("'foo\nbar'")])
         XCTAssertEqual(expression.description, "'foo\\nbar'")
     }
-    
+
     func testValidateQuotedIdentifierOfJustNewline() {
         let expression = Expression.parse("'\\n'")
         XCTAssertEqual(expression.symbols, [.variable("'\n'")])
@@ -1336,7 +1336,7 @@ class ExpressionTests: XCTestCase {
 
     func testAtan2Function() {
         let expression = Expression("atan2(1, 0)")
-        XCTAssertEqual(try expression.evaluate(), .pi/2)
+        XCTAssertEqual(try expression.evaluate(), .pi / 2)
     }
 
     func testModFunction() {
