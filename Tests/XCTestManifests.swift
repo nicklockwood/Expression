@@ -610,6 +610,7 @@ extension ExpressionTests {
         ("testValidateQuotedIdentifierContainingDelete", testValidateQuotedIdentifierContainingDelete),
         ("testValidateQuotedIdentifierContainingEmoji", testValidateQuotedIdentifierContainingEmoji),
         ("testValidateQuotedIdentifierContainingNewline", testValidateQuotedIdentifierContainingNewline),
+        ("testValidateQuotedIdentifierOfJustNewline", testValidateQuotedIdentifierOfJustNewline),
         ("testValidateQuotedIdentifierContainingNull", testValidateQuotedIdentifierContainingNull),
         ("testValidateQuotedIdentifierContainingTab", testValidateQuotedIdentifierContainingTab),
         ("testValidateQuotedIdentifierContainingUnitSeparator", testValidateQuotedIdentifierContainingUnitSeparator),
