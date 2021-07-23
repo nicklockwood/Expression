@@ -1207,8 +1207,10 @@ private extension UnicodeScalarView {
             var string = scanCharacter({ "`'\"".unicodeScalars.contains($0) }) else {
             return nil
         }
-        while let part = scanCharacters({ $0 != delimiter && $0 != "\\" }) {
-            string += part
+        var part: String? = nil
+        repeat {
+            part = scanCharacters({ $0 != delimiter && $0 != "\\" })
+            string += part ?? ""
             if scanCharacter("\\"), let c = popFirst() {
                 switch c {
                 case "0":
@@ -1247,7 +1249,7 @@ private extension UnicodeScalarView {
                     string.append(Character(c))
                 }
             }
-        }
+        } while part != nil
         guard scanCharacter(delimiter) else {
             return .error(string == String(delimiter) ?
                 .unexpectedToken(string) : .missingDelimiter(String(delimiter)), string)
