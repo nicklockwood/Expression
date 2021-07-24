@@ -1,6 +1,6 @@
 {
   "name": "Expression",
-  "version": "0.13.2",
+  "version": "0.13.3",
   "license": {
     "type": "MIT",
     "file": "LICENSE.md"
@@ -10,7 +10,7 @@
   "authors": "Nick Lockwood",
   "source": {
     "git": "https://github.com/nicklockwood/Expression.git",
-    "tag": "0.13.2"
+    "tag": "0.13.3"
   },
   "source_files": "Sources",
   "requires_arc": true,

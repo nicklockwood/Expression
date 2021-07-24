@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		010D941D26AB92AD00DB2414 /* MetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 010D941C26AB92AD00DB2414 /* MetadataTests.swift */; };
 		011F794D1D8D67BD00C5299A /* Expression.swift in Sources */ = {isa = PBXBuildFile; fileRef = 015B35B61D8AD16700ABBD4E /* Expression.swift */; };
 		011F795A1D8D691400C5299A /* Expression.h in Headers */ = {isa = PBXBuildFile; fileRef = 015B359F1D8AD15600ABBD4E /* Expression.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		0127DB072010B3A800B95E17 /* AnyExpressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01FEBBDE2008C4F2009469E9 /* AnyExpressionTests.swift */; };
@@ -171,6 +172,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		010D941C26AB92AD00DB2414 /* MetadataTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MetadataTests.swift; sourceTree = "<group>"; };
 		011F79551D8D67BD00C5299A /* Expression.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Expression.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		015B359C1D8AD15600ABBD4E /* Expression.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Expression.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		015B359F1D8AD15600ABBD4E /* Expression.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Expression.h; sourceTree = "<group>"; };
@@ -351,6 +353,7 @@
 			children = (
 				01CF6AF61E1C705F0017139E /* ExpressionTests.swift */,
 				01FEBBDE2008C4F2009469E9 /* AnyExpressionTests.swift */,
+				010D941C26AB92AD00DB2414 /* MetadataTests.swift */,
 				018124C5224AD4910048A55E /* XCTestManifests.swift */,
 				015B35AC1D8AD15600ABBD4E /* Info.plist */,
 			);
@@ -517,7 +520,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 015B35B31D8AD15600ABBD4E /* Build configuration list for PBXNativeTarget "ExpressionTests" */;
 			buildPhases = (
+				010D941A26AB907F00DB2414 /* Generate Linux Tests */,
 				015B35A11D8AD15600ABBD4E /* Sources */,
+				010D941B26AB909E00DB2414 /* Format Code */,
 				015B35A21D8AD15600ABBD4E /* Frameworks */,
 				015B35A31D8AD15600ABBD4E /* Resources */,
 			);
@@ -667,7 +672,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastSwiftUpdateCheck = 0920;
-				LastUpgradeCheck = 1020;
+				LastUpgradeCheck = 1250;
 				ORGANIZATIONNAME = "Nick Lockwood";
 				TargetAttributes = {
 					011F794B1D8D67BD00C5299A = {
@@ -824,6 +829,45 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		010D941A26AB907F00DB2414 /* Generate Linux Tests */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Generate Linux Tests";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "swift test --generate-linuxmain\n";
+		};
+		010D941B26AB909E00DB2414 /* Format Code */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Format Code";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftformat >/dev/null; then\n  swiftformat .\nelse\n  echo \"warning: SwiftFormat not installed, download from https://github.com/nicklockwood/SwiftFormat\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		011F794C1D8D67BD00C5299A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -849,6 +893,7 @@
 			files = (
 				0127DB072010B3A800B95E17 /* AnyExpressionTests.swift in Sources */,
 				01CF6AFB1E1C71020017139E /* ExpressionTests.swift in Sources */,
+				010D941D26AB92AD00DB2414 /* MetadataTests.swift in Sources */,
 				018124C6224AD4920048A55E /* XCTestManifests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1045,6 +1090,7 @@
 				INFOPLIST_FILE = Sources/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
+				MARKETING_VERSION = 0.13.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression;
 				PRODUCT_NAME = Expression;
 				SDKROOT = iphoneos;
@@ -1068,6 +1114,7 @@
 				INFOPLIST_FILE = Sources/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
+				MARKETING_VERSION = 0.13.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression;
 				PRODUCT_NAME = Expression;
 				SDKROOT = iphoneos;
@@ -1100,6 +1147,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -1164,6 +1212,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -1210,6 +1259,7 @@
 				INFOPLIST_FILE = Sources/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
+				MARKETING_VERSION = 0.13.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression;
 				PRODUCT_NAME = Expression;
 				SKIP_INSTALL = YES;
@@ -1232,6 +1282,7 @@
 				INFOPLIST_FILE = Sources/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
+				MARKETING_VERSION = 0.13.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression;
 				PRODUCT_NAME = Expression;
 				SKIP_INSTALL = YES;
@@ -1277,7 +1328,7 @@
 				DEVELOPMENT_TEAM = 8VQKF583ED;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				INFOPLIST_FILE = Examples/Benchmark/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression.Benchmark;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1299,7 +1350,7 @@
 				DEVELOPMENT_TEAM = 8VQKF583ED;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				INFOPLIST_FILE = Examples/Benchmark/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression.Benchmark;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1319,6 +1370,7 @@
 				CODE_SIGN_IDENTITY = "Mac Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 8VQKF583ED;
+				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1335,6 +1387,7 @@
 				CODE_SIGN_IDENTITY = "Mac Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 8VQKF583ED;
+				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1350,7 +1403,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = 8VQKF583ED;
 				INFOPLIST_FILE = Examples/Calculator/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression.Calculator;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1368,7 +1421,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = 8VQKF583ED;
 				INFOPLIST_FILE = Examples/Calculator/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression.Calculator;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1387,7 +1440,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = 8VQKF583ED;
 				INFOPLIST_FILE = Examples/Colors/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression.Colors;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1404,7 +1457,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = 8VQKF583ED;
 				INFOPLIST_FILE = Examples/Colors/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression.Colors;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1422,7 +1475,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = 8VQKF583ED;
 				INFOPLIST_FILE = Examples/Layout/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression.Layout;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1439,7 +1492,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = 8VQKF583ED;
 				INFOPLIST_FILE = Examples/Layout/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression.Layout;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1456,7 +1509,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = 8VQKF583ED;
 				INFOPLIST_FILE = Tests/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.DebugPerformanceTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1473,7 +1526,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = 8VQKF583ED;
 				INFOPLIST_FILE = Tests/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.DebugPerformanceTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1491,7 +1544,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = 8VQKF583ED;
 				INFOPLIST_FILE = Tests/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.ReleasePerformanceTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1508,7 +1561,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = 8VQKF583ED;
 				INFOPLIST_FILE = Tests/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.ReleasePerformanceTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";

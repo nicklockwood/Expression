@@ -1,5 +1,6 @@
-[![Travis](https://img.shields.io/travis/nicklockwood/Expression.svg)](https://travis-ci.org/nicklockwood/Expression)
-[![Coveralls](https://coveralls.io/repos/github/nicklockwood/Expression/badge.svg)](https://coveralls.io/github/nicklockwood/Expression)
+[![PayPal](https://img.shields.io/badge/paypal-donate-blue.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TSE3YHYFTJ9KL&source=url)
+[![Travis](https://travis-ci.com/nicklockwood/Expression.svg?branch=master)](https://travis-ci.com/github/nicklockwood/Expression)
+[![Codecov](https://codecov.io/gh/nicklockwood/Expression/graphs/badge.svg)](https://codecov.io/gh/nicklockwood/Expression)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20|%20macOS%20|%20tvOS%20|%20watchOS%20|%20Linux-lightgray.svg)]()
 [![Swift 4.2](https://img.shields.io/badge/swift-4.2-orange.svg?style=flat)](https://developer.apple.com/swift)
 [![Swift 5.1](https://img.shields.io/badge/swift-5.1-red.svg?style=flat)](https://developer.apple.com/swift)
@@ -36,6 +37,7 @@
 	- [Colors](#colors)
     - [Layout](#layout)
     - [REPL](#repl)
+- [Credits](#credits)
 
 # Introduction
 
@@ -94,13 +96,13 @@ pod 'Expression', '~> 0.12'
 To install using Carthage, add this to your Cartfile:
 
 ```
-github "nicklockwood/Expression" ~> 0.12
+github "nicklockwood/Expression" ~> 0.13
 ```
 
 To install using Swift Package Manager, add this to the `dependencies:` section in your Package.swift file:
 
 ```
-.package(url: "https://github.com/nicklockwood/Expression.git", .upToNextMinor(from: "0.12.0")),
+.package(url: "https://github.com/nicklockwood/Expression.git", .upToNextMinor(from: "0.13.0")),
 ```
 
 
@@ -628,3 +630,10 @@ foo = (5 + 6) + 7
 ```
 
 The named variable ("foo", in this case) is then available to use in subsequent expressions.
+
+
+# Credits
+
+The Expression framework is primarily the work of [Nick Lockwood](https://github.com/nicklockwood).
+
+([Full list of contributors](https://github.com/nicklockwood/Expression/graphs/contributors))

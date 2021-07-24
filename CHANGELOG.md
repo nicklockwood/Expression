@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.13.3](https://github.com/nicklockwood/Expression/releases/tag/0.13.3) (2021-07-24)
+
+- Fixed parsing error with string literals that begin with a double backslash
+
 ## [0.13.2](https://github.com/nicklockwood/Expression/releases/tag/0.13.2) (2019-06-30)
 
 - AnyExpression now supports concurrent evaluation on Linux

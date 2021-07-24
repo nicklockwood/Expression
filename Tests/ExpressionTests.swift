@@ -33,15 +33,6 @@
 import XCTest
 
 class ExpressionTests: XCTestCase {
-    func testLinuxTestSuiteIncludesAllTests() {
-        #if os(macOS)
-            let thisClass = type(of: self)
-            let linuxCount = thisClass.__allTests.count
-            let darwinCount = thisClass.defaultTestSuite.testCaseCount
-            XCTAssertEqual(linuxCount, darwinCount, "run swift test --generate-linuxmain")
-        #endif
-    }
-
     // MARK: Description
 
     func testDescriptionSpacing() {
@@ -407,8 +398,8 @@ class ExpressionTests: XCTestCase {
     }
 
     func testLargeInteger() {
-        let expression = Expression("12345678901234567890")
-        XCTAssertEqual(try expression.evaluate(), 12345678901234567890)
+        let expression = Expression("12345678901234567168")
+        XCTAssertEqual(try expression.evaluate(), 12345678901234567168)
     }
 
     func testNegativeInteger() {
@@ -1444,8 +1435,8 @@ class ExpressionTests: XCTestCase {
     }
 
     func testHugeNumber() {
-        let expression = Expression("19911919912912919291291291921929123")
-        XCTAssertEqual(try expression.evaluate(), 19911919912912919291291291921929123)
+        let expression = Expression("19911919912912918507489841695948800")
+        XCTAssertEqual(try expression.evaluate(), 19911919912912918507489841695948800)
     }
 
     // MARK: Symbols
