@@ -102,7 +102,7 @@ class AnyExpressionTests: XCTestCase {
 
     func testCallEvaluatorFunctionWithWrongArgumentsErrorDescription() {
         let error = Expression.Error.typeMismatch(.infix("()"), [
-            { (_: [Double]) throws -> Double in 0 }, 57, "foo",
+            { (_: [Double]) throws -> Double in 0 }, 57.0, "foo",
         ])
         XCTAssertEqual(error.description, "Attempted to call function with incompatible arguments (Double, String)")
     }
