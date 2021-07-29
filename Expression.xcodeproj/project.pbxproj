@@ -1067,7 +1067,7 @@
 				INFOPLIST_FILE = Sources/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MARKETING_VERSION = 0.13.3;
+				MARKETING_VERSION = 0.13.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression;
 				PRODUCT_NAME = Expression;
 				SDKROOT = iphoneos;
@@ -1091,7 +1091,7 @@
 				INFOPLIST_FILE = Sources/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MARKETING_VERSION = 0.13.3;
+				MARKETING_VERSION = 0.13.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression;
 				PRODUCT_NAME = Expression;
 				SDKROOT = iphoneos;
@@ -1236,7 +1236,7 @@
 				INFOPLIST_FILE = Sources/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MARKETING_VERSION = 0.13.3;
+				MARKETING_VERSION = 0.13.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression;
 				PRODUCT_NAME = Expression;
 				SKIP_INSTALL = YES;
@@ -1259,7 +1259,7 @@
 				INFOPLIST_FILE = Sources/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MARKETING_VERSION = 0.13.3;
+				MARKETING_VERSION = 0.13.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression;
 				PRODUCT_NAME = Expression;
 				SKIP_INSTALL = YES;

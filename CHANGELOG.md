@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.13.4](https://github.com/nicklockwood/Expression/releases/tag/0.13.4) (2021-07-29)
+
+- Fixed precedence bug where postfix operator was incorrectly applied to entire preceding expression
+
 ## [0.13.3](https://github.com/nicklockwood/Expression/releases/tag/0.13.3) (2021-07-24)
 
 - Fixed parsing error with string literals that begin with a double backslash
