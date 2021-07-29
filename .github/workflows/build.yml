@@ -1,0 +1,29 @@
+name: build
+
+on:
+  push:
+  pull_request:
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Build and Test
+        run:
+          xcodebuild -scheme "Expression (Mac)" -sdk macosx clean build test
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_11.7.app/Contents/Developer
+      - name: Codecov
+        run: bash <(curl -s https://codecov.io/bash) -t f835f552-0734-4266-b5c6-0c184c368bd9
+  linux:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:5.2
+      options: --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --security-opt apparmor=unconfined
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Build and Test
+        run: swift test --enable-test-discovery
+

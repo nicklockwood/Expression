@@ -1,5 +1,5 @@
 [![PayPal](https://img.shields.io/badge/paypal-donate-blue.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TSE3YHYFTJ9KL&source=url)
-[![Travis](https://travis-ci.com/nicklockwood/Expression.svg?branch=master)](https://travis-ci.com/github/nicklockwood/Expression)
+[![Build](https://github.com/nicklockwood/Expression/actions/workflows/build.yml/badge.svg)](https://github.com/nicklockwood/Expression/actions/workflows/build.yml)
 [![Codecov](https://codecov.io/gh/nicklockwood/Expression/graphs/badge.svg)](https://codecov.io/gh/nicklockwood/Expression)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20|%20macOS%20|%20tvOS%20|%20watchOS%20|%20Linux-lightgray.svg)]()
 [![Swift 4.2](https://img.shields.io/badge/swift-4.2-orange.svg?style=flat)](https://developer.apple.com/swift)

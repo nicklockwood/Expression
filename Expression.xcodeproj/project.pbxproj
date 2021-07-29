@@ -29,7 +29,6 @@
 		018124C2224AD2CC0048A55E /* Benchmarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 018124BD224AD2CC0048A55E /* Benchmarks.swift */; };
 		018124C3224AD2CC0048A55E /* Benchmarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 018124BD224AD2CC0048A55E /* Benchmarks.swift */; };
 		018124C4224AD2DA0048A55E /* BenchmarkUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 018124BB224AD2CC0048A55E /* BenchmarkUtils.swift */; };
-		018124C6224AD4920048A55E /* XCTestManifests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 018124C5224AD4910048A55E /* XCTestManifests.swift */; };
 		01A342082033043600F769A6 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A342072033043600F769A6 /* AppDelegate.swift */; };
 		01A3420A2033043600F769A6 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A342092033043600F769A6 /* ViewController.swift */; };
 		01A3420D2033043600F769A6 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 01A3420B2033043600F769A6 /* Main.storyboard */; };
@@ -183,7 +182,6 @@
 		018124BB224AD2CC0048A55E /* BenchmarkUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BenchmarkUtils.swift; sourceTree = "<group>"; };
 		018124BC224AD2CC0048A55E /* PerformanceTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
 		018124BD224AD2CC0048A55E /* Benchmarks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Benchmarks.swift; sourceTree = "<group>"; };
-		018124C5224AD4910048A55E /* XCTestManifests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XCTestManifests.swift; sourceTree = "<group>"; };
 		01A342052033043600F769A6 /* Benchmark.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Benchmark.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		01A342072033043600F769A6 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		01A342092033043600F769A6 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -354,7 +352,6 @@
 				01CF6AF61E1C705F0017139E /* ExpressionTests.swift */,
 				01FEBBDE2008C4F2009469E9 /* AnyExpressionTests.swift */,
 				010D941C26AB92AD00DB2414 /* MetadataTests.swift */,
-				018124C5224AD4910048A55E /* XCTestManifests.swift */,
 				015B35AC1D8AD15600ABBD4E /* Info.plist */,
 			);
 			path = Tests;
@@ -520,7 +517,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 015B35B31D8AD15600ABBD4E /* Build configuration list for PBXNativeTarget "ExpressionTests" */;
 			buildPhases = (
-				010D941A26AB907F00DB2414 /* Generate Linux Tests */,
 				015B35A11D8AD15600ABBD4E /* Sources */,
 				010D941B26AB909E00DB2414 /* Format Code */,
 				015B35A21D8AD15600ABBD4E /* Frameworks */,
@@ -830,24 +826,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		010D941A26AB907F00DB2414 /* Generate Linux Tests */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Generate Linux Tests";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "swift test --generate-linuxmain\n";
-		};
 		010D941B26AB909E00DB2414 /* Format Code */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -894,7 +872,6 @@
 				0127DB072010B3A800B95E17 /* AnyExpressionTests.swift in Sources */,
 				01CF6AFB1E1C71020017139E /* ExpressionTests.swift in Sources */,
 				010D941D26AB92AD00DB2414 /* MetadataTests.swift in Sources */,
-				018124C6224AD4920048A55E /* XCTestManifests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
