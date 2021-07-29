@@ -1296,9 +1296,12 @@ private extension UnicodeScalarView {
                                 case let .symbol(.infix(op2), _, _),
                                      let .symbol(.prefix(op2), _, _),
                                      let .symbol(.postfix(op2), _, _):
-                                    if !Expression.operator(symbol.name, takesPrecedenceOver: op2) {
+                                    guard stack.count > i + 4,
+                                          Expression.operator(symbol.name, takesPrecedenceOver: op2)
+                                    else {
                                         fallthrough
                                     }
+
                                 default:
                                     try collapseStack(from: i + 2)
                                     return

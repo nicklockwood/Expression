@@ -1931,6 +1931,31 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 5)
     }
 
+    func testCustomPostfixSymbolTakesPrecedenceOverInfixSymbol() {
+        let expression = Expression(
+            "foo + 15mm",
+            symbols: [
+                .variable("foo"): { _ in 5 },
+                .postfix("mm"): { $0[0] * 2 },
+            ]
+        )
+        XCTAssertEqual(expression.description, "foo + 15mm")
+        XCTAssertEqual(try expression.evaluate(), 35)
+    }
+
+    func testInfixOperatorInsidePostfixExpression() {
+        let expression = Expression(
+            "(a+b)%",
+            symbols: [
+                .variable("a"): { _ in 5 },
+                .variable("b"): { _ in 6 },
+                .postfix("%"): { $0[0] * 2 },
+            ]
+        )
+        XCTAssertEqual(expression.description, "(a + b)%")
+        XCTAssertEqual(try expression.evaluate(), 22)
+    }
+
     // MARK: Cache
 
     func testCache() {
