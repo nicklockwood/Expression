@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.13.5](https://github.com/nicklockwood/Expression/releases/tag/0.13.5) (2021-10-16)
+
+- Fixed build failure in benchmark example on Xcode 13
+
 ## [0.13.4](https://github.com/nicklockwood/Expression/releases/tag/0.13.4) (2021-07-29)
 
 - Fixed precedence bug where postfix operator was incorrectly applied to entire preceding expression

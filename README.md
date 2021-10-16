@@ -90,7 +90,7 @@ If you prefer, there's a framework that you can import which includes both the `
 To install Expression using CocoaPods, add the following to your Podfile:
 
 ```ruby
-pod 'Expression', '~> 0.12'
+pod 'Expression', '~> 0.13'
 ```
 
 To install using Carthage, add this to your Cartfile:
@@ -230,7 +230,7 @@ This is an alphanumeric identifier representing a constant or variable in an exp
 
 Like Swift, Expression allows unicode characters in identifiers, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for name-spacing (as demonstrated in the Layout example app).
 
-The parser also accepts quoted strings as identifiers. Single quotes (') , double quotes (") , or backticks (`) may be used. Since `Expression` only deals with numeric values, it's up to your application to map these string indentifiers to numbers (if you are using [AnyExpression](#anyexpression) then this is handled automatically).
+The parser also accepts quoted strings as identifiers. Single quotes (') , double quotes (") , or backticks (`) may be used. Since `Expression` only deals with numeric values, it's up to your application to map these string identifiers to numbers (if you are using [AnyExpression](#anyexpression) then this is handled automatically).
 
 Unlike regular identifiers, quoted identifiers can contain any unicode character, including spaces. Newlines, quotes and other special characters can be escaped using a backslash (\). Escape sequences are decoded for you, but the outer quotes are retained so you can distinguish strings from other identifiers.
 
@@ -375,7 +375,7 @@ try expression.evaluate() // this will throw an error because pow() has been und
 If you are using the `init(impureSymbols:pureSymbols:)` initializer, you can fall back to the standard library functions and operators by returning `nil` for unrecognized symbols. If you do not want to provide access to the standard library functions in your expression, throw an error for unrecognized symbols instead of returning `nil`.
 
 ```swift
-let expression = Expression("3 + 4", puresSymbols: { symbol in
+let expression = Expression("3 + 4", pureSymbols: { symbol in
     switch symbol {
     case .function("foo", arity: 1):
         return { args in args[0] + 1 }
