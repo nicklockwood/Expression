@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.13.6](https://github.com/nicklockwood/Expression/releases/tag/0.13.6) (2022-03-26)
+
+- Fixed crash when running with Swift 5.6 / Xcode 13.3
+- Fixed warnings and build failures in Xcode 13.3
+
 ## [0.13.5](https://github.com/nicklockwood/Expression/releases/tag/0.13.5) (2021-10-16)
 
 - Fixed build failure in benchmark example on Xcode 13
