@@ -351,7 +351,7 @@ public final class Expression: CustomStringConvertible {
         root = expression.root.optimized(
             withImpureSymbols: impureSymbols,
             pureSymbols: {
-                if let fn = pureSymbols($0) ?? Expression.mathSymbols[$0] ?? Expression.boolSymbols[$0] {
+                if let fn = (pureSymbols($0) ?? Expression.mathSymbols[$0]) ?? Expression.boolSymbols[$0] {
                     return fn
                 }
                 if case let .function(name, _) = $0 {
