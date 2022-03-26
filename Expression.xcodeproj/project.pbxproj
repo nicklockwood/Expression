@@ -481,9 +481,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 011F79521D8D67BD00C5299A /* Build configuration list for PBXNativeTarget "Expression (iOS)" */;
 			buildPhases = (
+				011F794F1D8D67BD00C5299A /* Headers */,
 				011F794C1D8D67BD00C5299A /* Sources */,
 				011F794E1D8D67BD00C5299A /* Frameworks */,
-				011F794F1D8D67BD00C5299A /* Headers */,
 				011F79511D8D67BD00C5299A /* Resources */,
 			);
 			buildRules = (
@@ -499,9 +499,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 015B35B01D8AD15600ABBD4E /* Build configuration list for PBXNativeTarget "Expression (Mac)" */;
 			buildPhases = (
+				015B35991D8AD15600ABBD4E /* Headers */,
 				015B35971D8AD15600ABBD4E /* Sources */,
 				015B35981D8AD15600ABBD4E /* Frameworks */,
-				015B35991D8AD15600ABBD4E /* Headers */,
 				015B359A1D8AD15600ABBD4E /* Resources */,
 			);
 			buildRules = (
@@ -668,7 +668,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastSwiftUpdateCheck = 0920;
-				LastUpgradeCheck = 1300;
+				LastUpgradeCheck = 1330;
 				ORGANIZATIONNAME = "Nick Lockwood";
 				TargetAttributes = {
 					011F794B1D8D67BD00C5299A = {
