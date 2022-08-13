@@ -398,6 +398,48 @@ class AnyExpressionTests: XCTestCase {
         }
     }
 
+    func testStringDictionaryLiteral() {
+        let expression = AnyExpression("['a': 1, 'b': 2.5, 'c': 3]")
+        XCTAssertEqual(try expression.evaluate(), ["a": 1, "b": 2.5, "c": 3])
+    }
+
+    func testDoubleDictionaryLiteral() {
+        let expression = AnyExpression("[1.5: false, 2.0: nil, 3.5: true]")
+        XCTAssertEqual(try expression.evaluate(), [1.5: false, 2.0: nil, 3.5: true])
+    }
+
+    func testIntDictionaryLiteral() {
+        let expression = AnyExpression("[1: 'f', 2: 'e', 3: 'd']")
+        XCTAssertEqual(try expression.evaluate(), [1: "f", 2: "e", 3: "d"])
+    }
+
+    func testDictionaryLiteralWithNonHashableKey() {
+        let expression = AnyExpression("[nil: false]")
+        XCTAssertThrowsError(try expression.evaluate() as Any) { error in
+            XCTAssertEqual(error as? Expression.Error, .typeMismatch(.infix(":"), [nil as Any? as Any, false]))
+        }
+    }
+
+    func testSubscriptStringDictionaryLiteralWithString() {
+        let expression = AnyExpression("['a': 1, 'b': 2.5, 'c': 3]['c']")
+        XCTAssertEqual(try expression.evaluate(), 3)
+    }
+
+    func testSubscriptDoubleDictionaryLiteralWithInt() {
+        let expression = AnyExpression("[1.5: false, 2.0: nil, 3.5: true][2]")
+        XCTAssertEqual(try expression.evaluate(), Optional<Bool>.none)
+    }
+
+    func testSubscriptIntDictionaryLiteralWithDouble() {
+        let expression = AnyExpression("[1: 'f', 2: 'e', 3: 'd'][1.0]")
+        XCTAssertEqual(try expression.evaluate(), "f")
+    }
+
+    func testSubscriptDictionaryLiteralWithNonexistentKey() {
+        let expression = AnyExpression("[1: 'f', 2: 'e', 3: 'd']['d']")
+        XCTAssertEqual(try expression.evaluate(), Optional<String>.none)
+    }
+
     // MARK: Ranges
 
     func testClosedIntRange() {
