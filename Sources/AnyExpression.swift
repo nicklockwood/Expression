@@ -2,7 +2,7 @@
 //  AnyExpression.swift
 //  Expression
 //
-//  Version 0.13.6
+//  Version 0.13.7
 //
 //  Created by Nick Lockwood on 18/04/2017.
 //  Copyright © 2017 Nick Lockwood. All rights reserved.
@@ -629,8 +629,8 @@ extension AnyExpression.Error {
             _string += _string
         }
         let offset = index >= string.startIndex ?
-                _string.distance(from: string.startIndex, to: index) :
-                -_string.distance(from: index, to: string.startIndex)
+            _string.distance(from: string.startIndex, to: index) :
+            -_string.distance(from: index, to: string.startIndex)
         return stringBounds(String(string), offset)
     }
 

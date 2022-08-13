@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.13.7](https://github.com/nicklockwood/Expression/releases/tag/0.13.7) (2023-02-21)
+
+- Fixed String.Index crash on macOS 13 / Swift 5.7
+- Added log() function to standard library
+
 ## [0.13.6](https://github.com/nicklockwood/Expression/releases/tag/0.13.6) (2022-03-26)
 
 - Fixed crash when running with Swift 5.6 / Xcode 13.3

@@ -1335,6 +1335,11 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), -1.5)
     }
 
+    func testLogFunction() {
+        let expression = Expression("log(4)")
+        XCTAssertEqual(try expression.evaluate(), log(4))
+    }
+
     func testVariadicMaxFunction() {
         let expression = Expression("max(7, 8, 9)")
         XCTAssertEqual(try expression.evaluate(), 9)
@@ -1966,5 +1971,14 @@ class ExpressionTests: XCTestCase {
         XCTAssertTrue(Expression.isCached(expression))
         Expression.clearCache(for: expression)
         XCTAssertFalse(Expression.isCached(expression))
+    }
+
+    // Test
+
+    func testFoo() {
+        let expression = Expression("3(2)", symbols: [
+            .infix("()"): { args in args[0] * args[1] },
+        ])
+        XCTAssertEqual(try expression.evaluate(), 6)
     }
 }

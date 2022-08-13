@@ -5,25 +5,25 @@
 [![Swift 4.2](https://img.shields.io/badge/swift-4.2-orange.svg?style=flat)](https://developer.apple.com/swift)
 [![Swift 5.1](https://img.shields.io/badge/swift-5.1-red.svg?style=flat)](https://developer.apple.com/swift)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
-[![Twitter](https://img.shields.io/badge/twitter-@nicklockwood-blue.svg)](http://twitter.com/nicklockwood)
+[![Mastodon](https://img.shields.io/badge/mastodon-@nicklockwood@mastodon.social-636dff.svg)](https://mastodon.social/@nicklockwood)
 
 - [Introduction](#introduction)
-	- [What?](#what)
-	- [Why?](#why)
-	- [How?](#how)
+    - [What?](#what)
+    - [Why?](#why)
+    - [How?](#how)
 - [Usage](#usage)
     - [Installation](#installation)
     - [Integration](#integration)
 - [Symbols](#symbols)
-	- [Variables](#variables)
-	- [Operators](#operators)
-	- [Functions](#functions)
-	- [Arrays](#arrays)
+    - [Variables](#variables)
+    - [Operators](#operators)
+    - [Functions](#functions)
+    - [Arrays](#arrays)
 - [Performance](#performance)
-	- [Caching](#caching)
-	- [Optimization](#optimization)
+    - [Caching](#caching)
+    - [Optimization](#optimization)
 - [Standard Library](#standard-library)
-	- [Math Symbols](#math-symbols)
+    - [Math Symbols](#math-symbols)
     - [Boolean Symbols](#boolean-symbols)
 - [AnyExpression](#anyexpression)
     - [Usage](#usage-1)
@@ -33,8 +33,8 @@
     - [Linux Support](#linux-support)
 - [Example Projects](#example-projects)
     - [Benchmark](#benchmark)
-	- [Calculator](#calculator)
-	- [Colors](#colors)
+    - [Calculator](#calculator)
+    - [Colors](#colors)
     - [Layout](#layout)
     - [REPL](#repl)
 - [Credits](#credits)
@@ -230,7 +230,7 @@ This is an alphanumeric identifier representing a constant or variable in an exp
 
 Like Swift, Expression allows unicode characters in identifiers, such as emoji and scientific symbols. Unlike Swift, Expression's identifiers may also contain periods (.) as separators, which is useful for name-spacing (as demonstrated in the Layout example app).
 
-The parser also accepts quoted strings as identifiers. Single quotes (') , double quotes (") , or backticks (`) may be used. Since `Expression` only deals with numeric values, it's up to your application to map these string identifiers to numbers (if you are using [AnyExpression](#anyexpression) then this is handled automatically).
+The parser also accepts quoted strings as identifiers. Single quotes, double quotes, or backticks may be used. Since `Expression` only deals with numeric values, it's up to your application to map these string identifiers to numbers (if you are using [AnyExpression](#anyexpression) then this is handled automatically).
 
 Unlike regular identifiers, quoted identifiers can contain any unicode character, including spaces. Newlines, quotes and other special characters can be escaped using a backslash (\). Escape sequences are decoded for you, but the outer quotes are retained so you can distinguish strings from other identifiers.
 
@@ -422,6 +422,7 @@ asin(x)
 tan(x)
 atan(x)
 abs(x)
+log(x)
 
 // Binary functions
 
