@@ -401,7 +401,24 @@ public struct AnyExpression: CustomStringConvertible {
                         }
                     }
                 case .function("[]", _):
-                    return { box.store($0.map(box.load)) }
+                    return { args in
+                        let args = args.map(box.load)
+                        let keyVals = args.compactMap { $0 as? Dictionary<AnyHashable, Any>.Element }
+                        return box.store(
+                            args.isEmpty || args.count != keyVals.count
+                                ? args
+                                : keyVals.reduce(into: [AnyHashable: Any]()) { $0[$1.key] = $1.value }
+                        )
+                    }
+                case .infix(":"):
+                    return { args in
+                        switch (box.load(args[0]), box.load(args[1])) {
+                        case let (lhs as AnyHashable, rhs):
+                            return box.store(Dictionary<AnyHashable, Any>.Element(key: lhs, value: rhs))
+                        case let (lhs, rhs):
+                            throw Error.typeMismatch(symbol, [lhs, rhs])
+                        }
+                    }
                 case let .variable(name):
                     guard let string = unwrapString(name) else {
                         return { _ in throw Error.undefinedSymbol(symbol) }
@@ -608,6 +625,8 @@ extension AnyExpression.Error {
             }
         case .infix("==") where types.count == 2 && types[0] == types[1]:
             return .message("Arguments for \(symbol) must conform to the Hashable protocol")
+        case .infix(":") where types.count == 2 && !(args[0] is AnyHashable):
+            return .message("First argument for \(symbol) must conform to the Hashable protocol")
         case _ where types.count == 1:
             return .message("Argument of type \(types[0]) is not compatible with \(symbol)")
         default:
