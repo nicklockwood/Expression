@@ -8,7 +8,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
       - name: Build and Test
         run:
           xcodebuild -scheme "Expression (Mac)" -sdk macosx clean build test
@@ -18,12 +18,15 @@ jobs:
         run: bash <(curl -s https://codecov.io/bash) -t f835f552-0734-4266-b5c6-0c184c368bd9
   linux:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        swift: ["5.7", "5.6", "5.5", "5.2"]
     container:
-      image: swift:5.2
+      image: swift:${{ matrix.swift }}
       options: --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --security-opt apparmor=unconfined
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
       - name: Build and Test
         run: swift test --enable-test-discovery
 
