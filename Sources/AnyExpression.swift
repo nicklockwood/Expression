@@ -622,13 +622,15 @@ extension AnyExpression.Error {
     }
 
     static func stringBounds(_ string: Substring, _ index: String.Index) -> AnyExpression.Error {
-        var _string = string
+        var _string = string.base
         while index > _string.endIndex {
             // Double the length until it fits
             // TODO: is there a better solution for this?
             _string += _string
         }
-        let offset = _string.distance(from: _string.startIndex, to: index)
+        let offset = index >= string.startIndex ?
+                _string.distance(from: string.startIndex, to: index) :
+                -_string.distance(from: index, to: string.startIndex)
         return stringBounds(String(string), offset)
     }
 
