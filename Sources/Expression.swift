@@ -501,6 +501,7 @@ public final class Expression: CustomStringConvertible {
         symbols[.function("tan", arity: 1)] = { tan($0[0]) }
         symbols[.function("atan", arity: 1)] = { atan($0[0]) }
         symbols[.function("abs", arity: 1)] = { abs($0[0]) }
+        symbols[.function("log", arity: 1)] = { log($0[0]) }
 
         // functions - arity 2
         symbols[.function("pow", arity: 2)] = { pow($0[0], $0[1]) }
