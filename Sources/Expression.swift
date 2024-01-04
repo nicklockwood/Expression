@@ -603,6 +603,7 @@ private extension Expression {
             ["..", "...", "..<"].map { ($0, false) }, // range formation
             ["+", "-", "|"].map { ($0, false) }, // default
             ["*", "/", "%", "&"].map { ($0, false) }, // multiplication
+            ["^"].map { ($0, false) }, // exponent
             ["<<", ">>", ">>>"].map { ($0, false) }, // bitshift
             ["[]"].map { ($0, false) },
         ]

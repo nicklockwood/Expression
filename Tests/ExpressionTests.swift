@@ -1886,7 +1886,12 @@ class ExpressionTests: XCTestCase {
         XCTAssertEqual(try expression.evaluate(), 12)
     }
 
-    func testSubscriptTakesPrecedenceOverMultiplications() {
+    func testExponentTakesPrecedenceOverMultiplication() {
+        let expression = Expression("3 * 2 ^ 3", symbols: [.infix("^"): { pow($0[0], $0[1]) }])
+        XCTAssertEqual(try expression.evaluate(), 24)
+    }
+
+    func testSubscriptTakesPrecedenceOverMultiplication() {
         let expression = Expression("2 * 3[3] * 4", symbols: [.infix("[]"): { $0[0] + $0[1] }])
         XCTAssertEqual(try expression.evaluate(), 48)
     }
