@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.13.8](https://github.com/nicklockwood/Expression/releases/tag/0.13.8) (2024-01-04)
+
+- Fix precedence for (^) exponent operator
+
 ## [0.13.7](https://github.com/nicklockwood/Expression/releases/tag/0.13.7) (2023-02-21)
 
 - Fixed String.Index crash on macOS 13 / Swift 5.7
