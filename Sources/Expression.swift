@@ -580,42 +580,43 @@ private extension Expression {
 
     // https://github.com/apple/swift-evolution/blob/master/proposals/0077-operator-precedence.md
     static let operatorPrecedence: [String: (precedence: Int, isRightAssociative: Bool)] = {
-        var precedences = [
-            "[]": 100,
-            "<<": 2, ">>": 2, ">>>": 2, // bitshift
-            "*": 1, "/": 1, "%": 1, "&": 1, // multiplication
-            // +, -, |, ^, etc: 0 (also the default)
-            "..": -1, "...": -1, "..<": -1, // range formation
-            "is": -2, "as": -2, "isa": -2, // casting
-            "??": -3, "?:": -3, // null-coalescing
-            // comparison: -4
-            "&&": -5, "and": -5, // and
-            "||": -6, "or": -6, // or
-            "?": -7, ":": -7, // ternary
-            // assignment: -8
-            ",": -100,
-        ].mapValues { ($0, false) }
+        let assignmentOperators = [
+            "=", "*=", "/=", "%=", "+=", "-=",
+            "<<=", ">>=", "&=", "^=", "|=", ":=",
+        ]
+
         let comparisonOperators = [
             "<", "<=", ">=", ">",
             "==", "!=", "<>", "===", "!==",
             "lt", "le", "lte", "gt", "ge", "gte", "eq", "ne",
         ]
-        for op in comparisonOperators {
-            precedences[op] = (-4, true)
-        }
-        let assignmentOperators = [
-            "=", "*=", "/=", "%=", "+=", "-=",
-            "<<=", ">>=", "&=", "^=", "|=", ":=",
+
+        let operators: [[(name: String, isRightAssociative: Bool)]] = [
+            [","].map { ($0, false) },
+            assignmentOperators.map { ($0, true) },
+            ["?", ":"].map { ($0, false) }, // ternary
+            ["||", "or"].map { ($0, false) }, // or
+            ["&&", "and"].map { ($0, false) }, // and
+            comparisonOperators.map { ($0, true) },
+            ["??", "?:"].map { ($0, false) }, // null-coalescing
+            ["is", "as", "isa"].map { ($0, false) }, // casting
+            ["..", "...", "..<"].map { ($0, false) }, // range formation
+            ["+", "-", "|"].map { ($0, false) }, // default
+            ["*", "/", "%", "&"].map { ($0, false) }, // multiplication
+            ["<<", ">>", ">>>"].map { ($0, false) }, // bitshift
+            ["[]"].map { ($0, false) },
         ]
-        for op in assignmentOperators {
-            precedences[op] = (-8, true)
-        }
-        return precedences
+
+        return Dictionary(uniqueKeysWithValues: operators.enumerated().flatMap { index, values in
+            values.map { ($0.name, (index, $0.isRightAssociative)) }
+        })
     }()
 
+    static let defaultPrecedence: (Int, Bool) = operatorPrecedence["+"]!
+
     static func `operator`(_ lhs: String, takesPrecedenceOver rhs: String) -> Bool {
-        let (p1, rightAssociative) = operatorPrecedence[lhs] ?? (0, false)
-        let (p2, _) = operatorPrecedence[rhs] ?? (0, false)
+        let (p1, rightAssociative) = operatorPrecedence[lhs] ?? defaultPrecedence
+        let (p2, _) = operatorPrecedence[rhs] ?? defaultPrecedence
         if p1 == p2 {
             return !rightAssociative
         }
