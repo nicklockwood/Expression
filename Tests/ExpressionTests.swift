@@ -32,6 +32,8 @@
 @testable import Expression
 import XCTest
 
+typealias Expression = NumericExpression
+
 class ExpressionTests: XCTestCase {
     // MARK: Description
 

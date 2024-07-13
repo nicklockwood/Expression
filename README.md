@@ -72,6 +72,7 @@ Normally these kind of calculations would involve embedding a heavyweight interp
 
 Expression is fast, lightweight, well-tested, and written entirely in Swift. It is substantially faster than using JavaScriptCore for evaluating simple expressions (see the [Benchmark](#benchmark) app for a scientific comparison.
 
+
 ## How?
 
 Expression works by parsing an expression string into a tree of symbols, which can then be evaluated at runtime. Each symbol maps to a Swift closure (function) which is executed during evaluation. There are built-in functions representing common math operations, or you can provide your own custom ones.
@@ -107,6 +108,18 @@ To install using Swift Package Manager, add this to the `dependencies:` section 
 
 
 ## Integration
+
+To start using Expression, import the Expression module at the top of your file:
+
+```swift
+import Expression
+```
+
+**Note:** In iOS 18 / macOS 15 Apple added a `Foundation.Expression` class that clashes with the `Expression` defined in the Expression library if you are importing Foundation in your file. To work around this, use the `NumericExpression` alias instead. Or if you prefer, you can override Apple's `Expression` with `NumericExpression` locally in your project by writing:
+
+```swift
+typealias Expression = NumericExpression
+```
 
 You create an `Expression` instance by passing a string containing your expression, and (optionally) any or all of the following:
 
