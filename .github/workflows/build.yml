@@ -8,7 +8,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        xcode: ["14.2.0", "13.4.1"]
+        xcode: ["15.3", "14.3.1"]
     steps:
       - uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -19,14 +19,23 @@ jobs:
         run:
           xcodebuild -scheme "Expression (Mac)" -sdk macosx clean build test
       - name: Codecov
-        run: bash <(curl -s https://codecov.io/bash) -t f835f552-0734-4266-b5c6-0c184c368bd9
+        uses: codecov/codecov-action@v2
+        with:
+          # the token is optional for a public repo, but including it anyway
+          token: f835f552-0734-4266-b5c6-0c184c368bd9
+          env_vars: MD_APPLE_SDK_ROOT,RUNNER_OS,RUNNER_ARCH
   linux:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        swift: ["5.7", "5.6", "5.5", "5.2"]
+        swiftver:
+          - swift:5.2
+          - swift:5.9
+        swiftos:
+          - focal
     container:
-      image: swift:${{ matrix.swift }}
+      image: ${{ format('{0}-{1}', matrix.swiftver, matrix.swiftos) }}
       options: --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --security-opt apparmor=unconfined
     steps:
       - name: Checkout

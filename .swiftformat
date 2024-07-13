@@ -1,4 +1,6 @@
 --hexgrouping ignore
 --decimalgrouping ignore
 --enable isEmpty
+--disable blankLineAfterImports
+
 --exclude Tests/XCTestManifests.swift
