@@ -1,8 +1,12 @@
 # Change Log
 
+## [0.13.9](https://github.com/nicklockwood/Expression/releases/tag/0.13.9) (2024-07-14)
+
+- Added `NumericExpression` typealias for Xcode 16
+
 ## [0.13.8](https://github.com/nicklockwood/Expression/releases/tag/0.13.8) (2024-01-04)
 
-- Fix precedence for (^) exponent operator
+- Fixed precedence for (^) exponent operator
 
 ## [0.13.7](https://github.com/nicklockwood/Expression/releases/tag/0.13.7) (2023-02-21)
 

@@ -1074,7 +1074,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.13.8;
+				MARKETING_VERSION = 0.13.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression;
 				PRODUCT_NAME = Expression;
 				SDKROOT = iphoneos;
@@ -1104,7 +1104,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.13.8;
+				MARKETING_VERSION = 0.13.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression;
 				PRODUCT_NAME = Expression;
 				SDKROOT = iphoneos;
@@ -1259,7 +1259,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
-				MARKETING_VERSION = 0.13.8;
+				MARKETING_VERSION = 0.13.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression;
 				PRODUCT_NAME = Expression;
 				SKIP_INSTALL = YES;
@@ -1289,7 +1289,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
-				MARKETING_VERSION = 0.13.8;
+				MARKETING_VERSION = 0.13.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Expression;
 				PRODUCT_NAME = Expression;
 				SKIP_INSTALL = YES;
