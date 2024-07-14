@@ -684,6 +684,8 @@ extension AnyExpression {
             return (anyValue as? NSNumber).map { numericType.init(truncating: $0) as! T }
         case let arrayType as _SwiftArray.Type:
             return arrayType.cast(anyValue) as? T
+        case let dictionaryType as _SwiftDictionary.Type:
+            return dictionaryType.cast(anyValue) as? T
         case is String.Type:
             return (anyValue as? _String).map { String($0.substring) as! T }
         case is Substring.Type:
@@ -869,6 +871,24 @@ private extension AnyExpression {
             value.append(element)
         }
         return value
+    }
+
+    // Cast a dictionary
+    static func dictionaryCast<T, U>(_ anyValue: Any) -> [T: U]? {
+        guard let dictionary = anyValue as? _SwiftDictionary else {
+            return nil
+        }
+        var result = [T: U]()
+        for key in dictionary.allKeys {
+            guard let key: T = cast(key),
+                  let anyValue = dictionary.value(for: key),
+                  let value: U = cast(anyValue)
+            else {
+                return nil
+            }
+            result[key] = value
+        }
+        return result
     }
 }
 
@@ -1129,12 +1149,25 @@ private protocol _Dictionary {
     func value(for key: Any) -> Any?
 }
 
-extension Dictionary: _Dictionary {
+private protocol _SwiftDictionary: _Dictionary {
+    var allKeys: [AnyHashable] { get }
+    static func cast(_ value: Any) -> Any?
+}
+
+extension Dictionary: _SwiftDictionary {
+    fileprivate var allKeys: [AnyHashable] {
+        return keys.map { $0 as AnyHashable }
+    }
+
     fileprivate func value(for key: Any) -> Any? {
         guard let key = AnyExpression.cast(key) as Key? else {
             return nil // Type mismatch
         }
         return self[key] as Any
+    }
+
+    fileprivate static func cast(_ value: Any) -> Any? {
+        return AnyExpression.dictionaryCast(value) as [Key: Value]?
     }
 }
 
