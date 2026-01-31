@@ -31,7 +31,10 @@
 //  SOFTWARE.
 //
 
+
+#if canImport(Dispatch)
 import Dispatch
+#endif
 import Foundation
 
 /// Alternative name to use for Expression if you need to disambiguate from the
@@ -398,18 +401,33 @@ public final class Expression: CustomStringConvertible {
         return characters.isEmpty
     }
 
+#if canImport(Dispatch)
     private static var cache = [String: Subexpression]()
     private static let queue = DispatchQueue(label: "com.Expression")
+#endif
 
     // For testing
+#if canImport(Dispatch)
     static func isCached(_ expression: String) -> Bool {
         return queue.sync { cache[expression] != nil }
     }
+#endif
 
+#if canImport(Dispatch)
     /// Parse an expression and optionally cache it for future use.
     /// Returns an opaque struct that cannot be evaluated but can be queried
     /// for symbols or used to construct an executable Expression instance
     public static func parse(_ expression: String, usingCache: Bool = true) -> ParsedExpression {
+        return _parse(expression, usingCache: usingCache)
+    }
+#else
+    public static func parse(_ expression: String) -> ParsedExpression {
+        return _parse(expression, usingCache: false)
+    }
+#endif
+
+    public static func _parse(_ expression: String, usingCache: Bool = true) -> ParsedExpression {
+#if canImport(Dispatch)
         // Check cache
         if usingCache {
             var cachedExpression: Subexpression?
@@ -418,15 +436,18 @@ public final class Expression: CustomStringConvertible {
                 return ParsedExpression(root: subexpression)
             }
         }
+#endif
 
         // Parse
         var characters = Substring.UnicodeScalarView(expression.unicodeScalars)
         let parsedExpression = parse(&characters)
 
+#if canImport(Dispatch)
         // Store
         if usingCache {
             queue.sync { cache[expression] = parsedExpression.root }
         }
+#endif
         return parsedExpression
     }
 
@@ -453,6 +474,7 @@ public final class Expression: CustomStringConvertible {
         return ParsedExpression(root: subexpression)
     }
 
+#if canImport(Dispatch)
     /// Clear the expression cache (useful for testing, or in low memory situations)
     public static func clearCache(for expression: String? = nil) {
         queue.sync {
@@ -463,6 +485,7 @@ public final class Expression: CustomStringConvertible {
             }
         }
     }
+#endif
 
     /// Returns the optmized, pretty-printed expression if it was valid
     /// Otherwise, returns the original (invalid) expression string
