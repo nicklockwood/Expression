@@ -13,7 +13,7 @@ import Foundation
     import JavaScriptCore
 #endif
 
-let symbols: [Expression.Symbol: Expression.SymbolEvaluator] = [
+let symbols: [NumericExpression.Symbol: NumericExpression.SymbolEvaluator] = [
     .variable("a"): { _ in 5 },
     .variable("b"): { _ in 6 },
     .variable("c"): { _ in 7 },
@@ -88,14 +88,14 @@ let booleanExpressions = [
 
 // MARK: Expression support
 
-func buildExpressions(_ expressions: [String]) -> [Expression] {
+func buildExpressions(_ expressions: [String]) -> [NumericExpression] {
     return expressions.map {
         let parsedExpression = Expression.parse($0, usingCache: false)
         return Expression(parsedExpression, options: .pureSymbols, symbols: symbols)
     }
 }
 
-func evaluateExpressions(_ expressions: [Expression]) -> Double? {
+func evaluateExpressions(_ expressions: [NumericExpression]) -> Double? {
     var result: Double?
     for _ in 0 ..< evalRepetitions {
         for expression in expressions {

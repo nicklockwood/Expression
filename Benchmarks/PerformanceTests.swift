@@ -341,7 +341,7 @@ class PerformanceTests: XCTestCase {
         }
     }
 
-    private func evaluateExpressions(_ expressions: [Expression]) {
+    private func evaluateExpressions(_ expressions: [NumericExpression]) {
         for _ in 0 ..< evalRepetitions {
             for exp in expressions {
                 _ = try! exp.evaluate()

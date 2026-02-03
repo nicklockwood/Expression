@@ -130,7 +130,7 @@ class ViewController: UITableViewController {
                 [
                     ("Short Expressions", time(
                         { buildExpressions(shortExpressions) },
-                        { _ = evaluateExpressions($0 as! [Expression]) }
+                        { _ = evaluateExpressions($0 as! [NumericExpression]) }
                     )),
                     ("Short AnyExpressions", time(
                         { buildAnyExpressions(shortExpressions) },
@@ -148,7 +148,7 @@ class ViewController: UITableViewController {
                 [
                     ("Medium Expressions", time(
                         { buildExpressions(mediumExpressions) },
-                        { _ = evaluateExpressions($0 as! [Expression]) }
+                        { _ = evaluateExpressions($0 as! [NumericExpression]) }
                     )),
                     ("Medium AnyExpressions", time(
                         { buildAnyExpressions(mediumExpressions) },
@@ -166,7 +166,7 @@ class ViewController: UITableViewController {
                 [
                     ("Long Expressions", time(
                         { buildExpressions(longExpressions) },
-                        { _ = evaluateExpressions($0 as! [Expression]) }
+                        { _ = evaluateExpressions($0 as! [NumericExpression]) }
                     )),
                     ("Long AnyExpressions", time(
                         { buildAnyExpressions(longExpressions) },
