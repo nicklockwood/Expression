@@ -16,7 +16,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "015B359B1D8AD15600ABBD4E"
                BuildableName = "Expression.framework"
-               BlueprintName = "Expression (Mac)"
+               BlueprintName = "Expression"
                ReferencedContainer = "container:Expression.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -33,7 +33,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "015B359B1D8AD15600ABBD4E"
             BuildableName = "Expression.framework"
-            BlueprintName = "Expression (Mac)"
+            BlueprintName = "Expression"
             ReferencedContainer = "container:Expression.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -65,7 +65,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "015B359B1D8AD15600ABBD4E"
             BuildableName = "Expression.framework"
-            BlueprintName = "Expression (Mac)"
+            BlueprintName = "Expression"
             ReferencedContainer = "container:Expression.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -81,7 +81,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "015B359B1D8AD15600ABBD4E"
             BuildableName = "Expression.framework"
-            BlueprintName = "Expression (Mac)"
+            BlueprintName = "Expression"
             ReferencedContainer = "container:Expression.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
