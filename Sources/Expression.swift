@@ -31,7 +31,6 @@
 //  SOFTWARE.
 //
 
-import Dispatch
 import Foundation
 
 /// Alternative name to use for Expression if you need to disambiguate from the
@@ -399,11 +398,16 @@ public final class Expression: CustomStringConvertible {
     }
 
     private static var cache = [String: Subexpression]()
-    private static let queue = DispatchQueue(label: "com.Expression")
+    private static let lock = NSLock()
+    private static func sync<T>(_ action: () -> T) -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return action()
+    }
 
     // For testing
     static func isCached(_ expression: String) -> Bool {
-        return queue.sync { cache[expression] != nil }
+        sync { cache[expression] != nil }
     }
 
     /// Parse an expression and optionally cache it for future use.
@@ -413,7 +417,7 @@ public final class Expression: CustomStringConvertible {
         // Check cache
         if usingCache {
             var cachedExpression: Subexpression?
-            queue.sync { cachedExpression = cache[expression] }
+            sync { cachedExpression = cache[expression] }
             if let subexpression = cachedExpression {
                 return ParsedExpression(root: subexpression)
             }
@@ -425,7 +429,7 @@ public final class Expression: CustomStringConvertible {
 
         // Store
         if usingCache {
-            queue.sync { cache[expression] = parsedExpression.root }
+            sync { cache[expression] = parsedExpression.root }
         }
         return parsedExpression
     }
@@ -455,7 +459,7 @@ public final class Expression: CustomStringConvertible {
 
     /// Clear the expression cache (useful for testing, or in low memory situations)
     public static func clearCache(for expression: String? = nil) {
-        queue.sync {
+        sync {
             if let expression = expression {
                 cache.removeValue(forKey: expression)
             } else {
