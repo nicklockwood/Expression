@@ -6,6 +6,7 @@
 //  Copyright © 2019 Nick Lockwood. All rights reserved.
 //
 
+#if !os(WASI)
 @testable import Expression
 import XCTest
 
@@ -53,3 +54,4 @@ class MetadataTests: XCTestCase {
         )
     }
 }
+#endif
